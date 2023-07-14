@@ -1,0 +1,212 @@
+version: "3.8"
+
+networks:
+  vnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.130.0/24
+
+volumes:
+  questdb_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${PWD}/questdb_data
+
+  grafana_data:
+    driver_opts:
+      o: bind
+      type: none
+      device: ${PWD}/grafana_data
+
+services:
+  questdb:
+    build:
+      context: ${PWD}
+      no_cache: false
+      pull: true
+      # https://github.com/questdb/questdb/blob/master/core/Dockerfile
+      dockerfile_inline: |
+        FROM questdb/questdb:7.2.1
+        RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+    image: ile-questdb:0.0.1
+    restart: always
+    hostname: questdb
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.10
+    ports:
+      - "8812:8812"
+      - "9000:9000"
+      - "9003:9003"
+      - "9009:9009"
+    environment:
+      - QDB_PG_USER=useradmin
+      - QDB_PG_PASSWORD=quest
+      - QDB_PG_READONLY_USER_ENABLED=true
+      - QDB_PG_READONLY_USER=admin
+      - QDB_PG_READONLY_PASSWORD=quest
+      # https://github.com/questdb/questdb/issues/3512#issuecomment-1609046049
+      - QDB_HTTP_MIN_WORKER_SLEEP_THRESHOLD=100
+      - QDB_HTTP_WORKER_SLEEP_THRESHOLD=100
+      - QDB_LINE_TCP_WRITER_WORKER_SLEEP_THRESHOLD=100
+      - QDB_LINE_TCP_IO_WORKER_SLEEP_THRESHOLD=100
+      - QDB_PG_WORKER_SLEEP_THRESHOLD=100
+      - QDB_WAL_APPLY_WORKER_SLEEP_THRESHOLD=100
+      - QDB_SHARED_WORKER_SLEEP_THRESHOLD=100
+    volumes:
+      - questdb_data:/var/lib/questdb
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://questdb.io/doc-s/operations/health-monitoring/
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:9003" ]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '2.00'
+        reservations:
+          cpus: '1.00'
+
+  grafana:
+    build:
+      context: ${PWD}
+      no_cache: false
+      pull: true
+      # https://github.com/grafana/grafana/blob/main/Dockerfile
+      dockerfile_inline: |
+        FROM grafana/grafana-oss:8.5.27-ubuntu
+        USER root
+        RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+        USER 472
+    image: ile-grafana:0.0.1
+    restart: always
+    hostname: grafana
+    networks:
+      - vnet
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://grafana.com/docs/grafana/latest/developers/http_api/other/#returns-health-information-about-grafana
+      # https://github.com/grafana/grafana/pull/27536
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:3000/api/health" ]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      questdb:
+        condition: service_healthy
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+
+  shellyscraper:
+    build:
+      context: ${PWD}/shellyscraper-ile
+      no_cache: false
+      pull: true
+    image: ile-shellyscraper:0.0.1
+    restart: always
+    networks:
+      - vnet
+    ports:
+      - "9080:9080"
+      - "9081:9081"
+    environment:
+      - ILE_QUESTDB_HOST=questdb
+      - ILE_QUESTDB_PORT=9009
+      - ILE_SHELLY_IPS=192.168.50.178,192.168.50.152,192.168.50.211,192.168.50.209
+      - ILE_DEBUG=false
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    depends_on:
+      questdb:
+        condition: service_healthy
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+
+  telegraf:
+    build:
+      context: ${PWD}
+      no_cache: false
+      pull: true
+      # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.26/Dockerfile
+      dockerfile_inline: |
+        FROM telegraf:1.26.3
+    image: ile-telegraf:0.0.1
+    user: telegraf:999
+    restart: always
+    network_mode: host
+    extra_hosts:
+      - questdb:192.168.130.10
+    volumes:
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PWD}/telegraf-ile/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    environment:
+      - HOST_ETC=/hostfs/etc
+      - HOST_PROC=/hostfs/proc
+      - HOST_SYS=/hostfs/sys
+      - HOST_VAR=/hostfs/var
+      - HOST_RUN=/hostfs/run
+      - HOST_MOUNT_PREFIX=/hostfs
+      - SOCKET_WRITER_ADDRESS=tcp://questdb:9009
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://github.com/influxdata/telegraf/blob/release-1.26/plugins/outputs/health/README.md
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8652" ]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      questdb:
+        condition: service_healthy
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
