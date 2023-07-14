@@ -11,6 +11,7 @@ import sys
 import threading
 import time
 import traceback
+import types
 import urllib.parse
 from typing import Callable, List, Optional, Tuple
 
@@ -71,6 +72,12 @@ class Env:
     ILE_SCRAPE_INTERVAL: str = os.environ.get("ILE_SCRAPE_INTERVAL", "60")
     ILE_BACKOFF_STRATEGY: str = os.environ.get("ILE_BACKOFF_STRATEGY", "0.5,1,3,3,5,60,90")
 
+    ILE_HTTP_BIND_HOST: str = os.environ.get("ILE_HTTP_BIND_HOST", "localhost")
+    ILE_HTTP_BIND_PORT: str = os.environ.get("ILE_HTTP_BIND_PORT", "9080")
+
+    ILE_WEBSOCKET_BIND_HOST: str = os.environ.get("ILE_WEBSOCKET_BIND_HOST", "localhost")
+    ILE_WEBSOCKET_BIND_PORT: str = os.environ.get("ILE_WEBSOCKET_BIND_PORT", "9081")
+
 
 class Config:
     debug: bool = Env.ILE_DEBUG.lower() == "true"
@@ -82,6 +89,9 @@ class Config:
 
     scrape_interval_seconds: int = int(Env.ILE_SCRAPE_INTERVAL)
     backoff_strategy_seconds: List[float] = list(map(float, filter(None, Env.ILE_BACKOFF_STRATEGY.split(","))))
+
+    http_bind_address: Tuple[str, int] = (Env.ILE_HTTP_BIND_HOST, int(Env.ILE_HTTP_BIND_PORT))
+    websocket_bind_address: Tuple[str, int] = (Env.ILE_WEBSOCKET_BIND_HOST, int(Env.ILE_WEBSOCKET_BIND_PORT))
 
 
 # --------------------- HELPERS -----------------------------------------------
@@ -123,11 +133,16 @@ def json_dumps(data: dict) -> str:
 
 
 def print_exception(exception: BaseException) -> None:
-    exc_type, exc_value, exc_traceback = sys.exc_info()
-    co_filename = exc_traceback.tb_frame.f_code.co_filename
-    co_name = exc_traceback.tb_frame.f_code.co_name
-    format_exception_only = traceback.format_exception_only(type(exception), exception)[0].strip()
-    print_(f"exception: {co_filename}:{exc_traceback.tb_lineno} ({co_name}) {format_exception_only}", file=sys.stderr)
+    exc_traceback: Optional[types.TracebackType] = exception.__traceback__
+
+    if exc_traceback:
+        co_filename = exc_traceback.tb_frame.f_code.co_filename
+        tb_lineno = exc_traceback.tb_lineno
+        co_name = exc_traceback.tb_frame.f_code.co_name
+        format_exception_only = traceback.format_exception_only(type(exception), exception)[0].strip()
+        print_(f"exception: {co_filename}:{tb_lineno} ({co_name}) {format_exception_only}", file=sys.stderr)
+    else:
+        print_(f"exception: {exception}", file=sys.stderr)
 
 
 def http_call(device_ip: str, path_and_query: str) -> dict:
@@ -143,7 +158,7 @@ def http_rpc_call(device_ip: str, method: str, params: Optional[dict] = None) ->
     # https://shelly-api-docs.shelly.cloud/gen2/General/RPCProtocol#request-frame
     post_body = {"jsonrpc": "2.0", "id": 1, "src": "ile", "method": method, "params": params}
     if params is None:
-        del post_body[params]
+        del post_body["params"]
 
     request = requests.post(f"http://{device_ip}/rpc", json=post_body, timeout=Config.shelly_api_http_timeout_seconds)
     request.raise_for_status()
@@ -190,7 +205,7 @@ def shelly_get_device_gen_and_type(device_ip: str) -> Tuple[int, str]:
         if device_gen == 2:
             device_type = shelly["model"]
         else:
-            device_type = None
+            device_type = "_unknown_"
 
     # gen1
     else:
@@ -340,8 +355,7 @@ class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
                     print_exception(exception)
 
                 # I/O operation that may be happening after the connection is closed.
-                questdb_thread = threading.Thread(target=write_ilp_to_questdb, args=(data,))
-                questdb_thread.daemon = False
+                questdb_thread = threading.Thread(target=write_ilp_to_questdb, args=(data,), daemon=False)
                 questdb_thread.start()
 
             else:
@@ -499,13 +513,12 @@ async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocket
 
                 except BaseException as exception:
                     print_exception(exception)
-                    device_name = None
+                    return
 
                 data = shelly_gen2_plusht_status_to_ilp(device_name, payload)
 
                 # I/O operation that may be happening after the connection is closed.
-                questdb_thread = threading.Thread(target=write_ilp_to_questdb, args=(data,))
-                questdb_thread.daemon = False
+                questdb_thread = threading.Thread(target=write_ilp_to_questdb, args=(data,), daemon=False)
                 questdb_thread.start()
 
         else:
@@ -566,25 +579,25 @@ def main():
     sigterm_threading_event = configure_sigterm_handler()
 
     for device_ip in Config.shelly_devices_ips:
-        status_thread = threading.Thread(target=shelly_device_status_loop, args=(sigterm_threading_event, device_ip,))
-        status_thread.daemon = False
+        status_thread = threading.Thread(target=shelly_device_status_loop, args=(sigterm_threading_event, device_ip,),
+                                         daemon=False)
         status_thread.start()
 
     # Handle Shelly H&T's action: "report sensor values".
-    shelly_ht_report_webhook = http.server.HTTPServer(('0.0.0.0', 9080), ShellyGen1HtReportSensorValuesHandler)
-    webhook_server_thread = threading.Thread(target=shelly_ht_report_webhook.serve_forever)
-    webhook_server_thread.daemon = True
+    shelly_ht_report_webhook = http.server.HTTPServer(Config.http_bind_address, ShellyGen1HtReportSensorValuesHandler)
+    webhook_server_thread = threading.Thread(target=shelly_ht_report_webhook.serve_forever, daemon=True)
     webhook_server_thread.start()
 
     # Act as WebSocket server. Handle gen2 notifications.
     # Let's mix classic http.server.HTTPServer with asyncio-based websockets!
     async def shelly_gen2_outbound_websocket_server():
-        ws_server = await websockets.serve(shelly_gen2_outbound_websocket_handler, '0.0.0.0', 9081)
+        ws_server = await websockets.serve(shelly_gen2_outbound_websocket_handler,
+                                           Config.websocket_bind_address[0], Config.websocket_bind_address[1])
         await ws_server.server.serve_forever()
 
     # Horrible. Works and is compatible with sigterm_threading_event.
-    websocket_sever_thread = threading.Thread(target=lambda: asyncio.run(shelly_gen2_outbound_websocket_server()))
-    websocket_sever_thread.daemon = True
+    websocket_sever_thread = threading.Thread(target=lambda: asyncio.run(shelly_gen2_outbound_websocket_server()),
+                                              daemon=True)
     websocket_sever_thread.start()
 
     print_("STARTED", file=sys.stderr)
