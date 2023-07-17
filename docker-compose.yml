@@ -160,14 +160,16 @@ services:
         reservations:
           cpus: '0.3'
 
+  # https://hub.docker.com/_/telegraf
+  # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
   telegraf:
     build:
       context: ${PWD}
       no_cache: false
       pull: true
-      # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.26/Dockerfile
+      # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.27/Dockerfile
       dockerfile_inline: |
-        FROM telegraf:1.26.3
+        FROM telegraf:1.27.2
     image: ile-telegraf:0.0.1
     user: telegraf:999
     restart: always
@@ -191,7 +193,7 @@ services:
         max-size: 10m
         max-file: 1
     healthcheck:
-      # https://github.com/influxdata/telegraf/blob/release-1.26/plugins/outputs/health/README.md
+      # https://github.com/influxdata/telegraf/blob/release-1.27/plugins/outputs/health/README.md
       test: [ "CMD", "curl", "-f", "http://127.0.0.1:8652" ]
       interval: 30s
       timeout: 10s
