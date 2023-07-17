@@ -1,4 +1,4 @@
-# shellyscraper-ile
+# ile-shellyscraper
 
 Collect data from Shelly devices, insert them into QuestDB and visualize data in Grafana.
 
