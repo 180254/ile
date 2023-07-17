@@ -72,10 +72,10 @@ class Env:
     ILE_SCRAPE_INTERVAL: str = os.environ.get("ILE_SCRAPE_INTERVAL", "60")
     ILE_BACKOFF_STRATEGY: str = os.environ.get("ILE_BACKOFF_STRATEGY", "0.5,1,3,3,5,60,90")
 
-    ILE_HTTP_BIND_HOST: str = os.environ.get("ILE_HTTP_BIND_HOST", "localhost")
+    ILE_HTTP_BIND_HOST: str = os.environ.get("ILE_HTTP_BIND_HOST", "127.0.0.1")
     ILE_HTTP_BIND_PORT: str = os.environ.get("ILE_HTTP_BIND_PORT", "9080")
 
-    ILE_WEBSOCKET_BIND_HOST: str = os.environ.get("ILE_WEBSOCKET_BIND_HOST", "localhost")
+    ILE_WEBSOCKET_BIND_HOST: str = os.environ.get("ILE_WEBSOCKET_BIND_HOST", "127.0.0.1")
     ILE_WEBSOCKET_BIND_PORT: str = os.environ.get("ILE_WEBSOCKET_BIND_PORT", "9081")
 
 
