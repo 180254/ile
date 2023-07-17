@@ -127,7 +127,7 @@ services:
 
   shellyscraper:
     build:
-      context: ${PWD}/shellyscraper-ile
+      context: ${PWD}/ile-shellyscraper
       no_cache: false
       pull: true
     image: ile-shellyscraper:0.0.1
@@ -177,7 +177,7 @@ services:
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${PWD}/telegraf-ile/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${PWD}/ile-telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     environment:
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc
