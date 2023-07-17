@@ -37,13 +37,13 @@ class Env:
     ITC_SOCKET_CONNECT_TIMEOUT: str = os.environ.get("ITC_SOCKET_CONNECT_TIMEOUT", "5s")
     ITC_SOCKET_TIMEOUT: str = os.environ.get("ITC_SOCKET_TIMEOUT", "30s")
 
-    ITC_MY_TCP_BIND_HOST: str = os.environ.get("ITC_MY_TCP_BIND_HOST", "localhost")
+    ITC_MY_TCP_BIND_HOST: str = os.environ.get("ITC_MY_TCP_BIND_HOST", "127.0.0.1")
     ITC_NY_TCP_BIND_PORT: str = os.environ.get("ITC_NY_TCP_BIND_PORT", "9999")
 
-    ITC_TARGET_TCP_HOST: str = os.environ.get("ITC_TARGET_TCP_HOST", "localhost")
+    ITC_TARGET_TCP_HOST: str = os.environ.get("ITC_TARGET_TCP_HOST", "127.0.0.1")
     ITC_TARGET_TCP_PORT: str = os.environ.get("ITC_TARGET_TCP_PORT", "9009")
 
-    ITC_REDIS_HOST: str = os.environ.get("ITC_REDIS_HOST", "localhost")
+    ITC_REDIS_HOST: str = os.environ.get("ITC_REDIS_HOST", "127.0.0.1")
     ITC_REDIS_PORT: str = os.environ.get("ITC_REDIS_PORT", "6379")
     ITC_REDIS_DB: str = os.environ.get("ITC_REDIS_DB", "0")
     ITC_REDIS_PASSWORD: Optional[str] = os.environ.get("ITC_REDIS_PASSWORD", None)
