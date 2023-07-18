@@ -38,7 +38,7 @@ class Env:
     ITC_SOCKET_TIMEOUT: str = os.environ.get("ITC_SOCKET_TIMEOUT", "30s")
 
     ITC_MY_TCP_BIND_HOST: str = os.environ.get("ITC_MY_TCP_BIND_HOST", "127.0.0.1")
-    ITC_NY_TCP_BIND_PORT: str = os.environ.get("ITC_NY_TCP_BIND_PORT", "9999")
+    ITC_MY_TCP_BIND_PORT: str = os.environ.get("ITC_MY_TCP_BIND_PORT", "9009")
 
     ITC_TARGET_TCP_HOST: str = os.environ.get("ITC_TARGET_TCP_HOST", "127.0.0.1")
     ITC_TARGET_TCP_PORT: str = os.environ.get("ITC_TARGET_TCP_PORT", "9009")
@@ -72,7 +72,7 @@ class Config:
     socket_connect_timeout: datetime.timedelta = duration(Env.ITC_SOCKET_CONNECT_TIMEOUT)
     socket_timeout: datetime.timedelta = duration(Env.ITC_SOCKET_TIMEOUT)
 
-    my_tcp_bind_address: Tuple[str, int] = (Env.ITC_MY_TCP_BIND_HOST, int(Env.ITC_NY_TCP_BIND_PORT))
+    my_tcp_bind_address: Tuple[str, int] = (Env.ITC_MY_TCP_BIND_HOST, int(Env.ITC_MY_TCP_BIND_PORT))
     target_tcp_address: Tuple[str, int] = (Env.ITC_TARGET_TCP_HOST, int(Env.ITC_TARGET_TCP_PORT))
 
     redis_host: str = Env.ITC_REDIS_HOST
@@ -167,45 +167,57 @@ def periodic(func: Callable[..., bool], interval_seconds: float, backoff_idx: in
     timer.start()
 
 
-class TCPParcelCollector(socketserver.StreamRequestHandler):
-    backpack: Deque[str] = collections.deque(maxlen=Config.parcel_collector_capacity)
+class TCPParcelCollector:
 
-    def handle(self):
-        self.request.setblocking(0)
+    def __init__(self, r: redis.Redis):
+        super().__init__()
+        self.backpack: Deque[str] = collections.deque(maxlen=Config.parcel_collector_capacity)
+        self.r: redis.Redis = r
 
-        while True:
-            data = self.rfile.readline()
-            if not data:
-                break
+    class Handler(socketserver.StreamRequestHandler):
+        def __init__(self, request, client_address, server, outer: 'TCPParcelCollector'):
+            self.outer = outer
+            super().__init__(request, client_address, server)
 
-            data = data.decode("utf-8").strip()
-            if not data:
-                break
+        def handle(self) -> None:
+            try:
+                while True:
+                    data = self.rfile.readline()
+                    if not data:
+                        break
 
-            self.backpack.append(data)
+                    data = data.decode("utf-8").strip()
+                    if not data:
+                        break
 
-            if len(self.backpack) >= Config.parcel_collector_capacity:
-                flush_thread = threading.Thread(target=self.deliver_to_warehouse, daemon=True)
-                flush_thread.start()
+                    self.outer.backpack.append(data)
 
-    @classmethod
-    def deliver_to_warehouse(cls, r: redis.Redis) -> bool:
+                    if len(self.outer.backpack) >= Config.parcel_collector_capacity:
+                        flush_thread = threading.Thread(target=self.outer.deliver_to_warehouse, daemon=True)
+                        flush_thread.start()
+            except BaseException as e:
+                print_exception(e)
+
+    def handler_factory(self, request, client_address, server) -> 'TCPParcelCollector.Handler':
+        return TCPParcelCollector.Handler(request, client_address, server, self)
+
+    def deliver_to_warehouse(self) -> bool:
         data = None
         try:
             flushed = 0
-            while cls.backpack and flushed < Config.parcel_collector_capacity:
+            while self.backpack and flushed < Config.parcel_collector_capacity:
                 try:
-                    data = cls.backpack.popleft()
+                    data = self.backpack.popleft()
                 except IndexError:
                     break
 
-                r.xadd(name=Config.redis_stream_name, id="*", fields={"data": data})
+                self.r.xadd(name=Config.redis_stream_name, id="*", fields={"data": data})
                 flushed += 1
             return True
         except redis.exceptions.RedisError as e:
             print_exception(e)
             if data:
-                cls.backpack.appendleft(data)
+                self.backpack.appendleft(data)
             return False
 
 
@@ -216,7 +228,6 @@ class DeliveryMan:
         # backpack = [(message_id, {field: value}), ...]
         self.backpack: List[Tuple[str, Dict]] = []
         self.backpack_rlock = threading.RLock()
-        self.first_day_at_work = True
         self.last_delivery = time.time()
         super().__init__()
 
@@ -226,11 +237,10 @@ class DeliveryMan:
             self.r.xdel(Config.redis_stream_name, init_id)
 
             xinfo_groups = self.r.xinfo_groups(name=Config.redis_stream_name)
-            if not any(xgroup["name"] == Config.redis_stream_group_name for xgroup in xinfo_groups):
-                self.r.xgroup_create(name=Config.redis_stream_name,
-                                     groupname=Config.redis_stream_group_name,
-                                     id="0",
-                                     mkstream=True)
+            for xgroup in xinfo_groups:
+                self.r.xgroup_destroy(name=Config.redis_stream_name, groupname=xgroup["name"])
+
+            self.r.xgroup_create(name=Config.redis_stream_name, groupname=Config.redis_stream_group_name, id="0")
 
             self.r.incr(Config.redis_hits_on_target_cnt_name, 0)
             self.r.incr(Config.redis_delivered_cnt_name, 0)
@@ -249,10 +259,9 @@ class DeliveryMan:
             xreadgroup = self.r.xreadgroup(
                     groupname=Config.redis_stream_group_name,
                     consumername=Config.redis_stream_consumer_name,
-                    streams={Config.redis_stream_name: "0" if self.first_day_at_work else ">"},
-                    count=max(Config.redis_steam_read_count - len(self.backpack), 1),
+                    streams={Config.redis_stream_name: ">"},
+                    count=min(max(Config.delivery_man_capacity - len(self.backpack), 1), Config.redis_steam_read_count),
                     noack=False)
-            self.first_day_at_work = False
         except redis.exceptions.RedisError as e:
             print_exception(e)
             xreadgroup = []
@@ -346,15 +355,13 @@ def main() -> int:
                     decode_responses=True)
 
     # [Pickup location: my TCP] -> [Parcel collector]
-    tcp_server = socketserver.TCPServer(Config.my_tcp_bind_address, TCPParcelCollector)
+    tcp_parcel_collector = TCPParcelCollector(r)
+    tcp_server = socketserver.TCPServer(Config.my_tcp_bind_address, tcp_parcel_collector.handler_factory)
     webhook_server_thread = threading.Thread(target=tcp_server.serve_forever, daemon=True)
     webhook_server_thread.start()
 
     # [Parcel collector] -> [Warehouse: Redis stream]
-    periodic(TCPParcelCollector.deliver_to_warehouse,
-             Config.parcel_collector_flush_interval.total_seconds(),
-             -1,
-             r)
+    periodic(tcp_parcel_collector.deliver_to_warehouse, Config.parcel_collector_flush_interval.total_seconds(), -1)
 
     # [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP]
     delivery_man = DeliveryMan(r)
@@ -364,10 +371,7 @@ def main() -> int:
              Config.delivery_man_collect_interval.total_seconds(),
              -1)
 
-    periodic(status,
-             Config.status_interval.total_seconds(),
-             -1,
-             TCPParcelCollector, delivery_man, r)
+    periodic(status, Config.status_interval.total_seconds(), -1, tcp_parcel_collector, delivery_man, r)
 
     sigterm_threading_event.wait()
     return 0
