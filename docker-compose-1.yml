@@ -1,5 +1,7 @@
 version: "3.8"
 
+name: ile
+
 networks:
   vnet:
     driver: bridge
@@ -43,11 +45,11 @@ services:
       - "9003:9003"
       - "9009:9009"
     environment:
-      - QDB_PG_USER=useradmin
-      - QDB_PG_PASSWORD=quest
-      - QDB_PG_READONLY_USER_ENABLED=true
-      - QDB_PG_READONLY_USER=admin
-      - QDB_PG_READONLY_PASSWORD=quest
+      - QDB_PG_USER=${QDB_PG_USER}
+      - QDB_PG_PASSWORD=${QDB_PG_PASSWORD}
+      - QDB_PG_READONLY_USER_ENABLED=${QDB_PG_READONLY_USER_ENABLED}
+      - QDB_PG_READONLY_USER=${QDB_PG_READONLY_USER}
+      - QDB_PG_READONLY_PASSWORD=${QDB_PG_READONLY_PASSWORD}
       # https://github.com/questdb/questdb/issues/3512#issuecomment-1609046049
       - QDB_HTTP_MIN_WORKER_SLEEP_THRESHOLD=100
       - QDB_HTTP_WORKER_SLEEP_THRESHOLD=100
@@ -94,7 +96,8 @@ services:
     restart: always
     hostname: grafana
     networks:
-      - vnet
+      vnet:
+        ipv4_address: 192.168.130.11
     ports:
       - "3000:3000"
     volumes:
@@ -113,7 +116,7 @@ services:
       retries: 3
     depends_on:
       questdb:
-        condition: service_healthy
+        condition: service_started
         restart: true
     deploy:
       restart_policy:
@@ -133,14 +136,15 @@ services:
     image: ile-shellyscraper:0.0.1
     restart: always
     networks:
-      - vnet
+      vnet:
+        ipv4_address: 192.168.130.12
     ports:
       - "9080:9080"
       - "9081:9081"
     environment:
       - ILE_QUESTDB_HOST=questdb
       - ILE_QUESTDB_PORT=9009
-      - ILE_SHELLY_IPS=192.168.50.178,192.168.50.152,192.168.50.211,192.168.50.209
+      - ILE_SHELLY_IPS=
       - ILE_DEBUG=false
     logging:
       options:
@@ -148,7 +152,7 @@ services:
         max-file: 1
     depends_on:
       questdb:
-        condition: service_healthy
+        condition: service_started
         restart: true
     deploy:
       restart_policy:
@@ -176,10 +180,6 @@ services:
     network_mode: host
     extra_hosts:
       - questdb:192.168.130.10
-    volumes:
-      - /:/hostfs:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${PWD}/ile-telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     environment:
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc
@@ -187,7 +187,12 @@ services:
       - HOST_VAR=/hostfs/var
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
-      - SOCKET_WRITER_ADDRESS=tcp://questdb:9009
+      - ILT_SOCKET_WRITER_ADDRESS=tcp://${ILT_SOCKET_WRITER_HOST}:9009
+      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
+    volumes:
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PWD}/ile-telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     logging:
       options:
         max-size: 10m
@@ -201,7 +206,7 @@ services:
       retries: 3
     depends_on:
       questdb:
-        condition: service_healthy
+        condition: service_started
         restart: true
     deploy:
       restart_policy:

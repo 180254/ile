@@ -1,0 +1,165 @@
+version: "3.8"
+
+name: ile
+
+networks:
+  vnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.130.0/24
+
+volumes:
+  redis_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${PWD}/redis_data
+
+services:
+  redis:
+    build:
+      context: ${PWD}
+      no_cache: false
+      pull: true
+      # https://github.com/docker-library/redis/blob/master/7.0/Dockerfile
+      # https://redis.io/docs/management/config-file/
+      dockerfile_inline: |
+        FROM redis:7.0.12
+        RUN mkdir -p /usr/local/etc/redis
+        RUN echo "save 3600 1 300 100 60 10000" > /usr/local/etc/redis/redis.conf
+        RUN echo "appendonly yes" >> /usr/local/etc/redis/redis.conf
+        RUN echo "requirepass ${ILE_REDIS_PASSWORD}" >> /usr/local/etc/redis/redis.conf
+        RUN echo "dir /data" >> /usr/local/etc/redis/redis.conf
+        CMD [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    image: ile-redis:0.0.1
+    restart: always
+    hostname: redis
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.20
+    volumes:
+      - redis_data:/data
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://questdb.io/doc-s/operations/health-monitoring/
+      test: timeout -s 15 5 redis-cli -h localhost -p 6379 -a ${ILE_REDIS_PASSWORD} ping | grep -qaFi PONG || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+
+  tcp-cache:
+    build:
+      context: ${PWD}/ile-tcp-cache
+      no_cache: false
+      pull: true
+    image: ile-tcp-cache:0.0.1
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.21
+    extra_hosts:
+      - questdb:192.168.130.10
+    ports:
+      - "9152:9152"
+    environment:
+      - ITC_MY_TCP_BIND_HOST=0.0.0.0
+      - ITC_MY_TCP_BIND_PORT=9152
+      - ITC_TARGET_TCP_HOST=${ITC_TARGET_TCP_HOST}
+      - ITC_TARGET_TCP_PORT=9009
+      - ITC_REDIS_HOST=redis
+      - ITC_REDIS_PORT=6379
+      - ITC_REDIS_PASSWORD=${ILE_REDIS_PASSWORD}
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    depends_on:
+      redis:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+
+  # https://hub.docker.com/_/telegraf
+  # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
+  telegraf2:
+    build:
+      context: ${PWD}
+      no_cache: false
+      pull: true
+      # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.27/Dockerfile
+      dockerfile_inline: |
+        FROM telegraf:1.27.2
+        CMD telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d
+    image: ile-telegraf2:0.0.1
+    user: telegraf:999
+    restart: always
+    network_mode: host
+    extra_hosts:
+      - ile-tcp-cache:192.168.130.21
+    environment:
+      - HOST_ETC=/hostfs/etc
+      - HOST_PROC=/hostfs/proc
+      - HOST_SYS=/hostfs/sys
+      - HOST_VAR=/hostfs/var
+      - HOST_RUN=/hostfs/run
+      - HOST_MOUNT_PREFIX=/hostfs
+      - LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libnvidia-ml.so
+      - ILT_SOCKET_WRITER_ADDRESS=tcp://ile-tcp-cache:9152
+      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8653
+    volumes:
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PWD}/ile-telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${PWD}/ile-telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
+      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
+      - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so:ro
+    devices:
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia0:/dev/nvidia0
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://github.com/influxdata/telegraf/blob/release-1.27/plugins/outputs/health/README.md
+      test: timeout -s 15 5 curl -f http://127.0.0.1:8653 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      tcp-cache:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
