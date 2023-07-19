@@ -322,7 +322,7 @@ class DeliveryMan:
         else:
             messages = []
 
-        if len(self.backpack) > Config.delivery_man_capacity:
+        if len(self.backpack) >= Config.delivery_man_capacity:
             self._incr_overloaded_cnt()
 
         if len(self.backpack) >= Config.delivery_man_capacity or \
