@@ -55,15 +55,15 @@ class Env:
     ITC_HITS_ON_TARGET_CNT_NAME: str = os.environ.get("ITC_HITS_ON_TARGET_CNT_NAME", "itc:hitsontarget")
     ITC_REDIS_DELIVERED_CNT_NAME: str = os.environ.get("ITC_REDIS_DELIVERED_CNT_NAME", "itc:delivered")
 
-    ITC_PARCEL_COLLECTOR_CAPACITY: str = os.environ.get("ITC_PARCEL_COLLECTOR_CAPACITY", "100")
-    ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL: str = os.environ.get("ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL", "10s")
+    ITC_PARCEL_COLLECTOR_CAPACITY: str = os.environ.get("ITC_PARCEL_COLLECTOR_CAPACITY", "2048")
+    ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL: str = os.environ.get("ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL", "60s")
 
-    ITC_REDIS_STREAM_READ_COUNT: str = os.environ.get("ITC_REDIS_STREAM_READ_COUNT", "100")
-    ITC_DELIVERY_MAN_CAPACITY: str = os.environ.get("ITC_DELIVERY_MAN_CAPACITY", "1000")
-    ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = os.environ.get("ITC_DELIVERY_MAN_COLLECT_INTERVAL", "10s")
+    ITC_REDIS_STREAM_READ_COUNT: str = os.environ.get("ITC_REDIS_STREAM_READ_COUNT", "256")
+    ITC_DELIVERY_MAN_CAPACITY: str = os.environ.get("ITC_DELIVERY_MAN_CAPACITY", "256")
+    ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = os.environ.get("ITC_DELIVERY_MAN_COLLECT_INTERVAL", "60s")
     ITC_DELIVERY_MAN_FLUSH_INTERVAL: str = os.environ.get("ITC_DELIVERY_MAN_FLUSH_INTERVAL", "60s")
 
-    ITC_STATUS_INTERVAL = os.environ.get("ITC_STATUS_INTERVAL", "5s")
+    ITC_STATUS_INTERVAL = os.environ.get("ITC_STATUS_INTERVAL", "60s")
 
     ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS = os.environ.get("ITC_REDIS_EXCEPTIONS_BACKOFF", "1.1,1.5,2.0,5.0")
 
@@ -75,8 +75,7 @@ class Config:
     my_tcp_bind_address: Tuple[str, int] = (Env.ITC_MY_TCP_BIND_HOST, int(Env.ITC_MY_TCP_BIND_PORT))
     target_tcp_address: Tuple[str, int] = (Env.ITC_TARGET_TCP_HOST, int(Env.ITC_TARGET_TCP_PORT))
 
-    redis_host: str = Env.ITC_REDIS_HOST
-    redis_port: int = int(Env.ITC_REDIS_PORT)
+    redis_address: Tuple[str, int] = (Env.ITC_REDIS_HOST, int(Env.ITC_REDIS_PORT))
     redis_db: int = int(Env.ITC_REDIS_DB)
     redis_password: Optional[str] = Env.ITC_REDIS_PASSWORD
 
@@ -360,8 +359,8 @@ def main() -> int:
 
     sigterm_threading_event = configure_sigterm_handler()
 
-    r = redis.Redis(host=Config.redis_host,
-                    port=Config.redis_port,
+    r = redis.Redis(host=Config.redis_address[0],
+                    port=Config.redis_address[1],
                     db=Config.redis_db,
                     password=Config.redis_password,
                     socket_timeout=Config.socket_timeout.total_seconds(),
