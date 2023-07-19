@@ -64,8 +64,14 @@ class Env:
 
     ITC_REDIS_STREAM_READ_COUNT: str = os.environ.get("ITC_REDIS_STREAM_READ_COUNT", "256")
     ITC_DELIVERY_MAN_CAPACITY: str = os.environ.get("ITC_DELIVERY_MAN_CAPACITY", "256")
+
     ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = os.environ.get("ITC_DELIVERY_MAN_COLLECT_INTERVAL", "60s")
     ITC_DELIVERY_MAN_FLUSH_INTERVAL: str = os.environ.get("ITC_DELIVERY_MAN_FLUSH_INTERVAL", "60s")
+
+    ITC_PARCEL_COLLECTOR_OVERLOADED_CNT_NAME: str = os.environ.get("ITC_PARCEL_COLLECTOR_OVERLOADED_CNT_NAME",
+                                                                   "itc:pcoverloaded")
+    ITC_DELIVERY_MAN_OVERLOADED_CNT_NAME: str = os.environ.get("ITC_DELIVERY_MAN_OVERLOADED_CNT_NAME",
+                                                               "itc:dmcapacityreached")
 
     ITC_STATUS_INTERVAL = os.environ.get("ITC_STATUS_INTERVAL", "60s")
 
@@ -100,6 +106,9 @@ class Config:
     delivery_man_capacity: int = int(Env.ITC_DELIVERY_MAN_CAPACITY)
     delivery_man_collect_interval: datetime.timedelta = duration(Env.ITC_DELIVERY_MAN_COLLECT_INTERVAL)
     delivery_man_flush_interval: datetime.timedelta = duration(Env.ITC_DELIVERY_MAN_FLUSH_INTERVAL)
+
+    parcel_collector_overloaded_cnt_name: str = Env.ITC_PARCEL_COLLECTOR_OVERLOADED_CNT_NAME
+    delivery_man_overloaded_cnt_name: str = Env.ITC_DELIVERY_MAN_OVERLOADED_CNT_NAME
 
     status_interval: datetime.timedelta = duration(Env.ITC_STATUS_INTERVAL)
 
@@ -226,6 +235,8 @@ class TCPParcelCollector:
 
                 if len(self.outer.backpack) >= Config.parcel_collector_capacity * 0.75 \
                         and not self.outer.sigterm_threading_event.is_set():
+                    threading.Thread(target=self.outer._incr_overloaded_cnt, daemon=False).start()
+
                     # simple check to limit the number of threads
                     # synchronization not needed, more than one thread is allowed
                     if not self.outer.handler_delivery_thread or not self.outer.handler_delivery_thread.is_alive():
@@ -260,6 +271,12 @@ class TCPParcelCollector:
                 self.backpack.appendleft(data)
             return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
+    def _incr_overloaded_cnt(self) -> None:
+        try:
+            self.r.incr(Config.parcel_collector_overloaded_cnt_name, 1)
+        except redis.exceptions.RedisError as e:
+            print_exception(e)
+
 
 class DeliveryMan:
 
@@ -271,27 +288,9 @@ class DeliveryMan:
         self.backpack_rlock = threading.RLock()
         self.last_delivery = time.time()
 
-    def init(self) -> bool:
-        try:
-            init_id = self.r.xadd(name=Config.redis_stream_name, id="*", fields={"init": "1"})
-            self.r.xdel(Config.redis_stream_name, init_id)
-
-            xinfo_groups = self.r.xinfo_groups(name=Config.redis_stream_name)
-            for xgroup in xinfo_groups:
-                self.r.xgroup_destroy(name=Config.redis_stream_name, groupname=xgroup["name"])
-
-            self.r.xgroup_create(name=Config.redis_stream_name, groupname=Config.redis_stream_group_name, id="0")
-
-            self.r.incr(Config.redis_hits_on_target_cnt_name, 0)
-            self.r.incr(Config.redis_delivered_cnt_name, 0)
-            return True
-
-        except redis.exceptions.RedisError as e:
-            print_exception(e)
-            return False
-
     def collect_from_warehouse_and_occasionally_deliver_to_target_tcp(self) -> Periodic.PeriodicResult:
         if len(self.backpack) >= Config.delivery_man_capacity:
+            self._incr_overloaded_cnt()
             if not self._deliver_to_target_tcp():
                 return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
@@ -322,6 +321,9 @@ class DeliveryMan:
                 self.backpack.extend(messages)
         else:
             messages = []
+
+        if len(self.backpack) > Config.delivery_man_capacity:
+            self._incr_overloaded_cnt()
 
         if len(self.backpack) >= Config.delivery_man_capacity or \
                 ((time.time() - self.last_delivery) > Config.delivery_man_flush_interval.total_seconds()):
@@ -372,6 +374,12 @@ class DeliveryMan:
 
         return True
 
+    def _incr_overloaded_cnt(self) -> None:
+        try:
+            self.r.incr(Config.delivery_man_overloaded_cnt_name, 1)
+        except redis.exceptions.RedisError as e:
+            print_exception(e)
+
 
 def status(parsel_collector: TCPParcelCollector, delivery_man: DeliveryMan, r: redis.Redis) -> Periodic.PeriodicResult:
     try:
@@ -387,13 +395,18 @@ def status(parsel_collector: TCPParcelCollector, delivery_man: DeliveryMan, r: r
         target_tcp_hits = r.get(Config.redis_hits_on_target_cnt_name)
         target_tcp_delivered = r.get(Config.redis_delivered_cnt_name)
 
+        parcel_collector_overloaded = r.get(Config.parcel_collector_overloaded_cnt_name)
+        delivery_man_overloaded = r.get(Config.delivery_man_overloaded_cnt_name)
+
         print_(f"threading.active_count: {threading_active_count} | "
                f"parcel_collector.backpack: {parcel_collector_backpack} | "
                f"warehouse.xlen: {warehouse_xlen} | "
                f"warehouse.xpending: {warehouse_xpending} | "
                f"delivery_man.backpack: {delivery_man_backpack} | "
                f"target_tcp.hists: {target_tcp_hits} | "
-               f"target_tcp.delivered: {target_tcp_delivered}")
+               f"target_tcp.delivered: {target_tcp_delivered} | "
+               f"parcel_collector.overloaded: {parcel_collector_overloaded} | "
+               f"delivery_man.overloaded: {delivery_man_overloaded}")
 
         return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
 
@@ -418,6 +431,30 @@ def wait_for_redis(r: redis.Redis) -> bool:
             time.sleep(Config.redis_startup_retry_interval.total_seconds())
 
 
+def redis_init(r: redis.Redis) -> bool:
+    try:
+        init_id = r.xadd(name=Config.redis_stream_name, id="*", fields={"init": "1"})
+        r.xdel(Config.redis_stream_name, init_id)
+
+        xinfo_groups = r.xinfo_groups(name=Config.redis_stream_name)
+        for xgroup in xinfo_groups:
+            r.xgroup_destroy(name=Config.redis_stream_name, groupname=xgroup["name"])
+
+        r.xgroup_create(name=Config.redis_stream_name, groupname=Config.redis_stream_group_name, id="0")
+
+        r.incr(Config.redis_hits_on_target_cnt_name, 0)
+        r.incr(Config.redis_delivered_cnt_name, 0)
+
+        r.incr(Config.delivery_man_overloaded_cnt_name, 0)
+        r.incr(Config.parcel_collector_overloaded_cnt_name, 0)
+
+        return True
+
+    except redis.exceptions.RedisError as e:
+        print_exception(e)
+        return False
+
+
 def main() -> int:
     print_("Config" + str(vars(Config)), file=sys.stderr)
 
@@ -434,6 +471,9 @@ def main() -> int:
     if not wait_for_redis(r):
         return -1
 
+    if not redis_init(r):
+        return -1
+
     # [Pickup location: my TCP] -> [Parcel collector]
     tcp_parcel_collector = TCPParcelCollector(r, sigterm_threading_event)
     tcp_server = socketserver.TCPServer(Config.my_tcp_bind_address, tcp_parcel_collector.handler_factory)
@@ -448,8 +488,6 @@ def main() -> int:
 
     # [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP]
     delivery_man = DeliveryMan(r)
-    if not delivery_man.init():
-        return -1
     delivery_man_periodic_collect = Periodic(delivery_man.collect_from_warehouse_and_occasionally_deliver_to_target_tcp,
                                              Config.delivery_man_collect_interval, sigterm_threading_event)
     delivery_man_periodic_collect.start()
