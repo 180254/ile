@@ -12,6 +12,7 @@ import threading
 import time
 import traceback
 import types
+import typing
 from typing import Tuple, List, Callable, Optional, Deque, Dict
 
 import redis
@@ -34,48 +35,65 @@ def duration(value: str) -> datetime.timedelta:
                               milliseconds=int(matchdict['milliseconds'] or 0))
 
 
+# https://stackoverflow.com/a/1094933/8574922
+def size_fmt(num: int, mode: typing.Literal["metric", "binary"] = "metric", suffix=""):
+    base = 1024.0 if mode == "binary" else 1000.0
+    i = "i" if mode == "binary" and num >= base else ""
+    for unit in ("", "K", "M", "G", "T", "P", "E", "Z"):
+        if abs(num) < base:
+            return f"{num:3.1f}{unit}{i}{suffix}"
+        num /= base
+    return f"{num:.1f}Y{i}{suffix}"
+
+
+getenv = os.environ.get
+
+
 class Env:
-    ITC_SOCKET_CONNECT_TIMEOUT: str = os.environ.get("ITC_SOCKET_CONNECT_TIMEOUT", "5s")
-    ITC_SOCKET_TIMEOUT: str = os.environ.get("ITC_SOCKET_TIMEOUT", "30s")
+    ITC_SOCKET_CONNECT_TIMEOUT: str = getenv("ITC_SOCKET_CONNECT_TIMEOUT", "5s")
+    ITC_SOCKET_TIMEOUT: str = getenv("ITC_SOCKET_TIMEOUT", "30s")
 
-    ITC_MY_TCP_BIND_HOST: str = os.environ.get("ITC_MY_TCP_BIND_HOST", "127.0.0.1")
-    ITC_MY_TCP_BIND_PORT: str = os.environ.get("ITC_MY_TCP_BIND_PORT", "9009")
+    ITC_MY_TCP_BIND_HOST: str = getenv("ITC_MY_TCP_BIND_HOST", "127.0.0.1")
+    ITC_MY_TCP_BIND_PORT: str = getenv("ITC_MY_TCP_BIND_PORT", "9009")
 
-    ITC_TARGET_TCP_HOST: str = os.environ.get("ITC_TARGET_TCP_HOST", "127.0.0.1")
-    ITC_TARGET_TCP_PORT: str = os.environ.get("ITC_TARGET_TCP_PORT", "9009")
+    ITC_TARGET_TCP_HOST: str = getenv("ITC_TARGET_TCP_HOST", "127.0.0.1")
+    ITC_TARGET_TCP_PORT: str = getenv("ITC_TARGET_TCP_PORT", "9009")
 
-    ITC_REDIS_HOST: str = os.environ.get("ITC_REDIS_HOST", "127.0.0.1")
-    ITC_REDIS_PORT: str = os.environ.get("ITC_REDIS_PORT", "6379")
-    ITC_REDIS_DB: str = os.environ.get("ITC_REDIS_DB", "0")
-    ITC_REDIS_PASSWORD: Optional[str] = os.environ.get("ITC_REDIS_PASSWORD", None)
+    ITC_REDIS_HOST: str = getenv("ITC_REDIS_HOST", "127.0.0.1")
+    ITC_REDIS_PORT: str = getenv("ITC_REDIS_PORT", "6379")
+    ITC_REDIS_DB: str = getenv("ITC_REDIS_DB", "0")
+    ITC_REDIS_PASSWORD: Optional[str] = getenv("ITC_REDIS_PASSWORD", None)
 
-    ITC_REDIS_STARTUP_TIMEOUT: str = os.environ.get("ITC_REDIS_STARTUP_TIMEOUT", "30s")
-    ITC_REDIS_STARTUP_RETRY_INTERVAL: str = os.environ.get("ITC_REDIS_STARTUP_RETRY_INTERVAL", "1s")
+    ITC_REDIS_STARTUP_TIMEOUT: str = getenv("ITC_REDIS_STARTUP_TIMEOUT", "30s")
+    ITC_REDIS_STARTUP_RETRY_INTERVAL: str = getenv("ITC_REDIS_STARTUP_RETRY_INTERVAL", "1s")
 
-    ITC_REDIS_STREAM_NAME: str = os.environ.get("ITC_REDIS_STREAM_NAME", "itc")
-    ITC_REDIS_STREAM_GROUP_NAME: str = os.environ.get("ITC_REDIS_STREAM_GROUP_NAME", "itc")
-    ITC_REDIS_STREAM_CONSUMER_NAME: str = os.environ.get("ITC_REDIS_STREAM_CONSUMER_NAME", "itc")
+    ITC_REDIS_STREAM_NAME: str = getenv("ITC_REDIS_STREAM_NAME", "itc")
+    ITC_REDIS_STREAM_GROUP_NAME: str = getenv("ITC_REDIS_STREAM_GROUP_NAME", "itc")
+    ITC_REDIS_STREAM_CONSUMER_NAME: str = getenv("ITC_REDIS_STREAM_CONSUMER_NAME", "itc")
 
-    ITC_HITS_ON_TARGET_CNT_NAME: str = os.environ.get("ITC_HITS_ON_TARGET_CNT_NAME", "itc:hitsontarget")
-    ITC_REDIS_DELIVERED_CNT_NAME: str = os.environ.get("ITC_REDIS_DELIVERED_CNT_NAME", "itc:delivered")
+    ITC_PARCEL_COLLECTOR_CAPACITY: str = getenv("ITC_PARCEL_COLLECTOR_CAPACITY", "2048")
+    ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL: str = getenv("ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL", "60s")
 
-    ITC_PARCEL_COLLECTOR_CAPACITY: str = os.environ.get("ITC_PARCEL_COLLECTOR_CAPACITY", "2048")
-    ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL: str = os.environ.get("ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL", "60s")
+    ITC_REDIS_STREAM_READ_COUNT: str = getenv("ITC_REDIS_STREAM_READ_COUNT", "2048")
+    ITC_DELIVERY_MAN_CAPACITY: str = getenv("ITC_DELIVERY_MAN_CAPACITY", "4096")
+    # https://questdb.io/docs/reference/configuration/ line.tcp.msg.buffer.size = 32768
+    ITC_TARGET_MAX_PAYLOAD_BYTES: str = getenv("ITC_TARGET_MAX_PAYLOAD_BYTES", "32768")
 
-    ITC_REDIS_STREAM_READ_COUNT: str = os.environ.get("ITC_REDIS_STREAM_READ_COUNT", "256")
-    ITC_DELIVERY_MAN_CAPACITY: str = os.environ.get("ITC_DELIVERY_MAN_CAPACITY", "256")
+    ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = getenv("ITC_DELIVERY_MAN_COLLECT_INTERVAL", "60s")
+    ITC_DELIVERY_MAN_FLUSH_INTERVAL: str = getenv("ITC_DELIVERY_MAN_FLUSH_INTERVAL", "60s")
 
-    ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = os.environ.get("ITC_DELIVERY_MAN_COLLECT_INTERVAL", "60s")
-    ITC_DELIVERY_MAN_FLUSH_INTERVAL: str = os.environ.get("ITC_DELIVERY_MAN_FLUSH_INTERVAL", "60s")
+    ITC_COUNTER_HITS_ON_TARGET: str = getenv("ITC_COUNTER_HITS_ON_TARGET", "itc:hitsontarget")
+    ITC_COUNTER_DELIVERED_MSGS: str = getenv("ITC_COUNTER_DELIVERED_MSGS", "itc:deliveredmsgs")
+    ITC_COUNTER_DELIVERED_BYTES: str = getenv("ITC_COUNTER_DELIVERED_BYTES", "itc:deliveredbytes")
 
-    ITC_PARCEL_COLLECTOR_OVERLOADED_CNT_NAME: str = os.environ.get("ITC_PARCEL_COLLECTOR_OVERLOADED_CNT_NAME",
-                                                                   "itc:pcoverloaded")
-    ITC_DELIVERY_MAN_OVERLOADED_CNT_NAME: str = os.environ.get("ITC_DELIVERY_MAN_OVERLOADED_CNT_NAME",
-                                                               "itc:dmcapacityreached")
+    ITC_COUNTER_PARCEL_COLLECTOR_OVERLOADED: str = getenv("ITC_COUNTER_PARCEL_COLLECTOR_OVERLOADED", "itc:pcoverloaded")
+    ITC_COUNTER_DELIVERY_MAN_OVERLOADED: str = getenv("ITC_COUNTER_DELIVERY_MAN_OVERLOADED", "itc:dmoverloaded")
+    ITC_COUNTER_TARGET_PAYLOAD_SPLIT: str = getenv("ITC_COUNTER_TARGET_PAYLOAD_SPLIT", "itc:targetpayloadsplit")
 
-    ITC_STATUS_INTERVAL = os.environ.get("ITC_STATUS_INTERVAL", "60s")
+    ITC_STATUS_INTERVAL: str = getenv("ITC_STATUS_INTERVAL", "60s")
 
-    ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS = os.environ.get("ITC_REDIS_EXCEPTIONS_BACKOFF", "1.1,1.5,2.0,5.0")
+    ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS: str = getenv("ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS",
+                                                           "1.1,1.5,2.0,5.0")
 
 
 class Config:
@@ -96,19 +114,23 @@ class Config:
     redis_stream_group_name: str = Env.ITC_REDIS_STREAM_GROUP_NAME
     redis_stream_consumer_name: str = Env.ITC_REDIS_STREAM_CONSUMER_NAME
 
-    redis_delivered_cnt_name: str = Env.ITC_REDIS_DELIVERED_CNT_NAME
-    redis_hits_on_target_cnt_name: str = Env.ITC_HITS_ON_TARGET_CNT_NAME
-
     parcel_collector_capacity: int = int(Env.ITC_PARCEL_COLLECTOR_CAPACITY)
     parcel_collector_flush_interval: datetime.timedelta = duration(Env.ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL)
 
     redis_steam_read_count: int = int(Env.ITC_REDIS_STREAM_READ_COUNT)
     delivery_man_capacity: int = int(Env.ITC_DELIVERY_MAN_CAPACITY)
+    target_capacity_bytes: int = int(Env.ITC_TARGET_MAX_PAYLOAD_BYTES)
+
     delivery_man_collect_interval: datetime.timedelta = duration(Env.ITC_DELIVERY_MAN_COLLECT_INTERVAL)
     delivery_man_flush_interval: datetime.timedelta = duration(Env.ITC_DELIVERY_MAN_FLUSH_INTERVAL)
 
-    parcel_collector_overloaded_cnt_name: str = Env.ITC_PARCEL_COLLECTOR_OVERLOADED_CNT_NAME
-    delivery_man_overloaded_cnt_name: str = Env.ITC_DELIVERY_MAN_OVERLOADED_CNT_NAME
+    counter_hits_on_target: str = Env.ITC_COUNTER_HITS_ON_TARGET
+    counter_delivered_msgs: str = Env.ITC_COUNTER_DELIVERED_MSGS
+    counter_delivered_bytes: str = Env.ITC_COUNTER_DELIVERED_BYTES
+
+    counter_parcel_collector_overloaded: str = Env.ITC_COUNTER_PARCEL_COLLECTOR_OVERLOADED
+    counter_delivery_man_overloaded: str = Env.ITC_COUNTER_DELIVERY_MAN_OVERLOADED
+    counter_target_payload_split: str = Env.ITC_COUNTER_TARGET_PAYLOAD_SPLIT
 
     status_interval: datetime.timedelta = duration(Env.ITC_STATUS_INTERVAL)
 
@@ -164,6 +186,26 @@ def configure_sigterm_handler() -> threading.Event:
     return sigterm_threading_event
 
 
+class VerboseThread(threading.Thread):
+
+    def run(self) -> None:
+        try:
+            super().run()
+        except BaseException as e:
+            print_exception(e)
+            raise
+
+
+class VerboseTimer(threading.Timer):
+
+    def run(self) -> None:
+        try:
+            super().run()
+        except BaseException as e:
+            print_exception(e)
+            raise
+
+
 class Periodic:
     class PeriodicResult(enum.Enum):
         REPEAT_ON_SCHEDULE = enum.auto()
@@ -179,7 +221,7 @@ class Periodic:
         self.backoff_idx = -1
 
     def start(self) -> None:
-        threading.Thread(target=self._run, daemon=False).start()
+        VerboseThread(target=self._run, daemon=False).start()
 
     def _run(self) -> None:
         try:
@@ -201,7 +243,7 @@ class Periodic:
             raise NotImplementedError
 
         if not self.sigterm_threading_event.is_set():
-            timer = threading.Timer(delay, self._run)
+            timer = VerboseTimer(delay, self._run)
             timer.daemon = False
             timer.start()
 
@@ -227,24 +269,30 @@ class TCPParcelCollector:
                     if not data_bytes:
                         break
 
-                    data = data_bytes.decode("utf-8").strip()
-                    if not data:
+                    data = data_bytes.decode("utf-8")
+                    if not data.strip():
                         break
 
                     self.outer.backpack.append(data)
 
                 if len(self.outer.backpack) >= Config.parcel_collector_capacity * 0.75 \
                         and not self.outer.sigterm_threading_event.is_set():
-                    threading.Thread(target=self.outer._incr_overloaded_cnt, daemon=False).start()
+                    VerboseThread(target=self._incr_overloaded_cnt, daemon=False).start()
 
                     # simple check to limit the number of threads
                     # synchronization not needed, more than one thread is allowed
                     if not self.outer.handler_delivery_thread or not self.outer.handler_delivery_thread.is_alive():
-                        flush_thread = threading.Thread(target=self.outer.deliver_to_warehouse, daemon=False)
+                        flush_thread = VerboseThread(target=self.outer.deliver_to_warehouse, daemon=False)
                         flush_thread.start()
                         self.outer.handler_delivery_thread = flush_thread
 
             except BaseException as e:
+                print_exception(e)
+
+        def _incr_overloaded_cnt(self) -> None:
+            try:
+                self.outer.r.incr(Config.counter_parcel_collector_overloaded, 1)
+            except redis.exceptions.RedisError as e:
                 print_exception(e)
 
     def handler_factory(self, request, client_address, server) -> 'TCPParcelCollector.Handler':
@@ -271,30 +319,37 @@ class TCPParcelCollector:
                 self.backpack.appendleft(data)
             return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
-    def _incr_overloaded_cnt(self) -> None:
-        try:
-            self.r.incr(Config.parcel_collector_overloaded_cnt_name, 1)
-        except redis.exceptions.RedisError as e:
-            print_exception(e)
-
 
 class DeliveryMan:
+    class Message:
+        def __init__(self, rstream_entry: Tuple[str, Dict]) -> None:
+            super().__init__()
+            self.message_id: str = rstream_entry[0]
+            self.data: bytes = rstream_entry[1]["data"].encode("utf-8")
 
     def __init__(self, r: redis.Redis) -> None:
         super().__init__()
         self.r = r
-        # backpack = [(message_id, {field: value}), ...]
-        self.backpack: List[Tuple[str, Dict]] = []
+        self.backpack: List[DeliveryMan.Message] = []
+        self.backpack_weight = 0
         self.backpack_rlock = threading.RLock()
         self.last_delivery = time.time()
+        self.avg_message_weight = 0
 
     def collect_from_warehouse_and_occasionally_deliver_to_target_tcp(self) -> Periodic.PeriodicResult:
-        if len(self.backpack) >= Config.delivery_man_capacity:
+        if len(self.backpack) >= Config.delivery_man_capacity \
+                or self.backpack_weight >= Config.target_capacity_bytes:
             self._incr_overloaded_cnt()
             if not self._deliver_to_target_tcp():
                 return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
-        xread = min(max(Config.delivery_man_capacity - len(self.backpack), 1), Config.redis_steam_read_count)
+        if self.avg_message_weight:
+            target_tcp_capacity = int(Config.target_capacity_bytes / self.avg_message_weight)
+            capacity = max(Config.delivery_man_capacity, target_tcp_capacity)
+        else:
+            capacity = Config.delivery_man_capacity
+
+        xread = min(max(capacity - len(self.backpack), 1), Config.redis_steam_read_count)
         redis_exception = None
 
         try:
@@ -312,20 +367,23 @@ class DeliveryMan:
             xreadgroup = []
 
         if len(xreadgroup) > 0:
-            messages = xreadgroup[0][1]
-            messages = filter(lambda message: bool(message[1]), messages)  # skip marked as deleted (message[1] == {})
-            messages = filter(lambda message: "data" in message[1], messages)  # skip invalid messages
-            messages = list(messages)
+            data = xreadgroup[0][1]
+            data = filter(lambda entry: bool(entry[1]), data)  # skip marked as deleted (entry[1] == {})
+            data = filter(lambda entry: "data" in entry[1], data)  # skip invalid entries
+            messages = [DeliveryMan.Message(entry) for entry in data]
 
             with self.backpack_rlock:
                 self.backpack.extend(messages)
+                self.backpack_weight += sum(len(message.data) for message in messages)
         else:
             messages = []
 
-        if len(self.backpack) >= Config.delivery_man_capacity:
+        if len(self.backpack) >= Config.delivery_man_capacity or \
+                self.backpack_weight >= Config.target_capacity_bytes:
             self._incr_overloaded_cnt()
 
         if len(self.backpack) >= Config.delivery_man_capacity or \
+                self.backpack_weight >= Config.target_capacity_bytes or \
                 ((time.time() - self.last_delivery) > Config.delivery_man_flush_interval.total_seconds()):
             if not self._deliver_to_target_tcp():
                 return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
@@ -343,15 +401,33 @@ class DeliveryMan:
             return True
 
         with self.backpack_rlock:
-            data = "\n".join(message[1]["data"] for message in self.backpack)
-            data += "\n"
+            if len(self.backpack) == 0:
+                return True
+
+            self.avg_message_weight = int(self.backpack_weight / len(self.backpack))
+
+            if self.backpack_weight > Config.target_capacity_bytes:
+                data = b''.join(message.data for message in self.backpack)
+                i = len(self.backpack)
+                payload_split = False
+            else:
+                data = bytearray()
+                i = 0
+                for message in self.backpack:
+                    if len(data) + len(message.data) > Config.target_capacity_bytes:
+                        break
+                    data.extend(message.data)
+                    i += 1
+                print_(f"backpack payload split: {len(self.backpack)} msgs "
+                       f"({self.backpack_weight}B) -> {i} msgs ({len(data)}B)")
+                payload_split = True
 
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                     sock.settimeout(Config.socket_connect_timeout.total_seconds())
                     sock.connect(Config.target_tcp_address)
                     sock.settimeout(Config.socket_timeout.total_seconds())
-                    sock.sendall(data.encode())
+                    sock.sendall(data)
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
 
@@ -359,15 +435,20 @@ class DeliveryMan:
                 print_exception(e)
                 return False
 
+            delivered_ids = [message.message_id for message in self.backpack[:i]]
             self.last_delivery = time.time()
-            message_ids = [item[0] for item in self.backpack]
-            self.backpack = []
+            self.backpack = self.backpack[i:]
+            self.backpack_weight = sum(len(message.data) for message in self.backpack)
 
         try:
-            self.r.xack(Config.redis_stream_name, Config.redis_stream_group_name, *message_ids)
-            self.r.xdel(Config.redis_stream_name, *message_ids)
-            self.r.incr(Config.redis_hits_on_target_cnt_name, 1)
-            self.r.incr(Config.redis_delivered_cnt_name, len(message_ids))
+            self.r.xack(Config.redis_stream_name, Config.redis_stream_group_name, *delivered_ids)
+            self.r.xdel(Config.redis_stream_name, *delivered_ids)
+            self.r.incr(Config.counter_hits_on_target, 1)
+            self.r.incr(Config.counter_delivered_msgs, len(delivered_ids))
+            self.r.incr(Config.counter_delivered_bytes, len(data))
+
+            if payload_split:
+                self.r.incr(Config.counter_target_payload_split, 1)
 
         except redis.exceptions.RedisError as e:
             print_exception(e)
@@ -376,7 +457,13 @@ class DeliveryMan:
 
     def _incr_overloaded_cnt(self) -> None:
         try:
-            self.r.incr(Config.delivery_man_overloaded_cnt_name, 1)
+            self.r.incr(Config.counter_delivery_man_overloaded, 1)
+        except redis.exceptions.RedisError as e:
+            print_exception(e)
+
+    def _incr_payload_split_cnt(self) -> None:
+        try:
+            self.r.incr(Config.counter_target_payload_split, 1)
         except redis.exceptions.RedisError as e:
             print_exception(e)
 
@@ -392,21 +479,25 @@ def status(parsel_collector: TCPParcelCollector, delivery_man: DeliveryMan, r: r
         warehouse_xpending = r.xpending(name=Config.redis_stream_name,
                                         groupname=Config.redis_stream_group_name)["pending"]
 
-        target_tcp_hits = r.get(Config.redis_hits_on_target_cnt_name)
-        target_tcp_delivered = r.get(Config.redis_delivered_cnt_name)
+        counter_hits_on_target = size_fmt(int(r.get(Config.counter_hits_on_target)))
+        counter_delivered_msgs = size_fmt(int(r.get(Config.counter_delivered_msgs)))
+        counter_delivered_bytes = size_fmt(int(r.get(Config.counter_delivered_bytes)), mode="binary", suffix="B")
 
-        parcel_collector_overloaded = r.get(Config.parcel_collector_overloaded_cnt_name)
-        delivery_man_overloaded = r.get(Config.delivery_man_overloaded_cnt_name)
+        counter_parcel_collector_overloaded = size_fmt(int(r.get(Config.counter_parcel_collector_overloaded)))
+        counter_delivery_man_overloaded = size_fmt(int(r.get(Config.counter_delivery_man_overloaded)))
+        counter_target_payload_split = size_fmt(int(r.get(Config.counter_target_payload_split)))
 
         print_(f"threading.active_count: {threading_active_count} | "
                f"parcel_collector.backpack: {parcel_collector_backpack} | "
+               f"delivery_man.backpack: {delivery_man_backpack} | "
                f"warehouse.xlen: {warehouse_xlen} | "
                f"warehouse.xpending: {warehouse_xpending} | "
-               f"delivery_man.backpack: {delivery_man_backpack} | "
-               f"target_tcp.hists: {target_tcp_hits} | "
-               f"target_tcp.delivered: {target_tcp_delivered} | "
-               f"parcel_collector.overloaded: {parcel_collector_overloaded} | "
-               f"delivery_man.overloaded: {delivery_man_overloaded}")
+               f"counter.hits_on_target: {counter_hits_on_target} | "
+               f"counter.delivered_msgs: {counter_delivered_msgs} | "
+               f"counter.delivered_bytes: {counter_delivered_bytes} | "
+               f"counter.parcel_collector_overloaded: {counter_parcel_collector_overloaded} | "
+               f"counter.delivery_man_overloaded: {counter_delivery_man_overloaded} | "
+               f"counter.target_payload_split: {counter_target_payload_split}")
 
         return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
 
@@ -442,11 +533,12 @@ def redis_init(r: redis.Redis) -> bool:
 
         r.xgroup_create(name=Config.redis_stream_name, groupname=Config.redis_stream_group_name, id="0")
 
-        r.incr(Config.redis_hits_on_target_cnt_name, 0)
-        r.incr(Config.redis_delivered_cnt_name, 0)
+        r.incr(Config.counter_hits_on_target, 0)
+        r.incr(Config.counter_delivered_msgs, 0)
 
-        r.incr(Config.delivery_man_overloaded_cnt_name, 0)
-        r.incr(Config.parcel_collector_overloaded_cnt_name, 0)
+        r.incr(Config.counter_parcel_collector_overloaded, 0)
+        r.incr(Config.counter_delivery_man_overloaded, 0)
+        r.incr(Config.counter_target_payload_split, 0)
 
         return True
 
@@ -477,7 +569,7 @@ def main() -> int:
     # [Pickup location: my TCP] -> [Parcel collector]
     tcp_parcel_collector = TCPParcelCollector(r, sigterm_threading_event)
     tcp_server = socketserver.TCPServer(Config.my_tcp_bind_address, tcp_parcel_collector.handler_factory)
-    webhook_server_thread = threading.Thread(target=tcp_server.serve_forever, daemon=True)
+    webhook_server_thread = VerboseThread(target=tcp_server.serve_forever, daemon=True)
     webhook_server_thread.start()
 
     # [Parcel collector] -> [Warehouse: Redis stream]
