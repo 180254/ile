@@ -3,6 +3,7 @@ import collections
 import datetime
 import enum
 import os
+import random
 import re
 import signal
 import socket
@@ -96,6 +97,7 @@ class Env:
 
     ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS: str = getenv("ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS",
                                                            "1.1,1.5,2.0,5.0")
+    ITC_PERIODIC_JITTER: str = getenv("ITC_PERIODIC_JITTER", "0.05")
 
 
 class Config:
@@ -140,6 +142,7 @@ class Config:
 
     periodic_failure_backoff_multipliers: List[float] = \
         list(map(float, filter(None, Env.ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS.split(","))))
+    periodic_jitter: float = float(Env.ITC_PERIODIC_JITTER)
 
 
 # noinspection DuplicatedCode
@@ -204,8 +207,12 @@ class VerboseThread(threading.Thread):
             raise
 
 
-class VerboseTimer(threading.Timer):
-    """Timer with exception handling."""
+class VerboseInaccurateTimer(threading.Timer):
+    """Timer with exception handling and untuned clock."""
+
+    def __init__(self, interval: float, function, args=None, kwargs=None) -> None:
+        jitter = random.uniform(-Config.periodic_jitter, Config.periodic_jitter) * interval
+        super().__init__(interval + jitter, function, args, kwargs)
 
     def run(self) -> None:
         try:
@@ -258,7 +265,7 @@ class Periodic:
             raise NotImplementedError
 
         if not self.sigterm_threading_event.is_set():
-            timer = VerboseTimer(delay, self._run)
+            timer = VerboseInaccurateTimer(delay, self._run)
             timer.daemon = False
             timer.start()
 
