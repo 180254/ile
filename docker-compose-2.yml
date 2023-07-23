@@ -15,7 +15,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ${PWD}/redis_data
+      device: ${PWD}/data_redis
 
 services:
   redis:
@@ -64,7 +64,7 @@ services:
 
   tcp-cache:
     build:
-      context: ${PWD}/ile-tcp-cache
+      context: ${PWD}/ile_tcp_cache
       no_cache: false
       pull: true
     image: ile-tcp-cache:0.0.1
@@ -132,8 +132,8 @@ services:
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${PWD}/ile-telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${PWD}/ile-telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
+      - ${PWD}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${PWD}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
       - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
       - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so:ro
     devices:
