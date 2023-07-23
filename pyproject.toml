@@ -1,0 +1,31 @@
+[tool.ruff]
+select = ["ALL"]
+ignore = [
+    # https://beta.ruff.rs/docs/rules/missing-type-self/
+    "ANN101",
+    # https://beta.ruff.rs/docs/rules/#pydocstyle-d
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    # https://beta.ruff.rs/docs/rules/commented-out-code/
+    "ERA001"
+]
+
+line-length = 120
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+target-version = "py311"
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.black]
+line-length = 120
+target-version = ["py311"]

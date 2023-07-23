@@ -2,5 +2,5 @@
 *.iml
 venv/
 notepad.txt
-.mypy_cache/
-*_data/
+.ruff_cache/
+data_*/
