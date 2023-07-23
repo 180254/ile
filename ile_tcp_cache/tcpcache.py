@@ -12,11 +12,13 @@ import sys
 import threading
 import time
 import traceback
-import types
 import typing
-from typing import Tuple, List, Callable, Optional, Deque, Dict
+from collections.abc import Callable
 
 import redis
+
+if typing.TYPE_CHECKING:
+    import types
 
 
 # ile-tcp-cache is useful when the target TCP server is not always available, and you don't want to lose data.
@@ -25,19 +27,23 @@ import redis
 #      [Pickup location: my TCP] -> [Parcel collector] -> [Warehouse: Redis stream]
 #              -> [Delivery man] -> [Destination location: target TCP]
 
+
 def duration(value: str) -> datetime.timedelta:
     """Convert values like 1m30s100ms or 3s to datetime.timedelta."""
-    match = re.match(r'((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?((?P<milliseconds>\d+)ms)?', value)
+    match = re.match(r"((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?((?P<milliseconds>\d+)ms)?", value)
     if not match:
-        raise ValueError(f'Invalid duration: {value}')
+        msg = f"Invalid duration: {value}"
+        raise ValueError(msg)
     matchdict = match.groupdict()
-    return datetime.timedelta(minutes=int(matchdict['minutes'] or 0),
-                              seconds=int(matchdict['seconds'] or 0),
-                              milliseconds=int(matchdict['milliseconds'] or 0))
+    return datetime.timedelta(
+        minutes=int(matchdict["minutes"] or 0),
+        seconds=int(matchdict["seconds"] or 0),
+        milliseconds=int(matchdict["milliseconds"] or 0),
+    )
 
 
 # https://stackoverflow.com/a/1094933/8574922
-def size_fmt(num: float, mode: typing.Literal["metric", "binary"] = "metric", suffix="") -> str:
+def size_fmt(num: float, mode: typing.Literal["metric", "binary"] = "metric", suffix: str = "") -> str:
     """Human friendly sizes, convert numbers to strings like 12.3K, 1.2Gi, 2.3GiB."""
     base = 1024.0 if mode == "binary" else 1000.0
     i = "i" if mode == "binary" and num >= base else ""
@@ -66,7 +72,7 @@ class Env:
     ITC_REDIS_HOST: str = getenv("ITC_REDIS_HOST", "127.0.0.1")
     ITC_REDIS_PORT: str = getenv("ITC_REDIS_PORT", "6379")
     ITC_REDIS_DB: str = getenv("ITC_REDIS_DB", "0")
-    ITC_REDIS_PASSWORD: Optional[str] = getenv("ITC_REDIS_PASSWORD", None)
+    ITC_REDIS_PASSWORD: str | None = getenv("ITC_REDIS_PASSWORD", None)
 
     ITC_REDIS_STARTUP_TIMEOUT: str = getenv("ITC_REDIS_STARTUP_TIMEOUT", "30s")
     ITC_REDIS_STARTUP_RETRY_INTERVAL: str = getenv("ITC_REDIS_STARTUP_RETRY_INTERVAL", "1s")
@@ -95,8 +101,10 @@ class Env:
 
     ITC_STATUS_INTERVAL: str = getenv("ITC_STATUS_INTERVAL", "60s")
 
-    ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS: str = getenv("ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS",
-                                                           "1.1,1.5,2.0,5.0")
+    ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS: str = getenv(
+        "ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS",
+        "1.1,1.5,2.0,5.0",
+    )
     ITC_PERIODIC_JITTER: str = getenv("ITC_PERIODIC_JITTER", "0.05")
 
 
@@ -106,12 +114,12 @@ class Config:
     socket_connect_timeout: datetime.timedelta = duration(Env.ITC_SOCKET_CONNECT_TIMEOUT)
     socket_timeout: datetime.timedelta = duration(Env.ITC_SOCKET_TIMEOUT)
 
-    my_tcp_bind_address: Tuple[str, int] = (Env.ITC_MY_TCP_BIND_HOST, int(Env.ITC_MY_TCP_BIND_PORT))
-    target_tcp_address: Tuple[str, int] = (Env.ITC_TARGET_TCP_HOST, int(Env.ITC_TARGET_TCP_PORT))
+    my_tcp_bind_address: tuple[str, int] = (Env.ITC_MY_TCP_BIND_HOST, int(Env.ITC_MY_TCP_BIND_PORT))
+    target_tcp_address: tuple[str, int] = (Env.ITC_TARGET_TCP_HOST, int(Env.ITC_TARGET_TCP_PORT))
 
-    redis_address: Tuple[str, int] = (Env.ITC_REDIS_HOST, int(Env.ITC_REDIS_PORT))
+    redis_address: tuple[str, int] = (Env.ITC_REDIS_HOST, int(Env.ITC_REDIS_PORT))
     redis_db: int = int(Env.ITC_REDIS_DB)
-    redis_password: Optional[str] = Env.ITC_REDIS_PASSWORD
+    redis_password: str | None = Env.ITC_REDIS_PASSWORD
 
     redis_startup_timeout: datetime.timedelta = duration(Env.ITC_REDIS_STARTUP_TIMEOUT)
     redis_startup_retry_interval: datetime.timedelta = duration(Env.ITC_REDIS_STARTUP_RETRY_INTERVAL)
@@ -140,23 +148,24 @@ class Config:
 
     status_interval: datetime.timedelta = duration(Env.ITC_STATUS_INTERVAL)
 
-    periodic_failure_backoff_multipliers: List[float] = \
-        list(map(float, filter(None, Env.ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS.split(","))))
+    periodic_failure_backoff_multipliers: typing.Sequence[float] = list(
+        map(float, filter(None, Env.ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS.split(","))),
+    )
     periodic_jitter: float = float(Env.ITC_PERIODIC_JITTER)
 
 
 # noinspection DuplicatedCode
 def print_(*args, **kwargs) -> None:
     """Print with timestamp."""
-    timestamp = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
-    new_args = (timestamp,) + args
+    timestamp = datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat()
+    new_args = (timestamp, *args)
     print(*new_args, **kwargs)
 
 
 # noinspection DuplicatedCode
 def print_exception(exception: BaseException) -> None:
     """Print exception summary."""
-    exc_traceback: Optional[types.TracebackType] = exception.__traceback__
+    exc_traceback: types.TracebackType | None = exception.__traceback__
     if exc_traceback:
         co_filename = exc_traceback.tb_frame.f_code.co_filename
         tb_lineno = exc_traceback.tb_lineno
@@ -173,7 +182,7 @@ def configure_sigterm_handler() -> threading.Event:
     sigterm_cnt = [0]
     sigterm_threading_event = threading.Event()
 
-    def sigterm_handler(signal_number, _):
+    def sigterm_handler(signal_number: int, _current_stack_frame) -> None:
         signal_name = signal.Signals(signal_number).name
 
         sigterm_cnt[0] += 1
@@ -201,7 +210,7 @@ class VerboseThread(threading.Thread):
     def run(self) -> None:
         try:
             super().run()
-        except BaseException as e:
+        except Exception as e:
             print_exception(e)
             traceback.print_tb(e.__traceback__)
             raise
@@ -210,14 +219,14 @@ class VerboseThread(threading.Thread):
 class VerboseInaccurateTimer(threading.Timer):
     """Timer with exception handling and untuned clock."""
 
-    def __init__(self, interval: float, function, args=None, kwargs=None) -> None:
+    def __init__(self, interval: float, function: Callable[..., typing.Any], args=None, kwargs=None) -> None:
         jitter = random.uniform(-Config.periodic_jitter, Config.periodic_jitter) * interval
         super().__init__(interval + jitter, function, args, kwargs)
 
     def run(self) -> None:
         try:
             super().run()
-        except BaseException as e:
+        except Exception as e:
             print_exception(e)
             traceback.print_tb(e.__traceback__)
             raise
@@ -233,8 +242,12 @@ class Periodic:
         REPEAT_WITH_BACKOFF = enum.auto()  # backoff is configurable using Config.periodic_failure_backoff_multipliers
         REPEAT_IMMEDIATELY = enum.auto()  # just repeat immediately
 
-    def __init__(self, func: Callable[[], PeriodicResult], interval: datetime.timedelta,
-                 sigterm_threading_event: threading.Event) -> None:
+    def __init__(
+        self,
+        func: Callable[[], PeriodicResult],
+        interval: datetime.timedelta,
+        sigterm_threading_event: threading.Event,
+    ) -> None:
         super().__init__()
         self.func = func
         self.interval = interval
@@ -247,7 +260,7 @@ class Periodic:
     def _run(self) -> None:
         try:
             result = self.func()
-        except BaseException as e:
+        except Exception as e:
             print_exception(e)
             traceback.print_tb(e.__traceback__)
             result = Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
@@ -280,13 +293,13 @@ class TCPParcelCollector:
         super().__init__()
         self.r = r
         self.sigterm_threading_event = sigterm_threading_event
-        self.backpack: Deque[str] = collections.deque(maxlen=Config.parcel_collector_capacity)
-        self.handler_delivery_thread: Optional[threading.Thread] = None
+        self.backpack: collections.deque[str] = collections.deque(maxlen=Config.parcel_collector_capacity)
+        self.handler_delivery_thread: threading.Thread | None = None
 
     class Handler(socketserver.StreamRequestHandler):
         """Handle processing: [Pickup location: my TCP] -> [Parcel collector]."""
 
-        def __init__(self, request, client_address, server, outer: 'TCPParcelCollector') -> None:
+        def __init__(self, request, client_address, server, outer: "TCPParcelCollector") -> None:
             self.outer = outer
             super().__init__(request, client_address, server)
 
@@ -303,8 +316,10 @@ class TCPParcelCollector:
 
                     self.outer.backpack.append(data)
 
-                if len(self.outer.backpack) >= Config.parcel_collector_capacity * 0.75 \
-                        and not self.outer.sigterm_threading_event.is_set():
+                if (
+                    len(self.outer.backpack) >= Config.parcel_collector_capacity * 0.75
+                    and not self.outer.sigterm_threading_event.is_set()
+                ):
                     VerboseThread(target=self._incr_overloaded_cnt, daemon=False).start()
 
                     # simple check to limit the number of threads
@@ -314,7 +329,7 @@ class TCPParcelCollector:
                         flush_thread.start()
                         self.outer.handler_delivery_thread = flush_thread
 
-            except BaseException as e:
+            except Exception as e:
                 print_exception(e)
 
         def _incr_overloaded_cnt(self) -> None:
@@ -323,7 +338,7 @@ class TCPParcelCollector:
             except redis.exceptions.RedisError as e:
                 print_exception(e)
 
-    def handler_factory(self, request, client_address, server) -> 'TCPParcelCollector.Handler':
+    def handler_factory(self, request, client_address, server) -> "TCPParcelCollector.Handler":
         return TCPParcelCollector.Handler(request, client_address, server, self)
 
     def deliver_to_warehouse(self) -> Periodic.PeriodicResult:
@@ -340,13 +355,14 @@ class TCPParcelCollector:
                 self.r.xadd(name=Config.redis_stream_name, id="*", fields={"data": data})
                 flushed += 1
 
-            return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
-
         except redis.exceptions.RedisError as e:
             print_exception(e)
             if data:
                 self.backpack.appendleft(data)
             return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
+
+        else:
+            return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
 
 
 class DeliveryMan:
@@ -356,7 +372,7 @@ class DeliveryMan:
     """
 
     class Message:
-        def __init__(self, rstream_entry: Tuple[str, Dict]) -> None:
+        def __init__(self, rstream_entry: tuple[str, dict]) -> None:
             super().__init__()
             self.message_id: str = rstream_entry[0]
             self.data: bytes = rstream_entry[1]["data"].encode("utf-8")
@@ -364,7 +380,7 @@ class DeliveryMan:
     def __init__(self, r: redis.Redis) -> None:
         super().__init__()
         self.r = r
-        self.backpack: List[DeliveryMan.Message] = []
+        self.backpack: list[DeliveryMan.Message] = []
         self.backpack_rlock = threading.RLock()
         self.last_flush = time.time()
 
@@ -389,7 +405,8 @@ class DeliveryMan:
                 consumername=Config.redis_stream_consumer_name,
                 streams={Config.redis_stream_name: ">"},
                 count=xread,
-                noack=False)
+                noack=False,
+            )
 
         except redis.exceptions.RedisError as e:
             print_exception(e)
@@ -410,9 +427,11 @@ class DeliveryMan:
         if len(self.backpack) >= Config.delivery_man_capacity:
             self._incr_overloaded_cnt()
 
-        if len(self.backpack) >= Config.delivery_man_capacity \
-                or ((time.time() - self.last_flush) >= Config.delivery_man_flush_interval.total_seconds()):
-            if not self._deliver_to_target_tcp():
+        if len(self.backpack) >= Config.delivery_man_capacity or (
+            (time.time() - self.last_flush) >= Config.delivery_man_flush_interval.total_seconds()
+        ):
+            delivered = self._deliver_to_target_tcp()
+            if not delivered:
                 return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
         if redis_exception is not None:
@@ -440,13 +459,13 @@ class DeliveryMan:
                 if len(self.backpack) == 0:
                     return True
 
-                data = b'\n'.join(message.data for message in self.backpack) + b'\n'
+                data = b"\n".join(message.data for message in self.backpack) + b"\n"
                 message_ids = [message.message_id for message in self.backpack]
 
                 try:
                     sock.settimeout(Config.socket_connect_timeout.total_seconds())
                     sock.connect(Config.target_tcp_address)
-                except socket.error as e:
+                except OSError as e:
                     # Connect error is not a 'final problem', it will be retried later.
                     # Return false as the data was not processed.
                     print_exception(e)
@@ -471,7 +490,7 @@ class DeliveryMan:
                 sock.close()
 
                 delivered = True
-            except socket.error as e:
+            except OSError as e:
                 # Error while sending data is a 'final problem', it will not be retried.
                 # Data may be corrupted, so it is better to drop it.
                 # Print exception, mark data as not delivered and continue.
@@ -512,8 +531,9 @@ def status(parsel_collector: TCPParcelCollector, delivery_man: DeliveryMan, r: r
         delivery_man_backpack = len(delivery_man.backpack)
 
         warehouse_xlen = r.xlen(name=Config.redis_stream_name)
-        warehouse_xpending = r.xpending(name=Config.redis_stream_name,
-                                        groupname=Config.redis_stream_group_name)["pending"]
+        warehouse_xpending = r.xpending(name=Config.redis_stream_name, groupname=Config.redis_stream_group_name)[
+            "pending"
+        ]
 
         counter_hits_on_target = size_fmt(int(r.get(Config.counter_hits_on_target) or -1))
         counter_delivered_msgs = size_fmt(int(r.get(Config.counter_delivered_msgs) or -1))
@@ -524,24 +544,27 @@ def status(parsel_collector: TCPParcelCollector, delivery_man: DeliveryMan, r: r
         counter_parcel_collector_overloaded = size_fmt(int(r.get(Config.counter_parcel_collector_overloaded) or -1))
         counter_delivery_man_overloaded = size_fmt(int(r.get(Config.counter_delivery_man_overloaded) or -1))
 
-        print_(f"threading.active_count: {threading_active_count} | "
-               f"parcel_collector.backpack: {parcel_collector_backpack} | "
-               f"delivery_man.backpack: {delivery_man_backpack} | "
-               f"warehouse.xlen: {warehouse_xlen} | "
-               f"warehouse.xpending: {warehouse_xpending} | "
-               f"counter.hits_on_target: {counter_hits_on_target} | "
-               f"counter.delivered_msgs: {counter_delivered_msgs} | "
-               f"counter.delivered_bytes: {counter_delivered_bytes} | "
-               f"counter.dropped_msgs: {counter_dropped_msgs} | "
-               f"counter.dropped_bytes: {counter_dropped_bytes} | "
-               f"counter.parcel_collector_overloaded: {counter_parcel_collector_overloaded} | "
-               f"counter.delivery_man_overloaded: {counter_delivery_man_overloaded}")
-
-        return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
+        print_(
+            f"threading.active_count: {threading_active_count} | "
+            f"parcel_collector.backpack: {parcel_collector_backpack} | "
+            f"delivery_man.backpack: {delivery_man_backpack} | "
+            f"warehouse.xlen: {warehouse_xlen} | "
+            f"warehouse.xpending: {warehouse_xpending} | "
+            f"counter.hits_on_target: {counter_hits_on_target} | "
+            f"counter.delivered_msgs: {counter_delivered_msgs} | "
+            f"counter.delivered_bytes: {counter_delivered_bytes} | "
+            f"counter.dropped_msgs: {counter_dropped_msgs} | "
+            f"counter.dropped_bytes: {counter_dropped_bytes} | "
+            f"counter.parcel_collector_overloaded: {counter_parcel_collector_overloaded} | "
+            f"counter.delivery_man_overloaded: {counter_delivery_man_overloaded}",
+        )
 
     except redis.exceptions.RedisError as e:
         print_exception(e)
         return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
+
+    else:
+        return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
 
 
 def wait_for_redis(r: redis.Redis) -> bool:
@@ -550,7 +573,7 @@ def wait_for_redis(r: redis.Redis) -> bool:
     while True:
         try:
             r.ping()
-            return True
+
         except (redis.exceptions.ConnectionError, ConnectionError) as e:
             print_exception(e)
 
@@ -558,6 +581,9 @@ def wait_for_redis(r: redis.Redis) -> bool:
                 return False
 
             time.sleep(Config.redis_startup_retry_interval.total_seconds())
+
+        else:
+            return True
 
 
 def redis_init(r: redis.Redis) -> bool:
@@ -580,11 +606,12 @@ def redis_init(r: redis.Redis) -> bool:
         r.incr(Config.counter_parcel_collector_overloaded, 0)
         r.incr(Config.counter_delivery_man_overloaded, 0)
 
-        return True
-
     except redis.exceptions.RedisError as e:
         print_exception(e)
         return False
+
+    else:
+        return True
 
 
 def main() -> int:
@@ -592,13 +619,15 @@ def main() -> int:
 
     sigterm_threading_event = configure_sigterm_handler()
 
-    r = redis.Redis(host=Config.redis_address[0],
-                    port=Config.redis_address[1],
-                    db=Config.redis_db,
-                    password=Config.redis_password,
-                    socket_timeout=Config.socket_timeout.total_seconds(),
-                    socket_connect_timeout=Config.socket_connect_timeout.total_seconds(),
-                    decode_responses=True)
+    r = redis.Redis(
+        host=Config.redis_address[0],
+        port=Config.redis_address[1],
+        db=Config.redis_db,
+        password=Config.redis_password,
+        socket_timeout=Config.socket_timeout.total_seconds(),
+        socket_connect_timeout=Config.socket_connect_timeout.total_seconds(),
+        decode_responses=True,
+    )
 
     if not wait_for_redis(r):
         return -1
@@ -613,19 +642,27 @@ def main() -> int:
     webhook_server_thread.start()
 
     # [Parcel collector] -> [Warehouse: Redis stream]
-    parcel_collector_periodic_flush = Periodic(tcp_parcel_collector.deliver_to_warehouse,
-                                               Config.parcel_collector_flush_interval,
-                                               sigterm_threading_event)
+    parcel_collector_periodic_flush = Periodic(
+        tcp_parcel_collector.deliver_to_warehouse,
+        Config.parcel_collector_flush_interval,
+        sigterm_threading_event,
+    )
     parcel_collector_periodic_flush.start()
 
     # [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP]
     delivery_man = DeliveryMan(r)
-    delivery_man_periodic_collect = Periodic(delivery_man.collect_from_warehouse_and_occasionally_deliver_to_target_tcp,
-                                             Config.delivery_man_collect_interval, sigterm_threading_event)
+    delivery_man_periodic_collect = Periodic(
+        delivery_man.collect_from_warehouse_and_occasionally_deliver_to_target_tcp,
+        Config.delivery_man_collect_interval,
+        sigterm_threading_event,
+    )
     delivery_man_periodic_collect.start()
 
-    periodic_status = Periodic(lambda: status(tcp_parcel_collector, delivery_man, r), Config.status_interval,
-                               sigterm_threading_event)
+    periodic_status = Periodic(
+        lambda: status(tcp_parcel_collector, delivery_man, r),
+        Config.status_interval,
+        sigterm_threading_event,
+    )
     periodic_status.start()
 
     sigterm_threading_event.wait()
