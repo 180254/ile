@@ -3,7 +3,7 @@ import os
 
 import psycopg2.extras
 
-# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb venv/bin/python3 qdb-count-rows.py
+# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb venv/bin/python3 qdb_count_rows.py
 
 dsn = os.environ.get("QDB_DSN", "postgresql://admin:quest@localhost:8812/qdb")
 
@@ -15,10 +15,10 @@ tables = cursor.fetchall()
 
 total = 0
 for table in tables:
-    name = table['name']
+    name = table["name"]
 
     cursor = conn.cursor()
-    cursor.execute(f"select count(*) from %s", (name,))
+    cursor.execute("select count(*) from %s", (name,))
     count = cursor.fetchone()[0]
     total += count
 
