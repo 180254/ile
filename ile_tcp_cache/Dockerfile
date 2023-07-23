@@ -17,4 +17,4 @@ WORKDIR /app
 COPY --from=build-venv /venv /venv
 COPY tcpcache.py /app
 
-ENTRYPOINT ["/venv/bin/python3", "-u", "/app/ile-tcp-cache.py"]
+ENTRYPOINT ["/venv/bin/python3", "-u", "/app/tcpcache.py"]
