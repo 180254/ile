@@ -35,15 +35,15 @@ Shelly Plus Plug IT | SNPL-00110IT | shelly_plugs_meter1,shelly_plugs_temperatur
 Shelly Plus Plug S  | SNPL-00112EU | shelly_plugs_meter1,shelly_plugs_temperature1 | API polling
 Shelly Plus Plug UK | SNPL-00112UK | shelly_plugs_meter1,shelly_plugs_temperature1 | API polling
 Shelly Plus Plug US | SNPL-00116US | shelly_plugs_meter1,shelly_plugs_temperature1 | API polling
-Shelly H&T          | SHHT-1       | shelly_ht_meter1,shelly_ht_meter2             | webhook (act as action URL)
-Shelly Plus H&T     | SNSN-0013A   | shelly_ht_meter1                              | receiving notifications (act as outbound WebSocket server)
+Shelly H&T          | SHHT-1       | shelly_ht_meter1,shelly_ht_meter2             | webhook (HTTP server)
+Shelly Plus H&T     | SNSN-0013A   | shelly_ht_meter1                              | receiving notifications (WebSocket)
 
 Device configuration:
 - Scape strategy: API polling
   Pass the IP address of the device using the ILE_SHELLY_IPS environment variable.
-- Scape strategy: webhook
+- Scape strategy: webhook (HTTP server)
   Configure your devices so that the "report sensor values" URL is "http://{machine_ip}:9080/".
-- Scape strategy: receiving notification
+- Scape strategy: receiving notification (WebSocket)
   Configure your devices so that the outgoing WebSocket server is "ws://{machine_ip}:9081/".
 
 You can configure the script using environment variables.
@@ -104,6 +104,7 @@ class Config:
 # --------------------- HELPERS -----------------------------------------------
 
 
+# noinspection DuplicatedCode
 def print_(*args, **kwargs) -> None:
     timestamp = datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat()
     new_args = (timestamp, *args)
@@ -115,17 +116,23 @@ def print_debug(msg_supplier: Callable[[], str]) -> None:
         print_(msg_supplier())
 
 
+# noinspection DuplicatedCode
 def configure_sigterm_handler() -> threading.Event:
     sigterm_cnt = [0]
     sigterm_threading_event = threading.Event()
 
-    def sigterm_handler(signal_number, _current_stack_frame) -> None:
+    def sigterm_handler(signal_number: int, _current_stack_frame) -> None:
         signal_name = signal.Signals(signal_number).name
 
         sigterm_cnt[0] += 1
         if sigterm_cnt[0] == 1:
             print_(f"Program interrupted by the {signal_name}, graceful shutdown in progress.", file=sys.stderr)
             sigterm_threading_event.set()
+
+            for thing in threading.enumerate():
+                if isinstance(thing, threading.Timer):
+                    print_(f"Canceling threading.Timer: {thing}")
+                    thing.cancel()
         else:
             print_(f"Program interrupted by the {signal_name} again, forced shutdown in progress.", file=sys.stderr)
             sys.exit(-1)
@@ -140,9 +147,9 @@ def json_dumps(data: dict) -> str:
     return json.dumps(data, separators=(",", ":"))
 
 
+# noinspection DuplicatedCode
 def print_exception(exception: BaseException) -> None:
     exc_traceback: types.TracebackType | None = exception.__traceback__
-
     if exc_traceback:
         co_filename = exc_traceback.tb_frame.f_code.co_filename
         tb_lineno = exc_traceback.tb_lineno
@@ -511,7 +518,7 @@ def shelly_gen2_plusht_status_to_ilp(device_name: str, status: dict) -> str:
     )
 
 
-async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocketServerProtocol, path: str) -> None:
+async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocketServerProtocol, _path: str) -> None:
     try:
         recv = await websocket.recv()
         payload = json.loads(recv)
