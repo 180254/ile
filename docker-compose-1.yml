@@ -29,11 +29,19 @@ services:
       context: ${PWD}
       no_cache: false
       pull: true
-      # https://github.com/questdb/questdb/blob/master/core/Dockerfile
+      # https://github.com/questdb/questdb/blob/7.2.1/core/Dockerfile
       dockerfile_inline: |
         FROM questdb/questdb:7.2.1
-        RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+        RUN set -eux \
+          && apt-get update \
+          && apt-get install -y --no-install-recommends curl ca-certificates \
+          && rm -rf /var/lib/apt/lists/* \
+          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
+          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+        RUN chown -R nonroot:nonroot /var/lib/questdb
+        USER nonroot
     image: ile-questdb:0.0.1
+    user: nonroot:nonroot
     restart: always
     hostname: questdb
     networks:
@@ -45,6 +53,8 @@ services:
       - "9003:9003"
       - "9009:9009"
     environment:
+      - QUESTDB_UID=${ILE_NONROOT_UID}
+      - QUESTDB_GID=${ILE_NONROOT_GID}
       - QDB_PG_USER=${QDB_PG_USER}
       - QDB_PG_PASSWORD=${QDB_PG_PASSWORD}
       - QDB_PG_READONLY_USER_ENABLED=${QDB_PG_READONLY_USER_ENABLED}
@@ -86,13 +96,26 @@ services:
       context: ${PWD}
       no_cache: false
       pull: true
-      # https://github.com/grafana/grafana/blob/main/Dockerfile
+      # https://github.com/grafana/grafana/blob/v8.5.27/Dockerfile
       dockerfile_inline: |
         FROM grafana/grafana-oss:8.5.27-ubuntu
         USER root
-        RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
-        USER 472
+        RUN set -eux \
+          && apt-get update \
+          && apt-get install -y --no-install-recommends curl ca-certificates \
+          && rm -rf /var/lib/apt/lists/* \
+          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
+          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+        RUN chown -R nonroot:nonroot \
+          /etc/grafana/grafana.ini \
+          /var/lib/grafana \
+          /usr/share/grafana \
+          /var/log/grafana \
+          /var/lib/grafana/plugins \
+          /etc/grafana/provisioning
+        USER nonroot
     image: ile-grafana:0.0.1
+    user: nonroot:nonroot
     restart: always
     hostname: grafana
     networks:
@@ -131,9 +154,13 @@ services:
   shellyscraper:
     build:
       context: ${PWD}/ile_shellyscraper
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
       pull: true
     image: ile-shellyscraper:0.0.1
+    user: nonroot:nonroot
     restart: always
     networks:
       vnet:
@@ -174,8 +201,13 @@ services:
       # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.27/Dockerfile
       dockerfile_inline: |
         FROM telegraf:1.27.2
+        RUN set -eux \
+          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
+          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+        USER nonroot
+        CMD telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d
     image: ile-telegraf:0.0.1
-    user: telegraf:999
+    user: nonroot:999
     restart: always
     network_mode: host
     extra_hosts:

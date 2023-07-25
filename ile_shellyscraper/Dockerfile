@@ -1,16 +1,17 @@
-FROM python:3.11-bookworm AS build
+FROM python:3.11-bookworm AS build-venv
 RUN python3 -m venv /venv
 RUN /venv/bin/pip3 install --upgrade pip setuptools wheel
-
-FROM build AS build-venv
 COPY requirements.txt /requirements.txt
 RUN /venv/bin/pip3 install --disable-pip-version-check -r /requirements.txt
 
 FROM python:3.11-slim-bookworm
 
-RUN set -ex \
-    && addgroup --system --gid 1001 nonroot \
-    && adduser --system --uid 1001 --gid 1001 --no-create-home nonroot
+ARG ILE_NONROOT_UID="1001"
+ARG ILE_NONROOT_GID="1001"
+
+RUN set -eux \
+    && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
+    && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
 USER nonroot
 
 WORKDIR /app

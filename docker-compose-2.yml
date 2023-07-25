@@ -27,13 +27,25 @@ services:
       # https://redis.io/docs/management/config-file/
       dockerfile_inline: |
         FROM redis:7.0.12
+        
         RUN mkdir -p /usr/local/etc/redis
-        RUN echo "save 3600 1 300 100 60 10000" > /usr/local/etc/redis/redis.conf
-        RUN echo "appendonly yes" >> /usr/local/etc/redis/redis.conf
-        RUN echo "requirepass ${ILE_REDIS_PASSWORD}" >> /usr/local/etc/redis/redis.conf
-        RUN echo "dir /data" >> /usr/local/etc/redis/redis.conf
+        COPY <<EOF /usr/local/etc/redis/redis.conf
+        save 3600 1 300 100 60 10000
+        appendonly yes
+        requirepass ${ILE_REDIS_PASSWORD}
+        dir /data
+        EOF
+      
+        RUN set -eux \
+          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
+          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+        
+        RUN chown -R nonroot:nonroot /data
+        USER nonroot
+    
         CMD [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     image: ile-redis:0.0.1
+    user: nonroot:nonroot
     restart: always
     hostname: redis
     networks:
@@ -65,9 +77,13 @@ services:
   tcp-cache:
     build:
       context: ${PWD}/ile_tcp_cache
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
       pull: true
     image: ile-tcp-cache:0.0.1
+    user: nonroot:nonroot
     restart: always
     networks:
       vnet:
@@ -112,9 +128,13 @@ services:
       # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.27/Dockerfile
       dockerfile_inline: |
         FROM telegraf:1.27.2
+        RUN set -eux \
+          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
+          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+        USER nonroot:999
         CMD telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d
     image: ile-telegraf2:0.0.1
-    user: telegraf:999
+    user: nonroot:999
     restart: always
     network_mode: host
     extra_hosts:
