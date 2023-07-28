@@ -36,8 +36,8 @@ services:
           && apt-get update \
           && apt-get install -y --no-install-recommends curl ca-certificates \
           && rm -rf /var/lib/apt/lists/* \
-          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
-          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
+          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
         RUN chown -R nonroot:nonroot /var/lib/questdb
         USER nonroot
     image: ile-questdb:0.0.1
@@ -104,8 +104,8 @@ services:
           && apt-get update \
           && apt-get install -y --no-install-recommends curl ca-certificates \
           && rm -rf /var/lib/apt/lists/* \
-          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
-          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
+          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
         RUN chown -R nonroot:nonroot \
           /etc/grafana/grafana.ini \
           /var/lib/grafana \
@@ -202,8 +202,8 @@ services:
       dockerfile_inline: |
         FROM telegraf:1.27.2
         RUN set -eux \
-          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
-          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
+          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
         USER nonroot
         CMD telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d
     image: ile-telegraf:0.0.1

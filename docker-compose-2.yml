@@ -27,7 +27,6 @@ services:
       # https://redis.io/docs/management/config-file/
       dockerfile_inline: |
         FROM redis:7.0.12
-        
         RUN mkdir -p /usr/local/etc/redis
         COPY <<EOF /usr/local/etc/redis/redis.conf
         save 3600 1 300 100 60 10000
@@ -35,14 +34,11 @@ services:
         requirepass ${ILE_REDIS_PASSWORD}
         dir /data
         EOF
-      
         RUN set -eux \
-          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
-          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
-        
+          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
+          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
         RUN chown -R nonroot:nonroot /data
         USER nonroot
-    
         CMD [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     image: ile-redis:0.0.1
     user: nonroot:nonroot
@@ -129,8 +125,8 @@ services:
       dockerfile_inline: |
         FROM telegraf:1.27.2
         RUN set -eux \
-          && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
-          && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
+          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
         USER nonroot:999
         CMD telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d
     image: ile-telegraf2:0.0.1

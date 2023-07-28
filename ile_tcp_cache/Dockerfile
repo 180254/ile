@@ -10,8 +10,8 @@ ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
 
 RUN set -eux \
-    && addgroup --system --gid "${ILE_NONROOT_GID}" nonroot \
-    && adduser --system --uid "${ILE_NONROOT_UID}" --gid "${ILE_NONROOT_GID}" --no-create-home nonroot
+    && groupadd -g "${ILE_NONROOT_GID}" nonroot \
+    && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
 USER nonroot
 
 WORKDIR /app
