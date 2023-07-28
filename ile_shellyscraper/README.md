@@ -1,6 +1,6 @@
 # ile-shellyscraper
 
-Collect data from Shelly devices, insert them into QuestDB and visualize data in Grafana.
+Collect data from Shelly devices, insert them into QuestDB, and visualize them in Grafana.
 
 Supported devices:
 
@@ -34,9 +34,9 @@ The solution consists of the following:
 * Create a docker network and docker volumes for data storage.
 
 ```shell
-docker network create --subnet=192.168.130.0/24 ile-network
-docker volume create ile-questdb-data
-docker volume create ile-grafana-data
+docker network create --subnet=192.168.130.0/24 ile_vnet
+docker volume create ile_data_questdb
+docker volume create ile_data_grafana
 ```
 
 * Run everything that the solution consists of:
@@ -44,21 +44,21 @@ docker volume create ile-grafana-data
 ```shell
 # https://questdb.io/docs/reference/configuration/#docker
 docker run -d --restart=unless-stopped \
-    --net ile-network --ip 192.168.130.10 \
+    --net ile_vnet --ip 192.168.130.10 \
     --name=ile-questdb \
     -p 9000:9000 -p 9009:9009 -p 8812:8812 -p 9003:9003 \
-    -v ile-questdb-data:/root/.questdb/ \
-    questdb/questdb:7.1.1
+    -v ile_data_questdb:/var/lib/questdb \
+    questdb/questdb:7.2.1
 ```
 
 ```shell
 # https://grafana.com/docs/grafana/latest/installation/docker/
 docker run -d --restart=unless-stopped \
-    --net ile-network \
+    --net ile_vnet --ip 192.168.130.11 \
     --name=ile-grafana \
     -p 3000:3000 \
-    -v ile-grafana-data:/var/lib/grafana \
-    grafana/grafana-oss:8.5.24
+    -v ile_data_grafana:/var/lib/grafana \
+    grafana/grafana-oss:8.5.27-ubuntu
 ```
 
 ```shell
@@ -69,7 +69,7 @@ As the value of the ILE_SHELLY_IPS env, enter the comma-separated list of IPs as
 
 ```shell
 docker run -d --restart=unless-stopped \
-    --net ile-network \
+    --net ile_vnet --ip 192.168.130.12 \
     --name=ile-shellyscraper \
     -p 9080:9080 \
     -p 9081:9081 \
