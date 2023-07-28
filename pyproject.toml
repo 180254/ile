@@ -1,3 +1,23 @@
+[project]
+name = "ile"
+version = "0.0.1"
+description = "one's home measurements"
+readme = "README.adoc"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+keywords = [
+    "Shelly", "Shelly Plug", "Shelly Plus Plug", "Shelly H&T", "Shelly Plus H&T",
+    "QuestDB", "Grafana", "Telegraf"
+]
+authors = [
+    { name = "180254", email = "180254@users.noreply.github.com" },
+]
+maintainers = [
+    { name = "180254", email = "180254@users.noreply.github.com" },
+]
+# dependencies = requirements.txt files
+# optional-dependencies = requirements-dev.txt files
+
 [tool.ruff]
 select = ["ALL"]
 ignore = [
@@ -17,15 +37,11 @@ ignore = [
 ]
 
 line-length = 120
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 target-version = "py311"
-
-[tool.ruff.mccabe]
-max-complexity = 10
 
 [tool.ruff.pydocstyle]
 convention = "google"
 
 [tool.black]
 line-length = 120
-target-version = ["py311"]
+target-version = ["py311", "py312"]
