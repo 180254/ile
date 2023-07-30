@@ -171,8 +171,8 @@ services:
     environment:
       - ILE_QUESTDB_HOST=questdb
       - ILE_QUESTDB_PORT=9009
-      - ILE_SHELLY_IPS=
-      - ILE_DEBUG=false
+      - ILE_SHELLY_IPS=${ILE_SHELLY_IPS}
+      - ILE_DEBUG=${ILE_DEBUG}
     logging:
       options:
         max-size: 10m
