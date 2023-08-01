@@ -25,8 +25,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 1,
-  "iteration": 1678625271238,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -88,7 +100,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.21",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -136,6 +148,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "axisSoftMax": 25,
@@ -190,7 +204,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -281,7 +296,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "8.5.21",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -376,7 +391,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.21",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -424,6 +439,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "axisSoftMax": 80,
@@ -478,7 +495,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -569,7 +587,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "8.5.21",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -665,7 +683,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.21",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -713,6 +731,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "axisSoftMax": 0,
@@ -852,7 +872,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -973,7 +994,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.21",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -1175,7 +1196,7 @@
     }
   ],
   "refresh": "",
-  "schemaVersion": 36,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1201,12 +1222,8 @@
       {
         "current": {
           "selected": false,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "text": "All",
+          "value": "$__all"
         },
         "datasource": {
           "type": "postgres",
@@ -1262,6 +1279,6 @@
   "timezone": "browser",
   "title": "shellyht1",
   "uid": "shellyht1",
-  "version": 50,
+  "version": 51,
   "weekStart": ""
 }

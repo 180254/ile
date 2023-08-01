@@ -25,8 +25,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 3,
-  "iteration": 1678625218741,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -75,7 +87,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.21",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -157,7 +169,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.21",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -205,6 +217,8 @@
             "mode": "fixed"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "axisSoftMax": 25,
@@ -259,7 +273,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -314,6 +329,8 @@
             "mode": "fixed"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -368,7 +385,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -412,8 +430,8 @@
       "type": "timeseries"
     }
   ],
-  "refresh": false,
-  "schemaVersion": 36,
+  "refresh": "",
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -438,9 +456,10 @@
       },
       {
         "current": {
-          "selected": true,
-          "text": "shellyht-772D81",
-          "value": "shellyht-772D81"
+          "isNone": true,
+          "selected": false,
+          "text": "None",
+          "value": ""
         },
         "datasource": {
           "type": "postgres",
@@ -469,6 +488,6 @@
   "timezone": "browser",
   "title": "shellyht2",
   "uid": "shellyht2",
-  "version": 15,
+  "version": 16,
   "weekStart": ""
 }
