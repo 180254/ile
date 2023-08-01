@@ -58,7 +58,7 @@ docker run -d --restart=unless-stopped \
     --name=ile-grafana \
     -p 3000:3000 \
     -v ile_data_grafana:/var/lib/grafana \
-    grafana/grafana-oss:8.5.27-ubuntu
+    grafana/grafana-oss:10.0.3-ubuntu
 ```
 
 ```shell

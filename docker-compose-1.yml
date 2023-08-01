@@ -96,9 +96,9 @@ services:
       context: ${PWD}
       no_cache: false
       pull: true
-      # https://github.com/grafana/grafana/blob/v8.5.27/Dockerfile
+      # https://github.com/grafana/grafana/blob/v10.0.3/Dockerfile
       dockerfile_inline: |
-        FROM grafana/grafana-oss:8.5.27-ubuntu
+        FROM grafana/grafana-oss:10.0.3-ubuntu
         USER root
         RUN set -eux \
           && apt-get update \
