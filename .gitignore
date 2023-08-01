@@ -4,3 +4,4 @@ venv/
 notepad.txt
 .ruff_cache/
 data_*/
+docker-compose-*.env
