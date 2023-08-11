@@ -29,9 +29,9 @@ services:
       context: ${PWD}
       no_cache: false
       pull: true
-      # https://github.com/questdb/questdb/blob/7.2.1/core/Dockerfile
+      # https://github.com/questdb/questdb/blob/7.3/core/Dockerfile
       dockerfile_inline: |
-        FROM questdb/questdb:7.2.1
+        FROM questdb/questdb:7.3
         RUN set -eux \
           && apt-get update \
           && apt-get install -y --no-install-recommends curl ca-certificates \
