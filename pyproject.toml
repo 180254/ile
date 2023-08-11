@@ -33,7 +33,9 @@ ignore = [
     "D106",
     "D107",
     # https://beta.ruff.rs/docs/rules/commented-out-code/
-    "ERA001"
+    "ERA001",
+    # https://beta.ruff.rs/docs/rules/missing-trailing-comma/
+    "COM812"
 ]
 
 line-length = 120
