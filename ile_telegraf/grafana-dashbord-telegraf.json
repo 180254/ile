@@ -2620,6 +2620,6 @@
   "timezone": "browser",
   "title": "telegraf",
   "uid": "telegraf",
-  "version": 59,
+  "version": 61,
   "weekStart": ""
 }

@@ -111,7 +111,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    max(tmp_tc) as tmp_tc,\n    cast(0 as timestamp) as time\nfrom (\n    select last(tmp_tc) as tmp_tc, device_name\n    from shelly_ht_meter1\n    where device_name in ($device_name) and is_valid = true and tmp_is_valid = true and $__timeFilter(timestamp)\n)\n",
+          "rawSql": "select\n    max(tmp_tc) as tmp_tc,\n    cast(0 as timestamp) as time\nfrom (\n    select last(tmp_tc) as tmp_tc, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and tmp_is_valid = true and $__timeFilter(timestamp)\n)\n",
           "refId": "A",
           "select": [
             [
@@ -223,7 +223,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(tmp_tc) as tmp_tc,\n    device_name as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_name in ($device_name)\n    and is_valid = true\n    and tmp_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(tmp_tc) as tmp_tc,\n    device_name as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_name in ($ht_device_name)\n    and is_valid = true\n    and tmp_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -264,12 +264,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#a07d41",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "orange",
                 "value": 0.00001
+              },
+              {
+                "color": "red",
+                "value": 0.01
               }
             ]
           },
@@ -294,7 +298,7 @@
           "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": false
       },
       "pluginVersion": "10.0.3",
       "targets": [
@@ -307,7 +311,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "with\n    shelly_ht_meter1b as (\n        select timestamp, is_valid, tmp_is_valid\n        from shelly_ht_meter1\n        where device_name in ($device_name) and $__timeFilter(timestamp)\n    ),\n    count_all as (\n        select count() as value\n        from shelly_ht_meter1b\n    ),\n    count_not_valid as (\n        select count() as value\n        from shelly_ht_meter1b\n        where is_valid = false or tmp_is_valid = false\n    )\nselect \n    cast(0 as timestamp) time,\n    ((1.0*count_not_valid.value)/count_all.value) as value\nfrom count_all\ncross join count_not_valid",
+          "rawSql": "with\n    shelly_ht_meter1b as (\n        select timestamp, is_valid, tmp_is_valid\n        from shelly_ht_meter1\n        where device_name in ($ht_device_name) and $__timeFilter(timestamp)\n    ),\n    count_all as (\n        select count() as value\n        from shelly_ht_meter1b\n    ),\n    count_not_valid as (\n        select count() as value\n        from shelly_ht_meter1b\n        where is_valid = false or tmp_is_valid = false\n    )\nselect \n    cast(0 as timestamp) time,\n    ((1.0*count_not_valid.value)/count_all.value) as value\nfrom count_all\ncross join count_not_valid",
           "refId": "value",
           "select": [
             [
@@ -402,7 +406,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    max(hum_value),\n    cast(0 as timestamp) as time\nfrom (\n    select last(hum_value) as hum_value, device_name\n    from shelly_ht_meter1\n    where device_name in ($device_name) and is_valid = true and hum_is_valid = true and $__timeFilter(timestamp)\n)",
+          "rawSql": "select\n    max(hum_value),\n    cast(0 as timestamp) as time\nfrom (\n    select last(hum_value) as hum_value, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and hum_is_valid = true and $__timeFilter(timestamp)\n)",
           "refId": "A",
           "select": [
             [
@@ -514,7 +518,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(hum_value) as hum_value,\n    device_name as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_name in ($device_name)\n    and is_valid = true\n    and hum_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(hum_value) as hum_value,\n    device_name as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_name in ($ht_device_name)\n    and is_valid = true\n    and hum_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -555,12 +559,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#6e7d96",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "orange",
                 "value": 0.00001
+              },
+              {
+                "color": "red",
+                "value": 0.01
               }
             ]
           },
@@ -585,7 +593,7 @@
           "values": false
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": false
       },
       "pluginVersion": "10.0.3",
       "targets": [
@@ -598,7 +606,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "with\n    shelly_ht_meter1b as (\n        select timestamp, is_valid, hum_is_valid\n        from 'shelly_ht_meter1'\n        where device_name in ($device_name) and $__timeFilter(timestamp)\n    ),\n    count_all as (\n        select count() as value\n        from shelly_ht_meter1b\n    ),\n    count_not_valid as (\n        select count() as value\n        from shelly_ht_meter1b\n        where is_valid = false or hum_is_valid = false\n    )\nselect \n    cast(0 as timestamp) time,\n    ((1.0*count_not_valid.value)/count_all.value) as value\nfrom count_all\ncross join count_not_valid",
+          "rawSql": "with\n    shelly_ht_meter1b as (\n        select timestamp, is_valid, hum_is_valid\n        from 'shelly_ht_meter1'\n        where device_name in ($ht_device_name) and $__timeFilter(timestamp)\n    ),\n    count_all as (\n        select count() as value\n        from shelly_ht_meter1b\n    ),\n    count_not_valid as (\n        select count() as value\n        from shelly_ht_meter1b\n        where is_valid = false or hum_is_valid = false\n    )\nselect \n    cast(0 as timestamp) time,\n    ((1.0*count_not_valid.value)/count_all.value) as value\nfrom count_all\ncross join count_not_valid",
           "refId": "value",
           "select": [
             [
@@ -694,7 +702,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select min(bat_value), cast(0 as timestamp) as time\nfrom (\n    select last(bat_value) as bat_value, device_name\n    from shelly_ht_meter1\n    where device_name in ($device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
+          "rawSql": "select min(bat_value), cast(0 as timestamp) as time\nfrom (\n    select last(bat_value) as bat_value, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
           "refId": "A",
           "select": [
             [
@@ -891,7 +899,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(bat_value) as bat_value,\n    concat('bat_value_', ${bat_metric:raw}) as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_ht_meter1\n        where\n            device_name in ($device_name)\n            and device_id is not null\n            and is_valid = true\n            and $__timeFilter(timestamp)\n    )\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(bat_value) as bat_value,\n    concat('bat_value_', ${bat_metric:raw}) as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_ht_meter1\n        where\n            device_name in ($ht_device_name)\n            and device_id is not null\n            and is_valid = true\n            and $__timeFilter(timestamp)\n    )\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "bat_value",
           "select": [
             [
@@ -922,7 +930,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(bat_voltage) as bat_voltage,\n    concat('bat_voltage_', ${bat_metric:raw}) as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_ht_meter1\n        where\n            device_name in ($device_name)\n            and device_id is not null\n            and is_valid = true\n            and $__timeFilter(timestamp)\n    )\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(bat_voltage) as bat_voltage,\n    concat('bat_voltage_', ${bat_metric:raw}) as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_ht_meter1\n        where\n            device_name in ($ht_device_name)\n            and device_id is not null\n            and is_valid = true\n            and $__timeFilter(timestamp)\n    )\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "bat_voltage",
           "select": [
             [
@@ -1005,7 +1013,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    sum(sensor_error) as sensor_error,\n    cast(0 as timestamp) as time\nfrom (\n    select last(sensor_error) as sensor_error, device_name\n    from shelly_ht_meter1\n    where device_name in ($device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
+          "rawSql": "select\n    sum(sensor_error) as sensor_error,\n    cast(0 as timestamp) as time\nfrom (\n    select last(sensor_error) as sensor_error, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
           "refId": "A",
           "select": [
             [
@@ -1076,7 +1084,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.15",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -1087,7 +1095,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select min(bat_voltage), cast(0 as timestamp) time\nfrom (\n    select last(bat_voltage) as bat_voltage, device_name\n    from shelly_ht_meter1\n    where device_name in ($device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
+          "rawSql": "select min(bat_voltage), cast(0 as timestamp) time\nfrom (\n    select last(bat_voltage) as bat_voltage, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
           "refId": "A",
           "select": [
             [
@@ -1158,7 +1166,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.15",
+      "pluginVersion": "10.0.3",
       "targets": [
         {
           "datasource": {
@@ -1169,7 +1177,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    sum(connect_retries) as connect_retries,\n    cast(0 as timestamp) as time\nfrom\n(\n    select last(connect_retries) as connect_retries, device_name\n    from shelly_ht_meter1\n    where device_name in ($device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
+          "rawSql": "select\n    sum(connect_retries) as connect_retries,\n    cast(0 as timestamp) as time\nfrom\n(\n    select last(connect_retries) as connect_retries, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
           "refId": "A",
           "select": [
             [
@@ -1221,9 +1229,13 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "postgres",
@@ -1233,10 +1245,10 @@
         "hide": 0,
         "includeAll": true,
         "multi": true,
-        "name": "device_name",
+        "name": "ht_device_name",
         "options": [],
         "query": "select distinct device_name from shelly_ht_meter1 where $__timeFilter(timestamp) and device_name is not null\n",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 5,
@@ -1244,7 +1256,7 @@
       },
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "device_id",
           "value": "device_id"
         },
@@ -1279,6 +1291,6 @@
   "timezone": "browser",
   "title": "shellyht1",
   "uid": "shellyht1",
-  "version": 51,
+  "version": 54,
   "weekStart": ""
 }

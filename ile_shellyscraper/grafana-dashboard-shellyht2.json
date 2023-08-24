@@ -98,7 +98,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select last(temp) as temp, cast(0 as timestamp) as time\nfrom shelly_ht_meter2\nwhere device_id = '$device_id' and $__timeFilter(timestamp)",
+          "rawSql": "select last(temp) as temp, cast(0 as timestamp) as time\nfrom shelly_ht_meter2\nwhere device_id = '$ht_device_id' and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -180,7 +180,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select last(hum) as hum, cast(0 as timestamp) as time\nfrom shelly_ht_meter2\nwhere device_id = '$device_id' and $__timeFilter(timestamp)",
+          "rawSql": "select last(hum) as hum, cast(0 as timestamp) as time\nfrom shelly_ht_meter2\nwhere device_id = '$ht_device_id' and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -292,7 +292,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(temp) as temp\nfrom shelly_ht_meter2\nwhere\n    device_id = '$device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(temp) as temp\nfrom shelly_ht_meter2\nwhere\n    device_id = '$ht_device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -404,7 +404,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(hum) as hum\nfrom shelly_ht_meter2\nwhere\n    device_id = '$device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(hum) as hum\nfrom shelly_ht_meter2\nwhere\n    device_id = '$ht_device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -456,10 +456,9 @@
       },
       {
         "current": {
-          "isNone": true,
           "selected": false,
-          "text": "None",
-          "value": ""
+          "text": "shellyht-772D81",
+          "value": "shellyht-772D81"
         },
         "datasource": {
           "type": "postgres",
@@ -469,7 +468,7 @@
         "hide": 0,
         "includeAll": false,
         "multi": false,
-        "name": "device_id",
+        "name": "ht_device_id",
         "options": [],
         "query": "select distinct device_id from shelly_ht_meter2 where $__timeFilter(timestamp) and device_id is not null\n",
         "refresh": 1,
@@ -488,6 +487,6 @@
   "timezone": "browser",
   "title": "shellyht2",
   "uid": "shellyht2",
-  "version": 16,
+  "version": 17,
   "weekStart": ""
 }
