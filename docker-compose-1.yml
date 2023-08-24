@@ -29,9 +29,9 @@ services:
       context: ${PWD}
       no_cache: false
       pull: true
-      # https://github.com/questdb/questdb/blob/7.3/core/Dockerfile
+      # https://github.com/questdb/questdb/blob/7.3.1/core/Dockerfile
       dockerfile_inline: |
-        FROM questdb/questdb:7.3
+        FROM questdb/questdb:7.3.1
         RUN set -eux \
           && apt-get update \
           && apt-get install -y --no-install-recommends curl ca-certificates \
@@ -55,6 +55,9 @@ services:
     environment:
       - QUESTDB_UID=${ILE_NONROOT_UID}
       - QUESTDB_GID=${ILE_NONROOT_GID}
+      # https://questdb.io/docs/reference/configuration/
+      # https://github.com/questdb/questdb/blob/7.3.1/core/src/main/java/io/questdb/PropertyKey.java
+      # https://github.com/questdb/questdb/blob/7.3.1/core/src/main/java/io/questdb/PropServerConfiguration.java
       - QDB_PG_USER=${QDB_PG_USER}
       - QDB_PG_PASSWORD=${QDB_PG_PASSWORD}
       - QDB_PG_READONLY_USER_ENABLED=${QDB_PG_READONLY_USER_ENABLED}
