@@ -21,8 +21,8 @@ for dir in data_*; do
 
   echo "processing ${BASENAME}"
   #tar --zstd -cf "${BACKUP_NAME}" "${dir}"
-  tar -cf - "${dir}" | pv -s "${DIR_SIZE_BYTES}" | zstd -3 -q - -o "${BACKUP_NAME}"
+  tar -cf - "${dir}" | pv -s "${DIR_SIZE_BYTES}" | zstd -3 -T0 -q - -o "${BACKUP_NAME}"
 
   BACKUP_SIZE=$(du -sh "${BACKUP_NAME}" | cut -f1)
-  echo "backed up ${BASENAME}=$DIR_SIZE, $BACKUP_NAME=$BACKUP_SIZE"
+  echo "backed up ${BASENAME}=$DIR_SIZE $BACKUP_NAME=$BACKUP_SIZE"
 done
