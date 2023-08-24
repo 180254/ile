@@ -155,6 +155,9 @@ services:
     devices:
       - /dev/nvidiactl:/dev/nvidiactl
       - /dev/nvidia0:/dev/nvidia0
+    security_opt:
+      # https://github.com/influxdata/telegraf/issues/6574
+      - apparmor:unconfined
     logging:
       options:
         max-size: 10m
