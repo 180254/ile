@@ -18,6 +18,10 @@ maintainers = [
 # dependencies = requirements.txt files
 # optional-dependencies = requirements-dev.txt files
 
+[tool.black]
+line-length = 120
+target-version = ["py311", "py312"]
+
 [tool.ruff]
 select = ["ALL"]
 ignore = [
@@ -46,6 +50,6 @@ target-version = "py311"
 [tool.ruff.pydocstyle]
 convention = "google"
 
-[tool.black]
-line-length = 120
-target-version = ["py311", "py312"]
+[tool.mypy]
+python_version = "3.11"
+python_executable = "./venv/bin/python3"

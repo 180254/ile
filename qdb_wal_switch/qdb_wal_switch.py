@@ -9,8 +9,8 @@ import psycopg2.extras
 
 dsn = os.environ.get("QDB_DSN", "postgresql://useradmin:quest@localhost:8812/qdb")
 
-wal = sys.argv[1] if len(sys.argv) >= 2 else os.environ.get("QDB_WAL", "True")
-wal = wal.lower() in ("true", "1", "t", "y", "yes")
+wal_cfg = sys.argv[1] if len(sys.argv) >= 2 else os.environ.get("QDB_WAL", "True")
+wal = wal_cfg.lower() in ("true", "1", "t", "y", "yes")
 
 print("wal: " + str(wal))
 print("-" * 40)
@@ -25,8 +25,8 @@ for table in tables:
     name = table["name"]
     print(name)
 
-    cursor = conn.cursor()
-    cursor.execute("alter table " + name + " set type " + ("" if wal else "bypass") + " WAL;")
+    cursor2 = conn.cursor()
+    cursor2.execute("alter table " + name + " set type " + ("" if wal else "bypass") + " WAL;")
 
 print("-" * 40)
 print("done, restart the database")

@@ -17,9 +17,11 @@ total = 0
 for table in tables:
     name = table["name"]
 
-    cursor = conn.cursor()
-    cursor.execute("select count(*) from %s", (name,))
-    count = cursor.fetchone()[0]
+    cursor2 = conn.cursor()
+    cursor2.execute("select count(*) from %s", (name,))
+    cursor2fetchone = cursor2.fetchone()
+
+    count = cursor2fetchone[0] if cursor2fetchone is not None else 0
     total += count
 
     print(f"{name}: {count}")
