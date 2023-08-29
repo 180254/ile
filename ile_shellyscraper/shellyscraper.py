@@ -13,10 +13,12 @@ import time
 import traceback
 import typing
 import urllib.parse
+import urllib.request
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import requests
+import requests.auth
 import websockets
 
 if TYPE_CHECKING:
@@ -42,9 +44,9 @@ Device configuration:
 - Scape strategy: API polling
   Pass the IP address of the device using the ILE_SHELLY_IPS environment variable.
 - Scape strategy: webhook (HTTP server)
-  Configure your devices so that the "report sensor values" URL is "http://{machine_ip}:9080/".
+  Configure your devices so that the "report sensor values" URL is "http://{machine_ip}:9080/{ile_auth_token}".
 - Scape strategy: receiving notification (WebSocket)
-  Configure your devices so that the outgoing WebSocket server is "ws://{machine_ip}:9081/".
+  Configure your devices so that the outgoing WebSocket server is "ws://{machine_ip}:9081/{ile_auth_token}".
 
 You can configure the script using environment variables.
 Check the Env class below to determine what variables you can set.
@@ -57,6 +59,10 @@ Check the Env class below to determine what variables you can set.
 class Env:
     # ILE_DEBUG=boolValueMaybeTrue
     ILE_DEBUG: str = os.environ.get("ILE_DEBUG", "false")
+
+    # ILE_CLOUD_MODE=boolValueMaybeTrue
+    # Set to true if shelly devices are not reachable from the machine running the script.
+    ILE_CLOUD_MODE: str = os.environ.get("ILE_CLOUD_MODE", "false")
 
     # ILE_QUESTDB_HOST=ipv4host
     # ILE_QUESTDB_PORT=intPort
@@ -77,28 +83,76 @@ class Env:
     ILE_SCRAPE_INTERVAL: str = os.environ.get("ILE_SCRAPE_INTERVAL", "60")
     ILE_BACKOFF_STRATEGY: str = os.environ.get("ILE_BACKOFF_STRATEGY", "0.5,1,3,3,5,60,90")
 
-    ILE_HTTP_BIND_HOST: str = os.environ.get("ILE_HTTP_BIND_HOST", "127.0.0.1")
-    ILE_HTTP_BIND_PORT: str = os.environ.get("ILE_HTTP_BIND_PORT", "9080")
+    # ILE_SHELLY_GEN1_WEBHOOK_ENABLED=boolValueMaybeTrue
+    # ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST=ipv4host
+    # ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT=intPort
+    ILE_SHELLY_GEN1_WEBHOOK_ENABLED: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_ENABLED", "true")
+    ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST", "0.0.0.0")
+    ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT", "9080")
 
-    ILE_WEBSOCKET_BIND_HOST: str = os.environ.get("ILE_WEBSOCKET_BIND_HOST", "127.0.0.1")
-    ILE_WEBSOCKET_BIND_PORT: str = os.environ.get("ILE_WEBSOCKET_BIND_PORT", "9081")
+    # ILE_SHELLY_GEN2_WEBSOCKET_ENABLED=boolValueMaybeTrue
+    # ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST=ipv4host
+    # ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT=intPort
+    ILE_SHELLY_GEN2_WEBSOCKET_ENABLED: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_ENABLED", "true")
+    ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST", "0.0.0.0")
+    ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT", "9081")
+
+    # ILE_SHELLY_GEN1_AUTH_USERNAME=stringOrEmpty
+    # ILE_SHELLY_GEN1_AUTH_PASSWORD=stringOrEmpty
+    # https://shelly-api-docs.shelly.cloud/gen1/#http-dialect
+    ILE_SHELLY_GEN1_AUTH_USERNAME = os.environ.get("ILE_SHELLY_GEN1_AUTH_USERNAME", "")
+    ILE_SHELLY_GEN1_AUTH_PASSWORD = os.environ.get("ILE_SHELLY_GEN1_AUTH_PASSWORD", "")
+
+    # ILE_SHELLY_GEN2_AUTH_USERNAME=stringOrEmpty
+    # ILE_SHELLY_GEN2_AUTH_PASSWORD=stringOrEmpty
+    # https://shelly-api-docs.shelly.cloud/gen2/General/Authentication/
+    ILE_SHELLY_GEN2_AUTH_USERNAME = os.environ.get("ILE_SHELLY_GEN2_AUTH_USERNAME", "")
+    ILE_SHELLY_GEN2_AUTH_PASSWORD = os.environ.get("ILE_SHELLY_GEN2_AUTH_PASSWORD", "")
+
+    # ILE_AUTH_TOKEN=stringOrEmpty
+    ILE_AUTH_TOKEN: str = os.environ.get("ILE_AUTH_TOKEN", "")
 
 
 class Config:
     debug: bool = Env.ILE_DEBUG.lower() == "true"
+    cloud_mode: bool = Env.ILE_CLOUD_MODE.lower() == "true"
+
     questdb_address: tuple[str, int] = (Env.ILE_QUESTDB_HOST, int(Env.ILE_QUESTDB_PORT))
     shelly_devices_ips: typing.Sequence[str] = list(filter(None, Env.ILE_SHELLY_IPS.split(",")))
 
-    questdb_socket_timeout_seconds: int = int(Env.ILE_SOCKET_TIMEOUT)
-    shelly_api_http_timeout_seconds: int = int(Env.ILE_HTTP_TIMEOUT)
+    socket_timeout_seconds: int = int(Env.ILE_SOCKET_TIMEOUT)
+    http_timeout_seconds: int = int(Env.ILE_HTTP_TIMEOUT)
 
     scrape_interval_seconds: int = int(Env.ILE_SCRAPE_INTERVAL)
     backoff_strategy_seconds: typing.Sequence[float] = list(
         map(float, filter(None, Env.ILE_BACKOFF_STRATEGY.split(","))),
     )
 
-    http_bind_address: tuple[str, int] = (Env.ILE_HTTP_BIND_HOST, int(Env.ILE_HTTP_BIND_PORT))
-    websocket_bind_address: tuple[str, int] = (Env.ILE_WEBSOCKET_BIND_HOST, int(Env.ILE_WEBSOCKET_BIND_PORT))
+    shelly_gen1_webhook_enabled: bool = Env.ILE_SHELLY_GEN1_WEBHOOK_ENABLED.lower() == "true"
+    shelly_gen1_webhook_bind_address: tuple[str, int] = (
+        Env.ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST,
+        int(Env.ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT),
+    )
+
+    shelly_gen2_websocket_enabled: bool = Env.ILE_SHELLY_GEN2_WEBSOCKET_ENABLED.lower() == "true"
+    shelly_gen2_websocket_bind_address: tuple[str, int] = (
+        Env.ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST,
+        int(Env.ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT),
+    )
+
+    shelly_gen1_auth: requests.auth.AuthBase | None = (
+        requests.auth.HTTPBasicAuth(Env.ILE_SHELLY_GEN1_AUTH_USERNAME, Env.ILE_SHELLY_GEN1_AUTH_PASSWORD)
+        if Env.ILE_SHELLY_GEN1_AUTH_USERNAME and Env.ILE_SHELLY_GEN1_AUTH_PASSWORD
+        else None
+    )
+
+    shelly_gen2_auth: requests.auth.AuthBase | None = (
+        requests.auth.HTTPDigestAuth(Env.ILE_SHELLY_GEN2_AUTH_USERNAME, Env.ILE_SHELLY_GEN2_AUTH_PASSWORD)
+        if Env.ILE_SHELLY_GEN2_AUTH_USERNAME and Env.ILE_SHELLY_GEN2_AUTH_PASSWORD
+        else None
+    )
+
+    auth_token: str = Env.ILE_AUTH_TOKEN
 
 
 # --------------------- HELPERS -----------------------------------------------
@@ -160,26 +214,42 @@ def print_exception(exception: BaseException) -> None:
         print_(f"exception: {exception}", file=sys.stderr)
 
 
-def http_call(device_ip: str, path_and_query: str) -> dict:
-    request = requests.get(f"http://{device_ip}/{path_and_query}", timeout=Config.shelly_api_http_timeout_seconds)
-    request.raise_for_status()
-    data = request.json()
+def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase | None = None) -> dict:
+    response = requests.get(
+        f"http://{device_ip}/{path_and_query}",
+        timeout=Config.http_timeout_seconds,
+        auth=auth,
+    )
+    response.raise_for_status()
+    data = response.json()
     print_debug(lambda: json_dumps(data))
     return data
 
 
 # https://shelly-api-docs.shelly.cloud/gen2/General/RPCProtocol
-def http_rpc_call(device_ip: str, method: str, params: dict | None = None) -> dict:
+def http_rpc_call(
+    device_ip: str, method: str, params: dict | None = None, auth: requests.auth.AuthBase | None = None
+) -> dict:
     # https://shelly-api-docs.shelly.cloud/gen2/General/RPCProtocol#request-frame
     post_body = {"jsonrpc": "2.0", "id": 1, "src": "ile", "method": method, "params": params}
     if params is None:
         del post_body["params"]
 
-    request = requests.post(f"http://{device_ip}/rpc", json=post_body, timeout=Config.shelly_api_http_timeout_seconds)
-    request.raise_for_status()
-    data = request.json()
+    response = requests.post(
+        f"http://{device_ip}/rpc",
+        json=post_body,
+        timeout=Config.http_timeout_seconds,
+        auth=auth,
+    )
+    response.raise_for_status()
+    data = response.json()
     print_debug(lambda: json_dumps(data))
     return data
+
+
+def timestamp_is_synced(unix_timestamp_seconds: float) -> bool:
+    one_day_in_seconds = 24 * 60 * 60
+    return unix_timestamp_seconds > one_day_in_seconds
 
 
 # --------------------- QUESTDB -----------------------------------------------
@@ -200,7 +270,7 @@ def write_ilp_to_questdb(data: str) -> None:
 
     # https://github.com/questdb/questdb.io/commit/35ca3c326ab0b3448ef9fdb39eb60f1bd45f8506
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.settimeout(Config.questdb_socket_timeout_seconds)
+        sock.settimeout(Config.socket_timeout_seconds)
         sock.connect(Config.questdb_address)
         sock.sendall(data.encode())
         sock.shutdown(socket.SHUT_RDWR)
@@ -233,7 +303,7 @@ def shelly_get_device_gen_and_type(device_ip: str) -> tuple[int, str]:
 
 def shelly_get_gen1_device_info(device_ip: str) -> tuple[str, str, str]:
     # https://shelly-api-docs.shelly.cloud/gen1/#settings
-    settings = http_call(device_ip, "settings")
+    settings = http_call(device_ip, "settings", auth=Config.shelly_gen1_auth)
 
     device_type = settings["device"]["type"]
     device_id = settings["device"]["hostname"]
@@ -247,14 +317,14 @@ def shelly_get_gen1_device_status_ilp(device_ip: str, device_type: str, device_i
     if device_type in ("SHPLG-1", "SHPLG-S", "SHPLG-U1", "HPLG2-1"):
         # https://shelly-api-docs.shelly.cloud/gen1/#status
         # https://shelly-api-docs.shelly.cloud/gen1/#shelly-plug-plugs-status
-        status = http_call(device_ip, "status")
+        status = http_call(device_ip, "status", auth=Config.shelly_gen1_auth)
         return shelly_gen1_plug_status_to_ilp(device_id, device_name, status)
 
     # https://shelly-api-docs.shelly.cloud/gen1/#shelly-h-amp-t-coiot
     if device_type == "SHHT-1":
         # https://shelly-api-docs.shelly.cloud/gen1/#status
         # https://shelly-api-docs.shelly.cloud/gen1/#shelly-h-amp-t-status
-        status = http_call(device_ip, "status")
+        status = http_call(device_ip, "status", auth=Config.shelly_gen1_auth)
         return shelly_gen1_ht_status_to_ilp(device_id, device_name, status)
 
     print_(
@@ -269,7 +339,7 @@ def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: dic
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-plug-plugs-status
 
     timestamp = status["unixtime"]
-    if timestamp == 0:
+    if not timestamp_is_synced(timestamp):
         timestamp = int(time.time())
     nano = "000000000"
 
@@ -311,7 +381,7 @@ def shelly_gen1_ht_status_to_ilp(device_id: str, device_name: str, status: dict)
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-h-amp-t-status
 
     timestamp = status["unixtime"]
-    if timestamp == 0:
+    if not timestamp_is_synced(timestamp):
         timestamp = int(time.time())
     nano = "000000000"
 
@@ -350,7 +420,17 @@ class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
 
             device_ip = self.client_address[0]
-            query_string = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+
+            if Config.auth_token and Config.auth_token not in self.path:
+                print_(
+                    f"The ShellyGen1HtReportSensorValuesHandler failed for device_ip={device_ip} "
+                    f"due to unsupported path: '{self.path}'.",
+                    file=sys.stderr,
+                )
+                return
+
+            url_components = urllib.parse.urlparse(self.path)
+            query_string = urllib.parse.parse_qs(url_components.query)
             is_valid_ht_report = "id" in query_string and "temp" in query_string and "hum" in query_string
             print_debug(lambda: self.path)
 
@@ -362,9 +442,10 @@ class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
                 data = shelly_gen1_ht_report_to_ilp(device_id, temp, hum)
 
                 try:
-                    # The http connection is still in progress. Device has active Wi-Fi.
-                    device_type, device_id, device_name = shelly_get_gen1_device_info(device_ip)
-                    data += shelly_get_gen1_device_status_ilp(device_ip, device_type, device_id, device_name)
+                    if not Config.cloud_mode:
+                        # The http connection is still in progress. Device has active Wi-Fi.
+                        device_type, device_id, device_name = shelly_get_gen1_device_info(device_ip)
+                        data += shelly_get_gen1_device_status_ilp(device_ip, device_type, device_id, device_name)
 
                 except Exception as exception:
                     print_exception(exception)
@@ -389,7 +470,7 @@ class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
 
 def shelly_get_gen2_device_name(device_ip: str) -> str:
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Sys#sysgetconfig
-    sysconfig = http_call(device_ip, "rpc/Sys.GetConfig")
+    sysconfig = http_call(device_ip, "rpc/Sys.GetConfig", auth=Config.shelly_gen2_auth)
     return sysconfig["device"]["name"]
 
 
@@ -400,7 +481,7 @@ def shelly_get_gen2_device_status_ilp(device_ip: str, device_type: str, device_n
     # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-us
     if device_type in ("SNPL-00110IT", "SNPL-00112EU", "SNPL-00112UK", "SNPL-00116US"):
         # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch#status
-        status = http_rpc_call(device_ip, "Switch.GetStatus", {"id": 0})
+        status = http_rpc_call(device_ip, "Switch.GetStatus", {"id": 0}, auth=Config.shelly_gen2_auth)
         return shelly_gen2_plug_status_to_ilp(device_name, status)
 
     print_(
@@ -475,7 +556,7 @@ def shelly_gen2_plug_status_to_ilp(device_name: str, status: dict) -> str:
     return data
 
 
-def shelly_gen2_plusht_status_to_ilp(device_name: str, status: dict) -> str:
+def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: dict) -> str:
     # status = status in "NotifyFullStatus" notification format
     # https://shelly-api-docs.shelly.cloud/gen2/General/Notifications/#notifyfullstatus
 
@@ -486,12 +567,15 @@ def shelly_gen2_plusht_status_to_ilp(device_name: str, status: dict) -> str:
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Humidity/
 
     timestamp = int(status["params"]["ts"] or 0)
-    if timestamp == 0:
+    if not timestamp_is_synced(timestamp):
         timestamp = int(time.time())
     nano = "000000000"
 
     device_id = status["src"]
     params = status["params"]
+
+    if device_name is None:
+        device_name = device_id
 
     tmp_tc = params["temperature:0"]["tC"]
     tmp_is_valid = tmp_tc is not None and "errors" not in params["temperature:0"]
@@ -518,13 +602,22 @@ def shelly_gen2_plusht_status_to_ilp(device_name: str, status: dict) -> str:
     )
 
 
-async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocketServerProtocol, _path: str) -> None:
+async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocketServerProtocol, path: str) -> None:
     try:
+        device_ip = websocket.remote_address[0]
+
+        if Config.auth_token and Config.auth_token not in path:
+            print_(
+                f"The shelly_gen2_outbound_websocket_handler failed for device_ip={device_ip} "
+                f"due to unsupported path '{path}'.",
+                file=sys.stderr,
+            )
+            return
+
         recv = await websocket.recv()
         payload = json.loads(recv)
         print_debug(lambda: json_dumps(payload))
 
-        device_ip = websocket.remote_address[0]
         src = payload["src"]
 
         if src.startswith("shellyplusht-"):
@@ -534,7 +627,7 @@ async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocket
             if payload["method"] == "NotifyFullStatus":
                 try:
                     # The websocket connection is still in progress. Device has active Wi-Fi.
-                    device_name = shelly_get_gen2_device_name(device_ip)
+                    device_name = shelly_get_gen2_device_name(device_ip) if not Config.cloud_mode else None
 
                 except Exception as exception:
                     print_exception(exception)
@@ -619,26 +712,30 @@ def main() -> int:
         status_thread.start()
 
     # Handle Shelly H&T's action: "report sensor values".
-    shelly_ht_report_webhook = http.server.HTTPServer(Config.http_bind_address, ShellyGen1HtReportSensorValuesHandler)
-    webhook_server_thread = threading.Thread(target=shelly_ht_report_webhook.serve_forever, daemon=True)
-    webhook_server_thread.start()
-
-    # Act as WebSocket server. Handle gen2 notifications.
-    # Let's mix classic http.server.HTTPServer with asyncio-based websockets!
-    async def shelly_gen2_outbound_websocket_server() -> None:
-        ws_server = await websockets.serve(
-            shelly_gen2_outbound_websocket_handler,
-            Config.websocket_bind_address[0],
-            Config.websocket_bind_address[1],
+    if Config.shelly_gen1_webhook_enabled:
+        shelly_ht_report_webhook = http.server.ThreadingHTTPServer(
+            Config.shelly_gen1_webhook_bind_address, ShellyGen1HtReportSensorValuesHandler
         )
-        await ws_server.server.serve_forever()
+        webhook_server_thread = threading.Thread(target=shelly_ht_report_webhook.serve_forever, daemon=True)
+        webhook_server_thread.start()
 
-    # Horrible. Works and is compatible with sigterm_threading_event.
-    websocket_sever_thread = threading.Thread(
-        target=lambda: asyncio.run(shelly_gen2_outbound_websocket_server()),
-        daemon=True,
-    )
-    websocket_sever_thread.start()
+    if Config.shelly_gen2_websocket_enabled:
+        # Act as WebSocket server. Handle gen2 notifications.
+        # Let's mix classic http.server.HTTPServer with asyncio-based websockets!
+        async def shelly_gen2_outbound_websocket_server() -> None:
+            ws_server = await websockets.serve(
+                shelly_gen2_outbound_websocket_handler,
+                Config.shelly_gen2_websocket_bind_address[0],
+                Config.shelly_gen2_websocket_bind_address[1],
+            )
+            await ws_server.server.serve_forever()
+
+        # Horrible. Works and is compatible with sigterm_threading_event.
+        websocket_sever_thread = threading.Thread(
+            target=lambda: asyncio.run(shelly_gen2_outbound_websocket_server()),
+            daemon=True,
+        )
+        websocket_sever_thread.start()
 
     print_("STARTED", file=sys.stderr)
     sigterm_threading_event.wait()
