@@ -21,8 +21,15 @@ if typing.TYPE_CHECKING:
     import types
 
 
-# ile-tcp-cache is useful when the target TCP server is not always available, and you don't want to lose data.
-# Use case example: telegraf on a laptop that has accesses the questdb once a day.
+# ile-tcp-cache is useful when the target TCP server is unreachable from the data-producing device.
+
+# Use case example: telegraf on a laptop with access to the database (target TCP server) once a day.
+#                   Redis, collector, and delivery man components run on the laptop.
+
+# Use case example: smart-home device is on a different network than a database (target TCP server).
+#                   The smart home device writes the measurements on a cloud virtual machine.
+#                   Redis and the collector components run in the cloud.
+#                   The delivery man component runs on the database host computer.
 
 #      [Pickup location: my TCP] -> [Parcel collector] -> [Warehouse: Redis stream]
 #              -> [Delivery man] -> [Destination location: target TCP]
@@ -81,12 +88,14 @@ class Env:
     ITC_REDIS_STREAM_GROUP_NAME: str = getenv("ITC_REDIS_STREAM_GROUP_NAME", "itc")
     ITC_REDIS_STREAM_CONSUMER_NAME: str = getenv("ITC_REDIS_STREAM_CONSUMER_NAME", "itc")
 
+    ITC_PARCEL_COLLECTOR_ENABLED: str = getenv("ITC_PARCEL_COLLECTOR_ENABLED", "true")
     ITC_PARCEL_COLLECTOR_CAPACITY: str = getenv("ITC_PARCEL_COLLECTOR_CAPACITY", "2048")
     ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL: str = getenv("ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL", "60s")
 
     ITC_REDIS_STREAM_READ_COUNT: str = getenv("ITC_REDIS_STREAM_READ_COUNT", "2048")
     ITC_DELIVERY_MAN_CAPACITY: str = getenv("ITC_DELIVERY_MAN_CAPACITY", "4096")
 
+    ITC_DELIVERY_MAN_ENABLED: str = getenv("ITC_DELIVERY_MAN_ENABLED", "true")
     ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = getenv("ITC_DELIVERY_MAN_COLLECT_INTERVAL", "60s")
     ITC_DELIVERY_MAN_FLUSH_INTERVAL: str = getenv("ITC_DELIVERY_MAN_FLUSH_INTERVAL", "60s")
 
@@ -128,12 +137,14 @@ class Config:
     redis_stream_group_name: str = Env.ITC_REDIS_STREAM_GROUP_NAME
     redis_stream_consumer_name: str = Env.ITC_REDIS_STREAM_CONSUMER_NAME
 
+    parcel_collector_enabled: bool = Env.ITC_PARCEL_COLLECTOR_ENABLED.lower() == "true"
     parcel_collector_capacity: int = int(Env.ITC_PARCEL_COLLECTOR_CAPACITY)
     parcel_collector_flush_interval: datetime.timedelta = duration(Env.ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL)
 
     redis_steam_read_count: int = int(Env.ITC_REDIS_STREAM_READ_COUNT)
     delivery_man_capacity: int = int(Env.ITC_DELIVERY_MAN_CAPACITY)
 
+    delivery_man_enabled: bool = Env.ITC_DELIVERY_MAN_ENABLED.lower() == "true"
     delivery_man_collect_interval: datetime.timedelta = duration(Env.ITC_DELIVERY_MAN_COLLECT_INTERVAL)
     delivery_man_flush_interval: datetime.timedelta = duration(Env.ITC_DELIVERY_MAN_FLUSH_INTERVAL)
 
@@ -523,12 +534,14 @@ class DeliveryMan:
             print_exception(e)
 
 
-def status(parsel_collector: TCPParcelCollector, delivery_man: DeliveryMan, r: redis.Redis) -> Periodic.PeriodicResult:
+def status(
+    parcel_collector: TCPParcelCollector | None, delivery_man: DeliveryMan | None, r: redis.Redis
+) -> Periodic.PeriodicResult:
     try:
         threading_active_count = threading.active_count()
 
-        parcel_collector_backpack = len(parsel_collector.backpack)
-        delivery_man_backpack = len(delivery_man.backpack)
+        parcel_collector_backpack = len(parcel_collector.backpack) if parcel_collector else -1
+        delivery_man_backpack = len(delivery_man.backpack) if delivery_man else -1
 
         warehouse_xlen = r.xlen(name=Config.redis_stream_name)
         warehouse_xpending = r.xpending(name=Config.redis_stream_name, groupname=Config.redis_stream_group_name)[
@@ -635,28 +648,34 @@ def main() -> int:
     if not redis_init(r):
         return -1
 
-    # [Pickup location: my TCP] -> [Parcel collector]
-    tcp_parcel_collector = TCPParcelCollector(r, sigterm_threading_event)
-    tcp_server = socketserver.TCPServer(Config.my_tcp_bind_address, tcp_parcel_collector.handler_factory)
-    webhook_server_thread = VerboseThread(target=tcp_server.serve_forever, daemon=True)
-    webhook_server_thread.start()
+    if Config.parcel_collector_enabled:
+        # [Pickup location: my TCP] -> [Parcel collector]
+        tcp_parcel_collector = TCPParcelCollector(r, sigterm_threading_event)
+        tcp_server = socketserver.ThreadingTCPServer(Config.my_tcp_bind_address, tcp_parcel_collector.handler_factory)
+        webhook_server_thread = VerboseThread(target=tcp_server.serve_forever, daemon=True)
+        webhook_server_thread.start()
 
-    # [Parcel collector] -> [Warehouse: Redis stream]
-    parcel_collector_periodic_flush = Periodic(
-        tcp_parcel_collector.deliver_to_warehouse,
-        Config.parcel_collector_flush_interval,
-        sigterm_threading_event,
-    )
-    parcel_collector_periodic_flush.start()
+        # [Parcel collector] -> [Warehouse: Redis stream]
+        parcel_collector_periodic_flush = Periodic(
+            tcp_parcel_collector.deliver_to_warehouse,
+            Config.parcel_collector_flush_interval,
+            sigterm_threading_event,
+        )
+        parcel_collector_periodic_flush.start()
+    else:
+        tcp_parcel_collector = None
 
-    # [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP]
-    delivery_man = DeliveryMan(r)
-    delivery_man_periodic_collect = Periodic(
-        delivery_man.collect_from_warehouse_and_occasionally_deliver_to_target_tcp,
-        Config.delivery_man_collect_interval,
-        sigterm_threading_event,
-    )
-    delivery_man_periodic_collect.start()
+    if Config.delivery_man_enabled:
+        # [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP]
+        delivery_man = DeliveryMan(r)
+        delivery_man_periodic_collect = Periodic(
+            delivery_man.collect_from_warehouse_and_occasionally_deliver_to_target_tcp,
+            Config.delivery_man_collect_interval,
+            sigterm_threading_event,
+        )
+        delivery_man_periodic_collect.start()
+    else:
+        delivery_man = None
 
     periodic_status = Periodic(
         lambda: status(tcp_parcel_collector, delivery_man, r),
