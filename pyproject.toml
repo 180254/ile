@@ -53,3 +53,9 @@ convention = "google"
 [tool.mypy]
 python_version = "3.11"
 python_executable = "./venv/bin/python3"
+
+[tool.pyright]
+venvPath = "."
+venv = "venv"
+pythonVersion = "3.11"
+pythonPlatform = "Linux"
