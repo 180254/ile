@@ -1,0 +1,18 @@
+version: "3.8"
+
+name: ile-base
+
+networks:
+  vnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.130.0/24
+
+services:
+  hello-world:
+    image: hello-world:latest
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.100

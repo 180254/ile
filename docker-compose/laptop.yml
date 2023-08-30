@@ -1,13 +1,11 @@
 version: "3.8"
 
-name: ile
+name: ile-laptop
 
 networks:
   vnet:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.130.0/24
+    name: ile-base_vnet
+    external: true
 
 volumes:
   redis_data:
@@ -20,33 +18,22 @@ volumes:
 services:
   redis:
     build:
-      context: ${PWD}
+      context: ${PWD}/deps-dockerfiles
+      dockerfile: redis.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+        ILE_REDIS_PORT: 6379
+        ILE_REDIS_PASSWORD: ${ILE_REDIS_PASSWORD}
       no_cache: false
       pull: true
-      # https://github.com/docker-library/redis/blob/master/7.0/Dockerfile
-      # https://redis.io/docs/management/config-file/
-      dockerfile_inline: |
-        FROM redis:7.0.12
-        RUN mkdir -p /usr/local/etc/redis
-        COPY <<EOF /usr/local/etc/redis/redis.conf
-        save 3600 1 300 100 60 10000
-        appendonly yes
-        requirepass ${ILE_REDIS_PASSWORD}
-        dir /data
-        EOF
-        RUN set -eux \
-          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
-          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
-        RUN chown -R nonroot:nonroot /data
-        USER nonroot
-        CMD [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
-    image: ile-redis:0.0.1
+    image: ile-laptop-redis:0.0.1
     user: nonroot:nonroot
     restart: always
-    hostname: redis
     networks:
       vnet:
-        ipv4_address: 192.168.130.20
+        ipv4_address: 192.168.130.30
+    ports: [ ]
     volumes:
       - redis_data:/data
     logging:
@@ -54,7 +41,6 @@ services:
         max-size: 10m
         max-file: 1
     healthcheck:
-      # https://questdb.io/doc-s/operations/health-monitoring/
       test: timeout -s 15 5 redis-cli -h localhost -p 6379 -a ${ILE_REDIS_PASSWORD} ping | grep -qaFi PONG || exit 1
       interval: 30s
       timeout: 10s
@@ -73,33 +59,37 @@ services:
   tcp-cache:
     build:
       context: ${PWD}/ile_tcp_cache
+      dockerfile: Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
       pull: true
-    image: ile-tcp-cache:0.0.1
+    image: ile-laptop-tcp-cache:0.0.1
     user: nonroot:nonroot
     restart: always
     networks:
       vnet:
-        ipv4_address: 192.168.130.21
-    extra_hosts:
-      - questdb:192.168.130.10
-    ports:
-      - "9152:9152"
+        ipv4_address: 192.168.130.31
+    ports: [ ]
     environment:
       - ITC_MY_TCP_BIND_HOST=0.0.0.0
       - ITC_MY_TCP_BIND_PORT=9152
       - ITC_TARGET_TCP_HOST=${ITC_TARGET_TCP_HOST}
-      - ITC_TARGET_TCP_PORT=9009
-      - ITC_REDIS_HOST=redis
+      - ITC_TARGET_TCP_PORT=${ITC_TARGET_TCP_PORT}
+      - ITC_REDIS_HOST=192.168.130.30
       - ITC_REDIS_PORT=6379
       - ITC_REDIS_PASSWORD=${ILE_REDIS_PASSWORD}
     logging:
       options:
         max-size: 10m
         max-file: 1
+    healthcheck:
+      test: timeout -s 15 5 socat -t5 -T5 /dev/null TCP:127.0.0.1:9152 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
     depends_on:
       redis:
         condition: service_started
@@ -116,25 +106,23 @@ services:
 
   # https://hub.docker.com/_/telegraf
   # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
-  telegraf2:
+  telegraf:
     build:
-      context: ${PWD}
+      context: ${PWD}/deps-dockerfiles
+      dockerfile: telegraf.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
       pull: true
-      # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.27/Dockerfile
-      dockerfile_inline: |
-        FROM telegraf:1.27.2
-        RUN set -eux \
-          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
-          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
-        USER nonroot:999
-        CMD telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d
-    image: ile-telegraf2:0.0.1
+    image: ile-laptop-telegraf:0.0.1
     user: nonroot:999
     restart: always
-    network_mode: host
-    extra_hosts:
-      - ile-tcp-cache:192.168.130.21
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.32
+    ports: [ ]
+    hostname: ${HOSTNAME}
     environment:
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc
@@ -143,13 +131,15 @@ services:
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
       - LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libnvidia-ml.so
-      - ILT_SOCKET_WRITER_ADDRESS=tcp://ile-tcp-cache:9152
-      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8653
+      - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.31:9152
+      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
+      - ILT_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${PWD}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${PWD}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
+      - ${PWD}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
       - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
       - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so:ro
     devices:
@@ -164,7 +154,7 @@ services:
         max-file: 1
     healthcheck:
       # https://github.com/influxdata/telegraf/blob/release-1.27/plugins/outputs/health/README.md
-      test: timeout -s 15 5 curl -f http://127.0.0.1:8653 || exit 1
+      test: timeout -s 15 5 curl -f http://127.0.0.1:8652 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s

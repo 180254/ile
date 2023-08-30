@@ -1,0 +1,221 @@
+version: "3.8"
+
+name: ile-cloudserver
+
+networks:
+  vnet:
+    name: ile-base_vnet
+    external: true
+
+volumes:
+  redis_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${PWD}/data_redis
+
+services:
+  redis:
+    build:
+      context: ${PWD}/deps-dockerfiles
+      dockerfile: redis.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+        ILE_REDIS_PORT: ${ILE_REDIS_PORT}
+        ILE_REDIS_PASSWORD: ${ILE_REDIS_PASSWORD}
+      no_cache: false
+      pull: false
+    image: ile-cloudserver-redis:0.0.1
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.10
+    ports:
+      - "${ILE_REDIS_PORT}:${ILE_REDIS_PORT}"
+    volumes:
+      - redis_data:/data
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://questdb.io/doc-s/operations/health-monitoring/
+      test: timeout -s 15 5 redis-cli -h localhost -p ${ILE_REDIS_PORT} -a ${ILE_REDIS_PASSWORD} ping | grep -qaFi PONG || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+
+  tcp-cache-parcel-collector:
+    build:
+      context: ${PWD}/ile_tcp_cache
+      dockerfile: Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: false
+    image: ile-cloudserver-tcp-cache:0.0.1
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.11
+    ports: [ ]
+    environment:
+      - ITC_PARCEL_COLLECTOR_ENABLED=true
+      - ITC_DELIVERY_MAN_ENABLED=false
+      - ITC_MY_TCP_BIND_HOST=0.0.0.0
+      - ITC_MY_TCP_BIND_PORT=9152
+      - ITC_REDIS_HOST=192.168.130.10
+      - ITC_REDIS_PORT=${ILE_REDIS_PORT}
+      - ITC_REDIS_PASSWORD=${ILE_REDIS_PASSWORD}
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: timeout -s 15 5 socat -t5 -T5 /dev/null TCP:127.0.0.1:9152 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      redis:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+
+  # https://hub.docker.com/_/telegraf
+  # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
+  telegraf:
+    build:
+      context: ${PWD}/deps-dockerfiles
+      dockerfile: telegraf.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: false
+      # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.27/Dockerfile
+    image: ile-cloudserver-telegraf:0.0.1
+    user: nonroot:999
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.12
+    ports: [ ]
+    hostname: ${HOSTNAME}
+    environment:
+      - HOST_ETC=/hostfs/etc
+      - HOST_PROC=/hostfs/proc
+      - HOST_SYS=/hostfs/sys
+      - HOST_VAR=/hostfs/var
+      - HOST_RUN=/hostfs/run
+      - HOST_MOUNT_PREFIX=/hostfs
+      - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.11:9152
+      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
+      - ILT_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
+    volumes:
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PWD}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    security_opt:
+      # https://github.com/influxdata/telegraf/issues/6574
+      - apparmor:unconfined
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://github.com/influxdata/telegraf/blob/release-1.27/plugins/outputs/health/README.md
+      test: timeout -s 15 5 curl -f http://127.0.0.1:8652 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      tcp-cache-parcel-collector:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+
+  shellyscraper:
+    build:
+      context: ${PWD}/ile_shellyscraper
+      dockerfile: Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: false
+    image: ile-cloudserver-shellyscraper:0.0.1
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.13
+    ports:
+      - "${ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT}:${ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT}"
+    environment:
+      - ILE_QUESTDB_HOST=192.168.130.11
+      - ILE_QUESTDB_PORT=9152
+      - ILE_SHELLY_IPS=
+      - ILE_DEBUG=${ILE_DEBUG}
+      - ILE_CLOUD_MODE=true
+      - ILE_SHELLY_GEN1_WEBHOOK_ENABLED=false
+      - ILE_SHELLY_GEN2_WEBSOCKET_ENABLED=true
+      - ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST=0.0.0.0
+      - ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT=${ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT}
+      - ILE_AUTH_TOKEN=${ILE_AUTH_TOKEN}
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: timeout -s 15 5 socat -t5 -T5 /dev/null TCP:127.0.0.1:${ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT} || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      tcp-cache-parcel-collector:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'

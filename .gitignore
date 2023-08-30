@@ -5,4 +5,4 @@ notepad.txt
 .mypy_cache/
 .ruff_cache/
 data_*/
-docker-compose-*.env
+*.env

@@ -1,13 +1,11 @@
 version: "3.8"
 
-name: ile
+name: ile-homeserver
 
 networks:
   vnet:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.130.0/24
+    name: ile-base_vnet
+    external: true
 
 volumes:
   questdb_data:
@@ -26,27 +24,19 @@ volumes:
 services:
   questdb:
     build:
-      context: ${PWD}
+      context: ${PWD}/deps-dockerfiles
+      dockerfile: questdb.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
       pull: true
-      # https://github.com/questdb/questdb/blob/7.3.1/core/Dockerfile
-      dockerfile_inline: |
-        FROM questdb/questdb:7.3.1
-        RUN set -eux \
-          && apt-get update \
-          && apt-get install -y --no-install-recommends curl ca-certificates \
-          && rm -rf /var/lib/apt/lists/* \
-          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
-          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
-        RUN chown -R nonroot:nonroot /var/lib/questdb
-        USER nonroot
-    image: ile-questdb:0.0.1
+    image: ile-homeserver-questdb:0.0.1
     user: nonroot:nonroot
     restart: always
-    hostname: questdb
     networks:
       vnet:
-        ipv4_address: 192.168.130.10
+        ipv4_address: 192.168.130.20
     ports:
       - "8812:8812"
       - "9000:9000"
@@ -81,7 +71,7 @@ services:
         max-file: 1
     healthcheck:
       # https://questdb.io/doc-s/operations/health-monitoring/
-      test: [ "CMD", "curl", "-f", "http://127.0.0.1:9003" ]
+      test: timeout -s 15 5 curl -f http://127.0.0.1:9003 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s
@@ -98,36 +88,24 @@ services:
 
   grafana:
     build:
-      context: ${PWD}
+      context: ${PWD}/deps-dockerfiles
+      dockerfile: grafana-oss.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
       pull: true
-      # https://github.com/grafana/grafana/blob/v10.0.3/Dockerfile
-      dockerfile_inline: |
-        FROM grafana/grafana-oss:10.0.3-ubuntu
-        USER root
-        RUN set -eux \
-          && apt-get update \
-          && apt-get install -y --no-install-recommends curl ca-certificates \
-          && rm -rf /var/lib/apt/lists/* \
-          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
-          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
-        RUN chown -R nonroot:nonroot \
-          /etc/grafana/grafana.ini \
-          /var/lib/grafana \
-          /usr/share/grafana \
-          /var/log/grafana \
-          /var/lib/grafana/plugins \
-          /etc/grafana/provisioning
-        USER nonroot
-    image: ile-grafana:0.0.1
+    image: ile-homeserver-grafana:0.0.1
     user: nonroot:nonroot
     restart: always
-    hostname: grafana
     networks:
       vnet:
-        ipv4_address: 192.168.130.11
+        ipv4_address: 192.168.130.21
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
     logging:
@@ -137,7 +115,7 @@ services:
     healthcheck:
       # https://grafana.com/docs/grafana/latest/developers/http_api/other/#returns-health-information-about-grafana
       # https://github.com/grafana/grafana/pull/27536
-      test: [ "CMD", "curl", "-f", "http://127.0.0.1:3000/api/health" ]
+      test: timeout -s 15 5 curl -f http://127.0.0.1:3000/api/health || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s
@@ -159,31 +137,51 @@ services:
   shellyscraper:
     build:
       context: ${PWD}/ile_shellyscraper
+      dockerfile: Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
       pull: true
-    image: ile-shellyscraper:0.0.1
+    image: ile-homeserver-shellyscraper:0.0.1
     user: nonroot:nonroot
     restart: always
     networks:
       vnet:
-        ipv4_address: 192.168.130.12
+        ipv4_address: 192.168.130.22
     ports:
       - "9080:9080"
       - "9081:9081"
     environment:
-      - ILE_QUESTDB_HOST=questdb
+      - ILE_QUESTDB_HOST=192.168.130.20
       - ILE_QUESTDB_PORT=9009
       - ILE_SHELLY_IPS=${ILE_SHELLY_IPS}
       - ILE_DEBUG=${ILE_DEBUG}
-      - ILE_HTTP_BIND_HOST=0.0.0.0
-      - ILE_WEBSOCKET_BIND_HOST=0.0.0.0
+      - ILE_CLOUD_MODE=false
+      - ILE_SHELLY_GEN1_WEBHOOK_ENABLED=true
+      - ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST=0.0.0.0
+      - ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT=9080
+      - ILE_SHELLY_GEN2_WEBSOCKET_ENABLED=true
+      - ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST=0.0.0.0
+      - ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT=9081
+      - ILE_SHELLY_GEN1_AUTH_USERNAME=${ILE_SHELLY_GEN1_AUTH_USERNAME}
+      - ILE_SHELLY_GEN1_AUTH_PASSWORD=${ILE_SHELLY_GEN1_AUTH_PASSWORD}
+      - ILE_SHELLY_GEN2_AUTH_USERNAME=${ILE_SHELLY_GEN2_AUTH_USERNAME}
+      - ILE_SHELLY_GEN2_AUTH_PASSWORD=${ILE_SHELLY_GEN2_AUTH_PASSWORD}
+      - ILE_AUTH_TOKEN=${ILE_AUTH_TOKEN}
     logging:
       options:
         max-size: 10m
         max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5 socat -t5 -T5 /dev/null TCP:127.0.0.1:9080
+        && timeout -s 15 5 socat -t5 -T5 /dev/null TCP:127.0.0.1:9081
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
     depends_on:
       questdb:
         condition: service_started
@@ -202,23 +200,19 @@ services:
   # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
   telegraf:
     build:
-      context: ${PWD}
-      no_cache: false
-      pull: true
-      # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.27/Dockerfile
-      dockerfile_inline: |
-        FROM telegraf:1.27.2
-        RUN set -eux \
-          && groupadd -g "${ILE_NONROOT_GID}" nonroot \
-          && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
-        USER nonroot
-        CMD telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d
-    image: ile-telegraf:0.0.1
+      context: ${PWD}/deps-dockerfiles
+      dockerfile: telegraf.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+    image: ile-homeserver-telegraf:0.0.1
     user: nonroot:999
     restart: always
-    network_mode: host
-    extra_hosts:
-      - questdb:192.168.130.10
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.23
+    ports: [ ]
+    hostname: ${HOSTNAME}
     environment:
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc
@@ -226,12 +220,14 @@ services:
       - HOST_VAR=/hostfs/var
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
-      - ILT_SOCKET_WRITER_ADDRESS=tcp://${ILT_SOCKET_WRITER_HOST}:9009
+      - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.20:9009
       - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
+      - ILT_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${PWD}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${PWD}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
       - apparmor:unconfined
@@ -241,7 +237,54 @@ services:
         max-file: 1
     healthcheck:
       # https://github.com/influxdata/telegraf/blob/release-1.27/plugins/outputs/health/README.md
-      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8652" ]
+      test: timeout -s 15 5 curl -f http://127.0.0.1:8652 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      questdb:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+
+  tcp-cache-delivery-man:
+    build:
+      context: ${PWD}/ile_tcp_cache
+      dockerfile: Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-tcp-cache:0.0.1
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.24
+    environment:
+      - ITC_PARCEL_COLLECTOR_ENABLED=false
+      - ITC_DELIVERY_MAN_ENABLED=true
+      - ITC_TARGET_TCP_HOST=192.168.130.20
+      - ITC_TARGET_TCP_PORT=9009
+      - ITC_REDIS_HOST=${ITC_REDIS_HOST}
+      - ITC_REDIS_PORT=${ITC_REDIS_PORT}
+      - ITC_REDIS_PASSWORD=${ITC_REDIS_PASSWORD}
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: timeout -s 15 5 true || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s

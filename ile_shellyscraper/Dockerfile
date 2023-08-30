@@ -6,6 +6,12 @@ RUN /venv/bin/pip3 install --disable-pip-version-check -r /requirements.txt
 
 FROM python:3.11-slim-bookworm
 
+# useful for healthchecks
+RUN set -eux \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends socat \
+  && rm -rf /var/lib/apt/lists/*
+
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
 
