@@ -12,6 +12,7 @@ RUN set -eux \
   && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
 
 RUN chown -R nonroot:nonroot /var/lib/questdb
+
 USER nonroot
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

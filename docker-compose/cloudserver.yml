@@ -13,20 +13,24 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ${PWD}/data_redis
+      device: ${ILEDIR}/data_redis
 
 services:
   redis:
     build:
-      context: ${PWD}/deps-dockerfiles
+      context: ${PWD}/deps
       dockerfile: redis.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
-        ILE_REDIS_PORT: ${ILE_REDIS_PORT}
-        ILE_REDIS_PASSWORD: ${ILE_REDIS_PASSWORD}
+        ILR_REDIS_PORT: ${ILR_REDIS_PORT}
+        ILR_REDIS_PASSWORD: ${ILR_REDIS_PASSWORD}
+        ILR_REDIS_SSL: true
+        ILR_REDIS_SSL_CERTFILE: /tls/certfile.pem
+        ILR_REDIS_SSL_KEYFILE: /tls/keyfile.pem
+        ILR_REDIS_SSL_PASSWORD: ${ILE_TLS_PASSWORD}
       no_cache: false
-      pull: false
+      pull: true
     image: ile-cloudserver-redis:0.0.1
     user: nonroot:nonroot
     restart: always
@@ -34,16 +38,18 @@ services:
       vnet:
         ipv4_address: 192.168.130.10
     ports:
-      - "${ILE_REDIS_PORT}:${ILE_REDIS_PORT}"
+      - "${ILR_REDIS_PORT}:${ILR_REDIS_PORT}"
     volumes:
       - redis_data:/data
+      - ${PWD}/tls/cloudbundle.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/cloud-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
         max-file: 1
     healthcheck:
       # https://questdb.io/doc-s/operations/health-monitoring/
-      test: timeout -s 15 5 redis-cli -h localhost -p ${ILE_REDIS_PORT} -a ${ILE_REDIS_PASSWORD} ping | grep -qaFi PONG || exit 1
+      test: timeout -s 15 5 redis-cli -h localhost -p ${ILR_REDIS_PORT} -a ${ILR_REDIS_PASSWORD} --tls --insecure ping | grep -qaFi PONG || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s
@@ -60,13 +66,13 @@ services:
 
   tcp-cache-parcel-collector:
     build:
-      context: ${PWD}/ile_tcp_cache
+      context: ${ILEDIR}/ile_tcp_cache
       dockerfile: Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
-      pull: false
+      pull: true
     image: ile-cloudserver-tcp-cache:0.0.1
     user: nonroot:nonroot
     restart: always
@@ -79,9 +85,20 @@ services:
       - ITC_DELIVERY_MAN_ENABLED=false
       - ITC_MY_TCP_BIND_HOST=0.0.0.0
       - ITC_MY_TCP_BIND_PORT=9152
+      - ITC_MY_TCP_SSL=true
+      - ITC_MY_TCP_SSL_CERTFILE=/tls/certfile.pem
+      - ITC_MY_TCP_SSL_KEYFILE=/tls/keyfile.pem
+      - ITC_MY_TCP_SSL_PASSWORD=${ILE_TLS_PASSWORD}
       - ITC_REDIS_HOST=192.168.130.10
-      - ITC_REDIS_PORT=${ILE_REDIS_PORT}
-      - ITC_REDIS_PASSWORD=${ILE_REDIS_PASSWORD}
+      - ITC_REDIS_PORT=${ILR_REDIS_PORT}
+      - ITC_REDIS_PASSWORD=${ILR_REDIS_PASSWORD}
+      - ITC_REDIS_SSL=true
+      - ITC_REDIS_SSL_CAFILE=/tls/ca.pem
+      - ITC_REDIS_SSL_CHECKHOSTNAME=false
+    volumes:
+      - ${PWD}/tls/cloudbundle.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/cloud-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
     logging:
       options:
         max-size: 10m
@@ -110,13 +127,13 @@ services:
   # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
   telegraf:
     build:
-      context: ${PWD}/deps-dockerfiles
+      context: ${PWD}/deps
       dockerfile: telegraf.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
-      pull: false
+      pull: true
       # https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.27/Dockerfile
     image: ile-cloudserver-telegraf:0.0.1
     user: nonroot:999
@@ -135,11 +152,15 @@ services:
       - HOST_MOUNT_PREFIX=/hostfs
       - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.11:9152
       - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
+      - ILT_TLS_CA=/tls/ca.pem
+      - ILT_TLS_INSECURE_SKIP_VERIFY=true
       - ILT_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${PWD}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf-writerssl.conf:/etc/telegraf/telegraf.d/telegraf-writerssl.conf:ro
+      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
       - apparmor:unconfined
@@ -170,13 +191,13 @@ services:
 
   shellyscraper:
     build:
-      context: ${PWD}/ile_shellyscraper
+      context: ${ILEDIR}/ile_shellyscraper
       dockerfile: Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
-      pull: false
+      pull: true
     image: ile-cloudserver-shellyscraper:0.0.1
     user: nonroot:nonroot
     restart: always
@@ -188,6 +209,9 @@ services:
     environment:
       - ILE_QUESTDB_HOST=192.168.130.11
       - ILE_QUESTDB_PORT=9152
+      - ILE_QUESTDB_SSL=true
+      - ILE_QUESTDB_SSL_CAFILE=/tls/ca.pem
+      - ILE_QUESTDB_SSL_CHECKHOSTNAME=false
       - ILE_SHELLY_IPS=
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_CLOUD_MODE=true
@@ -195,7 +219,15 @@ services:
       - ILE_SHELLY_GEN2_WEBSOCKET_ENABLED=true
       - ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST=0.0.0.0
       - ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT=${ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT}
+      - ILE_SHELLY_GEN2_WEBSOCKET_SSL=true
+      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE=/tls/certfile.pem
+      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE=/tls/keyfile.pem
+      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD=${ILE_TLS_PASSWORD}
       - ILE_AUTH_TOKEN=${ILE_AUTH_TOKEN}
+    volumes:
+      - ${PWD}/tls/cloudbundle.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/cloud-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
     logging:
       options:
         max-size: 10m

@@ -6,3 +6,8 @@ notepad.txt
 .ruff_cache/
 data_*/
 *.env
+!*example.env
+*.pem
+*.csr
+*csr.json
+!*example.csr.json

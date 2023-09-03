@@ -7,6 +7,7 @@ import os
 import re
 import signal
 import socket
+import ssl
 import sys
 import threading
 import time
@@ -57,17 +58,16 @@ Check the Env class below to determine what variables you can set.
 
 
 class Env:
-    # ILE_DEBUG=boolValueMaybeTrue
     ILE_DEBUG: str = os.environ.get("ILE_DEBUG", "false")
 
-    # ILE_CLOUD_MODE=boolValueMaybeTrue
     # Set to true if shelly devices are not reachable from the machine running the script.
     ILE_CLOUD_MODE: str = os.environ.get("ILE_CLOUD_MODE", "false")
 
-    # ILE_QUESTDB_HOST=ipv4host
-    # ILE_QUESTDB_PORT=intPort
     ILE_QUESTDB_HOST: str = os.environ.get("ILE_QUESTDB_HOST", "localhost")
     ILE_QUESTDB_PORT: str = os.environ.get("ILE_QUESTDB_PORT", "9009")
+    ILE_QUESTDB_SSL: str = os.environ.get("ILE_QUESTDB_SSL", "false")
+    ILE_QUESTDB_SSL_CAFILE: str = os.environ.get("ILE_QUESTDB_SSL_CAFILE", "")
+    ILE_QUESTDB_SSL_CHECKHOSTNAME: str = os.environ.get("ILE_QUESTDB_SSL_CHECKHOSTNAME", "true")
 
     # ILE_SHELLY_IPS=comma-separated list of IPs
     # List here the supported devices for which the script uses the 'API polling' strategy.
@@ -83,33 +83,30 @@ class Env:
     ILE_SCRAPE_INTERVAL: str = os.environ.get("ILE_SCRAPE_INTERVAL", "60")
     ILE_BACKOFF_STRATEGY: str = os.environ.get("ILE_BACKOFF_STRATEGY", "0.5,1,3,3,5,60,90")
 
-    # ILE_SHELLY_GEN1_WEBHOOK_ENABLED=boolValueMaybeTrue
-    # ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST=ipv4host
-    # ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT=intPort
     ILE_SHELLY_GEN1_WEBHOOK_ENABLED: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_ENABLED", "true")
     ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST", "0.0.0.0")
     ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT", "9080")
+    ILE_SHELLY_GEN1_WEBHOOK_SSL: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_SSL", "false")
+    ILE_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE", "server.crt")
+    ILE_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE", "server.key")
+    ILE_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD", "")
 
-    # ILE_SHELLY_GEN2_WEBSOCKET_ENABLED=boolValueMaybeTrue
-    # ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST=ipv4host
-    # ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT=intPort
     ILE_SHELLY_GEN2_WEBSOCKET_ENABLED: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_ENABLED", "true")
     ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST", "0.0.0.0")
     ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT", "9081")
+    ILE_SHELLY_GEN2_WEBSOCKET_SSL: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_SSL", "false")
+    ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE", "server.crt")
+    ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE", "server.key")
+    ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD", "")
 
-    # ILE_SHELLY_GEN1_AUTH_USERNAME=stringOrEmpty
-    # ILE_SHELLY_GEN1_AUTH_PASSWORD=stringOrEmpty
     # https://shelly-api-docs.shelly.cloud/gen1/#http-dialect
     ILE_SHELLY_GEN1_AUTH_USERNAME = os.environ.get("ILE_SHELLY_GEN1_AUTH_USERNAME", "")
     ILE_SHELLY_GEN1_AUTH_PASSWORD = os.environ.get("ILE_SHELLY_GEN1_AUTH_PASSWORD", "")
 
-    # ILE_SHELLY_GEN2_AUTH_USERNAME=stringOrEmpty
-    # ILE_SHELLY_GEN2_AUTH_PASSWORD=stringOrEmpty
     # https://shelly-api-docs.shelly.cloud/gen2/General/Authentication/
     ILE_SHELLY_GEN2_AUTH_USERNAME = os.environ.get("ILE_SHELLY_GEN2_AUTH_USERNAME", "")
     ILE_SHELLY_GEN2_AUTH_PASSWORD = os.environ.get("ILE_SHELLY_GEN2_AUTH_PASSWORD", "")
 
-    # ILE_AUTH_TOKEN=stringOrEmpty
     ILE_AUTH_TOKEN: str = os.environ.get("ILE_AUTH_TOKEN", "")
 
 
@@ -118,6 +115,10 @@ class Config:
     cloud_mode: bool = Env.ILE_CLOUD_MODE.lower() == "true"
 
     questdb_address: tuple[str, int] = (Env.ILE_QUESTDB_HOST, int(Env.ILE_QUESTDB_PORT))
+    questdb_ssl: bool = Env.ILE_QUESTDB_SSL.lower() == "true"
+    questdb_ssl_cafile: str | None = Env.ILE_QUESTDB_SSL_CAFILE or None
+    questdb_ssl_checkhostname: bool = Env.ILE_QUESTDB_SSL_CHECKHOSTNAME.lower() == "true"
+
     shelly_devices_ips: typing.Sequence[str] = list(filter(None, Env.ILE_SHELLY_IPS.split(",")))
 
     socket_timeout_seconds: int = int(Env.ILE_SOCKET_TIMEOUT)
@@ -133,12 +134,20 @@ class Config:
         Env.ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST,
         int(Env.ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT),
     )
+    shelly_gen1_webhook_ssl: bool = Env.ILE_SHELLY_GEN1_WEBHOOK_SSL.lower() == "true"
+    shelly_gen1_webhook_ssl_certfile: str = Env.ILE_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE
+    shelly_gen1_webhook_ssl_keyfile: str = Env.ILE_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE
+    shelly_gen1_webhook_ssl_password: str | None = Env.ILE_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD or None
 
     shelly_gen2_websocket_enabled: bool = Env.ILE_SHELLY_GEN2_WEBSOCKET_ENABLED.lower() == "true"
     shelly_gen2_websocket_bind_address: tuple[str, int] = (
         Env.ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST,
         int(Env.ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT),
     )
+    shelly_gen2_websocket_ssl: bool = Env.ILE_SHELLY_GEN2_WEBSOCKET_SSL.lower() == "true"
+    shelly_gen2_websocket_ssl_certfile: str = Env.ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE
+    shelly_gen2_websocket_ssl_keyfile: str = Env.ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE
+    shelly_gen2_websocket_ssl_password: str | None = Env.ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD or None
 
     shelly_gen1_auth: requests.auth.AuthBase | None = (
         requests.auth.HTTPBasicAuth(Env.ILE_SHELLY_GEN1_AUTH_USERNAME, Env.ILE_SHELLY_GEN1_AUTH_PASSWORD)
@@ -268,8 +277,17 @@ def write_ilp_to_questdb(data: str) -> None:
 
     print_(data, end="")
 
+    if Config.questdb_ssl:
+        ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=Config.questdb_ssl_cafile)
+        ssl_context.check_hostname = Config.questdb_ssl_checkhostname
+    else:
+        ssl_context = None
+
     # https://github.com/questdb/questdb.io/commit/35ca3c326ab0b3448ef9fdb39eb60f1bd45f8506
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+    with (
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock0,
+        ssl_context.wrap_socket(sock0, server_hostname=Config.questdb_address[0]) if ssl_context else sock0 as sock,
+    ):
         sock.settimeout(Config.socket_timeout_seconds)
         sock.connect(Config.questdb_address)
         sock.sendall(data.encode())
@@ -716,6 +734,16 @@ def main() -> int:
         shelly_ht_report_webhook = http.server.ThreadingHTTPServer(
             Config.shelly_gen1_webhook_bind_address, ShellyGen1HtReportSensorValuesHandler
         )
+        if Config.shelly_gen1_webhook_ssl:
+            webhook_ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            webhook_ssl_context.load_cert_chain(
+                Config.shelly_gen1_webhook_ssl_certfile,
+                Config.shelly_gen1_webhook_ssl_keyfile,
+                Config.shelly_gen1_webhook_ssl_password,
+            )
+            shelly_ht_report_webhook.socket = webhook_ssl_context.wrap_socket(
+                shelly_ht_report_webhook.socket, server_side=True
+            )
         webhook_server_thread = threading.Thread(target=shelly_ht_report_webhook.serve_forever, daemon=True)
         webhook_server_thread.start()
 
@@ -723,10 +751,21 @@ def main() -> int:
         # Act as WebSocket server. Handle gen2 notifications.
         # Let's mix classic http.server.HTTPServer with asyncio-based websockets!
         async def shelly_gen2_outbound_websocket_server() -> None:
+            if Config.shelly_gen2_websocket_ssl:
+                websocket_ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+                websocket_ssl_context.load_cert_chain(
+                    Config.shelly_gen2_websocket_ssl_certfile,
+                    Config.shelly_gen2_websocket_ssl_keyfile,
+                    Config.shelly_gen2_websocket_ssl_password,
+                )
+            else:
+                websocket_ssl_context = None
+
             ws_server = await websockets.serve(
                 shelly_gen2_outbound_websocket_handler,
                 Config.shelly_gen2_websocket_bind_address[0],
                 Config.shelly_gen2_websocket_bind_address[1],
+                ssl=websocket_ssl_context,
             )
             await ws_server.server.serve_forever()
 

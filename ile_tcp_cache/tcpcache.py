@@ -8,6 +8,7 @@ import re
 import signal
 import socket
 import socketserver
+import ssl
 import sys
 import threading
 import time
@@ -27,7 +28,7 @@ if typing.TYPE_CHECKING:
 #                   Redis, collector, and delivery man components run on the laptop.
 
 # Use case example: smart-home device is on a different network than a database (target TCP server).
-#                   The smart home device writes the measurements on a cloud virtual machine.
+#                   The smart home device writes the measurements to a cloud virtual machine.
 #                   Redis and the collector components run in the cloud.
 #                   The delivery man component runs on the database host computer.
 
@@ -72,14 +73,24 @@ class Env:
 
     ITC_MY_TCP_BIND_HOST: str = getenv("ITC_MY_TCP_BIND_HOST", "127.0.0.1")
     ITC_MY_TCP_BIND_PORT: str = getenv("ITC_MY_TCP_BIND_PORT", "9009")
+    ITC_MY_TCP_SSL: str = getenv("ITC_MY_TCP_SSL", "false")
+    ITC_MY_TCP_SSL_CERTFILE: str = getenv("ITC_MY_TCP_SSL_CERTFILE", "server.pem")
+    ITC_MY_TCP_SSL_KEYFILE: str = getenv("ITC_MY_TCP_SSL_KEYFILE", "server.crt")
+    ITC_MY_TCP_SSL_PASSWORD: str = getenv("ITC_MY_TCP_SSL_PASSWORD", "")
 
     ITC_TARGET_TCP_HOST: str = getenv("ITC_TARGET_TCP_HOST", "127.0.0.1")
     ITC_TARGET_TCP_PORT: str = getenv("ITC_TARGET_TCP_PORT", "9009")
+    ITC_TARGET_TCP_SSL: str = getenv("ITC_TARGET_TCP_SSL", "false")
+    ITC_TARGET_TCP_SSL_CAFILE: str = getenv("ITC_TARGET_TCP_SSL_CAFILE", "")
+    ITC_TARGET_TCP_SSL_CHECKHOSTNAME: str = getenv("ITC_TARGET_TCP_SSL_CHECKHOSTNAME", "true")
 
     ITC_REDIS_HOST: str = getenv("ITC_REDIS_HOST", "127.0.0.1")
     ITC_REDIS_PORT: str = getenv("ITC_REDIS_PORT", "6379")
     ITC_REDIS_DB: str = getenv("ITC_REDIS_DB", "0")
-    ITC_REDIS_PASSWORD: str | None = getenv("ITC_REDIS_PASSWORD", None)
+    ITC_REDIS_PASSWORD: str = getenv("ITC_REDIS_PASSWORD", "")
+    ITC_REDIS_SSL: str = getenv("ITC_REDIS_SSL", "false")
+    ITC_REDIS_SSL_CAFILE: str = getenv("ITC_REDIS_SSL_CAFILE", "")
+    ITC_REDIS_SSL_CHECKHOSTNAME: str = getenv("ITC_REDIS_SSL_CHECKHOSTNAME", "true")
 
     ITC_REDIS_STARTUP_TIMEOUT: str = getenv("ITC_REDIS_STARTUP_TIMEOUT", "30s")
     ITC_REDIS_STARTUP_RETRY_INTERVAL: str = getenv("ITC_REDIS_STARTUP_RETRY_INTERVAL", "1s")
@@ -124,11 +135,22 @@ class Config:
     socket_timeout: datetime.timedelta = duration(Env.ITC_SOCKET_TIMEOUT)
 
     my_tcp_bind_address: tuple[str, int] = (Env.ITC_MY_TCP_BIND_HOST, int(Env.ITC_MY_TCP_BIND_PORT))
+    my_tcp_ssl: bool = Env.ITC_MY_TCP_SSL.lower() == "true"
+    my_tcp_ssl_certfile: str = Env.ITC_MY_TCP_SSL_CERTFILE
+    my_tcp_ssl_keyfile: str = Env.ITC_MY_TCP_SSL_KEYFILE
+    my_tcp_ssl_password: str | None = Env.ITC_MY_TCP_SSL_PASSWORD or None
+
     target_tcp_address: tuple[str, int] = (Env.ITC_TARGET_TCP_HOST, int(Env.ITC_TARGET_TCP_PORT))
+    target_tcp_ssl: bool = Env.ITC_TARGET_TCP_SSL.lower() == "true"
+    target_tcp_ssl_cafile: str | None = Env.ITC_TARGET_TCP_SSL_CAFILE or None
+    target_tcp_ssl_checkhostname: bool = Env.ITC_TARGET_TCP_SSL_CHECKHOSTNAME.lower() == "true"
 
     redis_address: tuple[str, int] = (Env.ITC_REDIS_HOST, int(Env.ITC_REDIS_PORT))
     redis_db: int = int(Env.ITC_REDIS_DB)
     redis_password: str | None = Env.ITC_REDIS_PASSWORD
+    redis_ssl: bool = Env.ITC_REDIS_SSL.lower() == "true"
+    redis_ssl_cafile: str | None = Env.ITC_REDIS_SSL_CAFILE or None
+    redis_ssl_checkhostname: bool = Env.ITC_REDIS_SSL_CHECKHOSTNAME.lower() == "true"
 
     redis_startup_timeout: datetime.timedelta = duration(Env.ITC_REDIS_STARTUP_TIMEOUT)
     redis_startup_retry_interval: datetime.timedelta = duration(Env.ITC_REDIS_STARTUP_RETRY_INTERVAL)
@@ -461,7 +483,22 @@ class DeliveryMan:
         if len(self.backpack) == 0:
             return True
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        if Config.target_tcp_ssl:
+            self.ssl_context = ssl.create_default_context(
+                purpose=ssl.Purpose.SERVER_AUTH, cafile=Config.target_tcp_ssl_cafile
+            )
+            self.ssl_context.check_hostname = Config.target_tcp_ssl_checkhostname
+        else:
+            self.ssl_context = None
+
+        with (
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock0,
+            (
+                self.ssl_context.wrap_socket(sock0, server_hostname=Config.target_tcp_address[0])
+                if self.ssl_context
+                else sock0
+            ) as sock,
+        ):
             # Synchronize access to the backpack:
             #   collect bytes, connect to the target TCP, empty the backpack.
             # If these operations are successful, the data will be processed.
@@ -635,6 +672,9 @@ def main() -> int:
     r = redis.Redis(
         host=Config.redis_address[0],
         port=Config.redis_address[1],
+        ssl=Config.redis_ssl,
+        ssl_ca_certs=Config.redis_ssl_cafile,
+        ssl_check_hostname=Config.redis_ssl_checkhostname,
         db=Config.redis_db,
         password=Config.redis_password,
         socket_timeout=Config.socket_timeout.total_seconds(),
@@ -652,6 +692,12 @@ def main() -> int:
         # [Pickup location: my TCP] -> [Parcel collector]
         tcp_parcel_collector = TCPParcelCollector(r, sigterm_threading_event)
         tcp_server = socketserver.ThreadingTCPServer(Config.my_tcp_bind_address, tcp_parcel_collector.handler_factory)
+        if Config.my_tcp_ssl:
+            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            ssl_context.load_cert_chain(
+                Config.my_tcp_ssl_certfile, Config.my_tcp_ssl_keyfile, Config.my_tcp_ssl_password
+            )
+            tcp_server.socket = ssl_context.wrap_socket(tcp_server.socket, server_side=True)
         webhook_server_thread = VerboseThread(target=tcp_server.serve_forever, daemon=True)
         webhook_server_thread.start()
 

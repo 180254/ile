@@ -13,18 +13,18 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ${PWD}/data_redis
+      device: ${ILEDIR}/data_redis_laptop
 
 services:
   redis:
     build:
-      context: ${PWD}/deps-dockerfiles
+      context: ${PWD}/deps
       dockerfile: redis.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
-        ILE_REDIS_PORT: 6379
-        ILE_REDIS_PASSWORD: ${ILE_REDIS_PASSWORD}
+        ILR_REDIS_PORT: 6379
+        ILR_REDIS_PASSWORD: ${ILR_REDIS_PASSWORD}
       no_cache: false
       pull: true
     image: ile-laptop-redis:0.0.1
@@ -41,7 +41,7 @@ services:
         max-size: 10m
         max-file: 1
     healthcheck:
-      test: timeout -s 15 5 redis-cli -h localhost -p 6379 -a ${ILE_REDIS_PASSWORD} ping | grep -qaFi PONG || exit 1
+      test: timeout -s 15 5 redis-cli -h localhost -p 6379 -a ${ILR_REDIS_PASSWORD} ping | grep -qaFi PONG || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s
@@ -58,7 +58,7 @@ services:
 
   tcp-cache:
     build:
-      context: ${PWD}/ile_tcp_cache
+      context: ${ILEDIR}/ile_tcp_cache
       dockerfile: Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
@@ -79,7 +79,7 @@ services:
       - ITC_TARGET_TCP_PORT=${ITC_TARGET_TCP_PORT}
       - ITC_REDIS_HOST=192.168.130.30
       - ITC_REDIS_PORT=6379
-      - ITC_REDIS_PASSWORD=${ILE_REDIS_PASSWORD}
+      - ITC_REDIS_PASSWORD=${ILR_REDIS_PASSWORD}
     logging:
       options:
         max-size: 10m
@@ -108,7 +108,7 @@ services:
   # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
   telegraf:
     build:
-      context: ${PWD}/deps-dockerfiles
+      context: ${PWD}/deps
       dockerfile: telegraf.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
@@ -137,9 +137,10 @@ services:
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${PWD}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${PWD}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
-      - ${PWD}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
       - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
       - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so:ro
     devices:

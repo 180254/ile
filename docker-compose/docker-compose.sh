@@ -34,7 +34,8 @@ for MACHINE_TYPE in $(echo "${MACHINE_TYPES}" | tr ',' '\n'); do
 
   fi
 
-  PWD="$(realpath "${PWD}/..")" \
+  PWD="$(realpath "${PWD}")" \
+    ILEDIR=$(realpath "${PWD}/../") \
     HOSTNAME="$(hostname)" \
     ILE_NONROOT_UID="$(id -u)" \
     ILE_NONROOT_GID="$(id -g)" \

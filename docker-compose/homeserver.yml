@@ -13,18 +13,18 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ${PWD}/data_questdb
+      device: ${ILEDIR}/data_questdb
 
   grafana_data:
     driver_opts:
       o: bind
       type: none
-      device: ${PWD}/data_grafana
+      device: ${ILEDIR}/data_grafana
 
 services:
   questdb:
     build:
-      context: ${PWD}/deps-dockerfiles
+      context: ${PWD}/deps
       dockerfile: questdb.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
@@ -88,7 +88,7 @@ services:
 
   grafana:
     build:
-      context: ${PWD}/deps-dockerfiles
+      context: ${PWD}/deps
       dockerfile: grafana-oss.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
@@ -136,7 +136,7 @@ services:
 
   shellyscraper:
     build:
-      context: ${PWD}/ile_shellyscraper
+      context: ${ILEDIR}/ile_shellyscraper
       dockerfile: Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
@@ -200,7 +200,7 @@ services:
   # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
   telegraf:
     build:
-      context: ${PWD}/deps-dockerfiles
+      context: ${PWD}/deps
       dockerfile: telegraf.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
@@ -226,8 +226,9 @@ services:
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${PWD}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${PWD}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
       - apparmor:unconfined
@@ -258,7 +259,7 @@ services:
 
   tcp-cache-delivery-man:
     build:
-      context: ${PWD}/ile_tcp_cache
+      context: ${ILEDIR}/ile_tcp_cache
       dockerfile: Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
@@ -279,6 +280,11 @@ services:
       - ITC_REDIS_HOST=${ITC_REDIS_HOST}
       - ITC_REDIS_PORT=${ITC_REDIS_PORT}
       - ITC_REDIS_PASSWORD=${ITC_REDIS_PASSWORD}
+      - ITC_REDIS_SSL=${ITC_REDIS_SSL}
+      - ITC_REDIS_SSL_CAFILE=/tls/ca.pem
+      - ITC_REDIS_SSL_CHECKHOSTNAME=${ITC_REDIS_SSL_CHECKHOSTNAME}
+    volumes:
+      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
     logging:
       options:
         max-size: 10m
