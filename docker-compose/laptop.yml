@@ -77,9 +77,14 @@ services:
       - ITC_MY_TCP_BIND_PORT=9152
       - ITC_TARGET_TCP_HOST=${ITC_TARGET_TCP_HOST}
       - ITC_TARGET_TCP_PORT=${ITC_TARGET_TCP_PORT}
+      - ITC_TARGET_TCP_SSL=${ITC_TARGET_TCP_SSL}
+      - ITC_TARGET_TCP_SSL_CAFILE=/tls/ca.pem
+      - ITC_TARGET_TCP_SSL_CHECKHOSTNAME=${ITC_TARGET_TCP_SSL_CHECKHOSTNAME}
       - ITC_REDIS_HOST=192.168.130.30
       - ITC_REDIS_PORT=6379
       - ITC_REDIS_PASSWORD=${ILR_REDIS_PASSWORD}
+    volumes:
+      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
     logging:
       options:
         max-size: 10m

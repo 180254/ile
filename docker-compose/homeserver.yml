@@ -37,11 +37,7 @@ services:
     networks:
       vnet:
         ipv4_address: 192.168.130.20
-    ports:
-      - "8812:8812"
-      - "9000:9000"
-      - "9003:9003"
-      - "9009:9009"
+    ports: []
     environment:
       - QUESTDB_UID=${ILE_NONROOT_UID}
       - QUESTDB_GID=${ILE_NONROOT_GID}
@@ -101,8 +97,7 @@ services:
     networks:
       vnet:
         ipv4_address: 192.168.130.21
-    ports:
-      - "3000:3000"
+    ports: []
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
@@ -120,10 +115,6 @@ services:
       timeout: 10s
       start_period: 20s
       retries: 3
-    depends_on:
-      questdb:
-        condition: service_started
-        restart: true
     deploy:
       restart_policy:
         condition: any
@@ -150,25 +141,42 @@ services:
       vnet:
         ipv4_address: 192.168.130.22
     ports:
-      - "9080:9080"
-      - "9081:9081"
+      - "9080:9080" # SHELLY_GEN1_WEBHOOK
+      - "9081:9081" # SHELLY_GEN2_WEBSOCKET
     environment:
-      - ILE_QUESTDB_HOST=192.168.130.20
+      - ILE_QUESTDB_HOST=192.168.130.25
       - ILE_QUESTDB_PORT=9009
+      - ILE_QUESTDB_SSL=true
+      - ILE_QUESTDB_SSL_CAFILE=/tls/ca.pem
+      - ILE_QUESTDB_SSL_CHECKHOSTNAME=true
       - ILE_SHELLY_IPS=${ILE_SHELLY_IPS}
+      - ILE_SHELLY_SSL_IPS=${ILE_SHELLY_SSL_IPS}
+      - ILE_SHELLY_SSL_IPS_VERIFY=${ILE_SHELLY_SSL_IPS_VERIFY}
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_CLOUD_MODE=false
       - ILE_SHELLY_GEN1_WEBHOOK_ENABLED=true
       - ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST=0.0.0.0
       - ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT=9080
+      - ILE_SHELLY_GEN1_WEBHOOK_SSL=false
+      - ILE_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE=/tls/certfile.pem
+      - ILE_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE=/tls/keyfile.pem
+      - ILE_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD=${ILE_TLS_PASSWORD}
       - ILE_SHELLY_GEN2_WEBSOCKET_ENABLED=true
       - ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST=0.0.0.0
       - ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT=9081
+      - ILE_SHELLY_GEN2_WEBSOCKET_SSL=true
+      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE=/tls/certfile.pem
+      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE=/tls/keyfile.pem
+      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD=${ILE_TLS_PASSWORD}
       - ILE_SHELLY_GEN1_AUTH_USERNAME=${ILE_SHELLY_GEN1_AUTH_USERNAME}
       - ILE_SHELLY_GEN1_AUTH_PASSWORD=${ILE_SHELLY_GEN1_AUTH_PASSWORD}
       - ILE_SHELLY_GEN2_AUTH_USERNAME=${ILE_SHELLY_GEN2_AUTH_USERNAME}
       - ILE_SHELLY_GEN2_AUTH_PASSWORD=${ILE_SHELLY_GEN2_AUTH_PASSWORD}
       - ILE_AUTH_TOKEN=${ILE_AUTH_TOKEN}
+    volumes:
+      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/homeserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/homeserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
@@ -184,6 +192,9 @@ services:
       retries: 3
     depends_on:
       questdb:
+        condition: service_started
+        restart: true
+      haproxy-tls:
         condition: service_started
         restart: true
     deploy:
@@ -220,15 +231,18 @@ services:
       - HOST_VAR=/hostfs/var
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
-      - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.20:9009
+      - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.25:9009
+      - ILT_TLS_CA=/tls/ca.pem
+      - ILT_TLS_INSECURE_SKIP_VERIFY=false
       - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
       - ILT_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${ILEDIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
+      - ${ILEDIR}/ile_telegraf/telegraf-writerssl.conf:/etc/telegraf/telegraf.d/telegraf-writerssl.conf:ro
       - ${ILEDIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
+      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
       - apparmor:unconfined
@@ -245,6 +259,9 @@ services:
       retries: 3
     depends_on:
       questdb:
+        condition: service_started
+        restart: true
+      haproxy-tls:
         condition: service_started
         restart: true
     deploy:
@@ -275,8 +292,11 @@ services:
     environment:
       - ITC_PARCEL_COLLECTOR_ENABLED=false
       - ITC_DELIVERY_MAN_ENABLED=true
-      - ITC_TARGET_TCP_HOST=192.168.130.20
+      - ITC_TARGET_TCP_HOST=192.168.130.25
       - ITC_TARGET_TCP_PORT=9009
+      - ITC_TARGET_TCP_SSL=true
+      - ITC_TARGET_TCP_SSL_CAFILE=/tls/ca.pem
+      - ITC_TARGET_TCP_SSL_CHECKHOSTNAME=true
       - ITC_REDIS_HOST=${ITC_REDIS_HOST}
       - ITC_REDIS_PORT=${ITC_REDIS_PORT}
       - ITC_REDIS_PASSWORD=${ITC_REDIS_PASSWORD}
@@ -297,6 +317,62 @@ services:
       retries: 3
     depends_on:
       questdb:
+        condition: service_started
+        restart: true
+      haproxy-tls:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+
+  haproxy-tls:
+    build:
+      context: ${PWD}/deps
+      dockerfile: haproxy-homeserver.Dockerfile
+      args:
+        IHH_CRT_FILE: /tls/full.pem
+        IHH_QUESTDB_HOST: 192.168.130.20
+        IHH_QUESTDB_RESTAPI_USERNAME: ${QDB_PG_USER}
+        IHH_QUESTDB_RESTAPI_PASSWORD: ${QDB_PG_PASSWORD}
+        IHH_GRAFANA_HOST: 192.168.130.21
+      no_cache: false
+      pull: true
+    image: ile-homeserver-haproxy-tls:0.0.1
+    user: haproxy:haproxy
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.25
+    ports:
+      - "8812:8812" # questdb - Postgres wire protocol
+      - "9000:9000" # questdb - REST API and Web Console
+      - "9003:9003" # questdb - Min health server and Prometheus metrics
+      - "9009:9009" # questdb - InfluxDB line protocol
+      - "3000:3000" # grafana
+    volumes:
+      - ${PWD}/tls/homeserver-full.pem:/tls/full.pem:ro
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: timeout -s 15 5 curl -f http://127.0.0.1:80 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      questdb:
+        condition: service_started
+        restart: true
+      grafana:
         condition: service_started
         restart: true
     deploy:

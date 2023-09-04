@@ -5,6 +5,7 @@ notepad.txt
 .mypy_cache/
 .ruff_cache/
 data_*/
+.passphrase
 *.env
 !*example.env
 *.pem

@@ -484,19 +484,17 @@ class DeliveryMan:
             return True
 
         if Config.target_tcp_ssl:
-            self.ssl_context = ssl.create_default_context(
+            ssl_context = ssl.create_default_context(
                 purpose=ssl.Purpose.SERVER_AUTH, cafile=Config.target_tcp_ssl_cafile
             )
-            self.ssl_context.check_hostname = Config.target_tcp_ssl_checkhostname
+            ssl_context.check_hostname = Config.target_tcp_ssl_checkhostname
         else:
-            self.ssl_context = None
+            ssl_context = None
 
         with (
             socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock0,
             (
-                self.ssl_context.wrap_socket(sock0, server_hostname=Config.target_tcp_address[0])
-                if self.ssl_context
-                else sock0
+                ssl_context.wrap_socket(sock0, server_hostname=Config.target_tcp_address[0]) if ssl_context else sock0
             ) as sock,
         ):
             # Synchronize access to the backpack:

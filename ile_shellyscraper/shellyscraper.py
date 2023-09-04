@@ -2,6 +2,7 @@
 import asyncio
 import datetime
 import http.server
+import itertools
 import json
 import os
 import re
@@ -70,8 +71,16 @@ class Env:
     ILE_QUESTDB_SSL_CHECKHOSTNAME: str = os.environ.get("ILE_QUESTDB_SSL_CHECKHOSTNAME", "true")
 
     # ILE_SHELLY_IPS=comma-separated list of IPs
-    # List here the supported devices for which the script uses the 'API polling' strategy.
+    # List here the supported devices for which the script uses the 'API polling' strategy, and http protocol.
     ILE_SHELLY_IPS: str = os.environ.get("ILE_SHELLY_IPS", "")
+
+    # ILE_SHELLY_SSL_IPS=comma-separated list of IPs
+    # List here the supported devices for which the script uses the 'API polling' strategy, and https protocol.
+    ILE_SHELLY_SSL_IPS: str = os.environ.get("ILE_SHELLY_SSL_IPS", "")
+
+    # ILE_SHELLY_SSL_IPS_VERIFY=path to the CA file, True, False, empty (= None)
+    # https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification
+    ILE_SHELLY_SSL_IPS_VERIFY: str = os.environ.get("ILE_SHELLY_SSL_IPS_VERIFY", "")
 
     # ILE_SOCKET_TIMEOUT=intValue (seconds)
     # ILE_HTTP_TIMEOUT=intValue (seconds)
@@ -120,6 +129,18 @@ class Config:
     questdb_ssl_checkhostname: bool = Env.ILE_QUESTDB_SSL_CHECKHOSTNAME.lower() == "true"
 
     shelly_devices_ips: typing.Sequence[str] = list(filter(None, Env.ILE_SHELLY_IPS.split(",")))
+
+    shelly_devices_ssl_ips: typing.Sequence[str] = list(filter(None, Env.ILE_SHELLY_SSL_IPS.split(",")))
+    shelly_devices_ssl_ips_verify: str | bool | None
+    match Env.ILE_SHELLY_SSL_IPS_VERIFY.lower():
+        case "true":
+            shelly_devices_ssl_ips_verify = True
+        case "false":
+            shelly_devices_ssl_ips_verify = False
+        case "":
+            shelly_devices_ssl_ips_verify = None
+        case _:
+            shelly_devices_ssl_ips_verify = Env.ILE_SHELLY_SSL_IPS_VERIFY
 
     socket_timeout_seconds: int = int(Env.ILE_SOCKET_TIMEOUT)
     http_timeout_seconds: int = int(Env.ILE_HTTP_TIMEOUT)
@@ -223,11 +244,21 @@ def print_exception(exception: BaseException) -> None:
         print_(f"exception: {exception}", file=sys.stderr)
 
 
+def time_is_synced(unix_timestamp_seconds: float) -> bool:
+    one_day_in_seconds = 24 * 60 * 60
+    return unix_timestamp_seconds > one_day_in_seconds
+
+
 def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase | None = None) -> dict:
+    ssl_ = device_ip in Config.shelly_devices_ssl_ips
+    proto = "https" if ssl_ else "http"
+    verify = Config.shelly_devices_ssl_ips_verify if ssl_ else None
+
     response = requests.get(
-        f"http://{device_ip}/{path_and_query}",
+        f"{proto}://{device_ip}/{path_and_query}",
         timeout=Config.http_timeout_seconds,
         auth=auth,
+        verify=verify,
     )
     response.raise_for_status()
     data = response.json()
@@ -239,26 +270,26 @@ def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase 
 def http_rpc_call(
     device_ip: str, method: str, params: dict | None = None, auth: requests.auth.AuthBase | None = None
 ) -> dict:
+    ssl_ = device_ip in Config.shelly_devices_ssl_ips
+    proto = "https" if ssl_ else "http"
+    verify = Config.shelly_devices_ssl_ips_verify if ssl_ else None
+
     # https://shelly-api-docs.shelly.cloud/gen2/General/RPCProtocol#request-frame
     post_body = {"jsonrpc": "2.0", "id": 1, "src": "ile", "method": method, "params": params}
     if params is None:
         del post_body["params"]
 
     response = requests.post(
-        f"http://{device_ip}/rpc",
+        f"{proto}://{device_ip}/rpc",
         json=post_body,
         timeout=Config.http_timeout_seconds,
         auth=auth,
+        verify=verify,
     )
     response.raise_for_status()
     data = response.json()
     print_debug(lambda: json_dumps(data))
     return data
-
-
-def timestamp_is_synced(unix_timestamp_seconds: float) -> bool:
-    one_day_in_seconds = 24 * 60 * 60
-    return unix_timestamp_seconds > one_day_in_seconds
 
 
 # --------------------- QUESTDB -----------------------------------------------
@@ -291,6 +322,14 @@ def write_ilp_to_questdb(data: str) -> None:
         sock.settimeout(Config.socket_timeout_seconds)
         sock.connect(Config.questdb_address)
         sock.sendall(data.encode())
+
+        # Send one more empty line after a while.
+        # Make sure that the server did not close the connection
+        # (questdb will do that asynchronously if the data was incorrect).
+        # https://github.com/questdb/questdb/blob/7.2.1/core/src/main/java/io/questdb/network/AbstractIODispatcher.java#L149
+        time.sleep(0.050)
+        sock.sendall(b"\n")
+
         sock.shutdown(socket.SHUT_RDWR)
         sock.close()
 
@@ -357,7 +396,7 @@ def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: dic
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-plug-plugs-status
 
     timestamp = status["unixtime"]
-    if not timestamp_is_synced(timestamp):
+    if not time_is_synced(timestamp):
         timestamp = int(time.time())
     nano = "000000000"
 
@@ -399,7 +438,7 @@ def shelly_gen1_ht_status_to_ilp(device_id: str, device_name: str, status: dict)
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-h-amp-t-status
 
     timestamp = status["unixtime"]
-    if not timestamp_is_synced(timestamp):
+    if not time_is_synced(timestamp):
         timestamp = int(time.time())
     nano = "000000000"
 
@@ -585,7 +624,7 @@ def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: dict) -> s
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Humidity/
 
     timestamp = int(status["params"]["ts"] or 0)
-    if not timestamp_is_synced(timestamp):
+    if not time_is_synced(timestamp):
         timestamp = int(time.time())
     nano = "000000000"
 
@@ -721,7 +760,7 @@ def main() -> int:
 
     sigterm_threading_event = configure_sigterm_handler()
 
-    for device_ip in Config.shelly_devices_ips:
+    for device_ip in itertools.chain(Config.shelly_devices_ips, Config.shelly_devices_ssl_ips):
         status_thread = threading.Thread(
             target=shelly_device_status_loop,
             args=(sigterm_threading_event, device_ip),

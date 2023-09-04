@@ -41,8 +41,8 @@ services:
       - "${ILR_REDIS_PORT}:${ILR_REDIS_PORT}"
     volumes:
       - redis_data:/data
-      - ${PWD}/tls/cloudbundle.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/cloud-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/cloudserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
@@ -94,11 +94,11 @@ services:
       - ITC_REDIS_PASSWORD=${ILR_REDIS_PASSWORD}
       - ITC_REDIS_SSL=true
       - ITC_REDIS_SSL_CAFILE=/tls/ca.pem
-      - ITC_REDIS_SSL_CHECKHOSTNAME=false
+      - ITC_REDIS_SSL_CHECKHOSTNAME=true
     volumes:
-      - ${PWD}/tls/cloudbundle.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/cloud-key-enc.pem:/tls/keyfile.pem:ro
       - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/cloudserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
@@ -151,9 +151,9 @@ services:
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
       - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.11:9152
-      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
       - ILT_TLS_CA=/tls/ca.pem
-      - ILT_TLS_INSECURE_SKIP_VERIFY=true
+      - ILT_TLS_INSECURE_SKIP_VERIFY=false
+      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
       - ILT_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
     volumes:
       - /:/hostfs:ro
@@ -211,7 +211,7 @@ services:
       - ILE_QUESTDB_PORT=9152
       - ILE_QUESTDB_SSL=true
       - ILE_QUESTDB_SSL_CAFILE=/tls/ca.pem
-      - ILE_QUESTDB_SSL_CHECKHOSTNAME=false
+      - ILE_QUESTDB_SSL_CHECKHOSTNAME=true
       - ILE_SHELLY_IPS=
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_CLOUD_MODE=true
@@ -225,9 +225,9 @@ services:
       - ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD=${ILE_TLS_PASSWORD}
       - ILE_AUTH_TOKEN=${ILE_AUTH_TOKEN}
     volumes:
-      - ${PWD}/tls/cloudbundle.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/cloud-key-enc.pem:/tls/keyfile.pem:ro
       - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/cloudserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m

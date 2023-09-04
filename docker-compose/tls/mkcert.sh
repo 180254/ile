@@ -5,14 +5,21 @@ if ! [ -x "$(command -v cfssl)" ]; then
   exit 1
 fi
 
-PASSPHRASE=$(tr -dc '[:alpha:]' < /dev/urandom | fold -w 32 | head -n 1)
+if [ ! -f .passphrase ]; then
+  tr -dc '[:alpha:]' < /dev/urandom | fold -w 32 | head -n 1 > .passphrase
+fi
 
-cfssl genkey -initca ca-csr.json | cfssljson -bare ca
-cfssl gencert -profile www -ca ca.pem -ca-key ca-key.pem cloud-csr.json  | cfssljson -bare cloud
+PASSPHRASE=$(cat .passphrase)
 
-cat cloud.pem ca.pem > cloudbundle.pem
+if [ ! -f ca.pem ]; then
+  cfssl genkey -initca "ca-csr.json" | cfssljson -bare "ca"
+  openssl ec -in "ca-key.pem" -out "ca-key-enc.pem" -aes256 -passout "pass:$PASSPHRASE"
+fi
 
-openssl ec -in cloud-key.pem -out cloud-key-enc.pem -aes256 -passout "pass:$PASSPHRASE"
-openssl ec -in ca-key.pem -out ca-key-enc.pem -aes256 -passout "pass:$PASSPHRASE"
+for i in cloudserver homeserver; do
+  cfssl gencert -profile www -ca ca.pem -ca-key ca-key.pem "$i-csr.json"  | cfssljson -bare "$i"
+  openssl ec -in "$i-key.pem" -out "$i-key-enc.pem" -aes256 -passout "pass:$PASSPHRASE"
+  cat "$i.pem" "$i-key.pem" > "$i-full.pem"
+done
 
 echo "passphrase: $PASSPHRASE"
