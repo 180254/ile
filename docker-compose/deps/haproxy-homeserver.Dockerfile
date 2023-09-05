@@ -10,13 +10,17 @@ RUN set -eux \
 
 USER haproxy
 
+ARG IHH_CRT_FILE="/tls/full.pem"
 ARG IHH_QUESTDB_HOST="questdb"
 ARG IHH_QUESTDB_RESTAPI_USERNAME="admin"
 ARG IHH_QUESTDB_RESTAPI_PASSWORD="password"
 ARG IHH_GRAFANA_HOST="grafana"
-ARG IHH_CRT_FILE="/tls/full.pem"
+ARG IHH_QUESTDB_STATS_USERNAME="admin"
+ARG IHH_QUESTDB_STATS_PASSWORD="password"
 
 # http://docs.haproxy.org/2.8/configuration.html
+# tcplog  - http://docs.haproxy.org/2.8/configuration.html#8.2.2
+# httplog - http://docs.haproxy.org/2.8/configuration.html#8.2.3
 COPY <<EOF /usr/local/etc/haproxy/haproxy.cfg
 global
     maxconn 1000
@@ -41,6 +45,13 @@ frontend health
     mode http
     bind 127.0.0.1:80
     http-request return status 200
+
+frontend stats
+    mode http
+    bind *:4040 ssl crt ${IHH_CRT_FILE} alpn h2,http/1.1
+    stats enable
+    stats uri /
+    stats auth ${IHH_QUESTDB_STATS_USERNAME}:${IHH_QUESTDB_STATS_PASSWORD}
 
 userlist questdb_rest_api_and_web_console_userlist
    user ${IHH_QUESTDB_RESTAPI_USERNAME} insecure-password ${IHH_QUESTDB_RESTAPI_PASSWORD}

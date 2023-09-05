@@ -342,6 +342,8 @@ services:
         IHH_QUESTDB_RESTAPI_USERNAME: ${QDB_PG_USER}
         IHH_QUESTDB_RESTAPI_PASSWORD: ${QDB_PG_PASSWORD}
         IHH_GRAFANA_HOST: 192.168.130.21
+        IHH_QUESTDB_STATS_USERNAME: ${IHH_QUESTDB_STATS_USERNAME}
+        IHH_QUESTDB_STATS_PASSWORD: ${IHH_QUESTDB_STATS_PASSWORD}
       no_cache: false
       pull: true
     image: ile-homeserver-haproxy-tls:0.0.1
@@ -351,6 +353,7 @@ services:
       vnet:
         ipv4_address: 192.168.130.25
     ports:
+      - "4040:4040" # haproxy - stats
       - "8812:8812" # questdb - Postgres wire protocol
       - "9000:9000" # questdb - REST API and Web Console
       - "9003:9003" # questdb - Min health server and Prometheus metrics
