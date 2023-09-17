@@ -28,7 +28,6 @@ global
 
     # generated 2023-09-04, Mozilla Guideline v5.7, HAProxy 2.1, OpenSSL 1.1.1k, modern configuration, no HSTS, no OCSP
     # https://ssl-config.mozilla.org/#server=haproxy&version=2.1&config=modern&openssl=1.1.1k&hsts=false&ocsp=false&guideline=5.7
-    # modern configuration
     ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
     ssl-default-bind-options prefer-client-ciphers no-sslv3 no-tlsv10 no-tlsv11 no-tlsv12 no-tls-tickets
     ssl-default-server-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
@@ -80,7 +79,8 @@ backend questdb_influxdb_line_protocol
 frontend questdb_prostgres_wire_protocol
     mode tcp
     option tcplog
-    bind :8812 ssl crt ${IHH_CRT_FILE}
+    #bind :8812 ssl crt ${IHH_CRT_FILE}
+    bind :8812
     use_backend questdb_prostgres_wire_protocol
 
 backend questdb_prostgres_wire_protocol

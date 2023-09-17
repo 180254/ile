@@ -6,7 +6,7 @@ if ! [ -x "$(command -v cfssl)" ]; then
 fi
 
 if [ ! -f .passphrase ]; then
-  tr -dc '[:alpha:]' < /dev/urandom | fold -w 32 | head -n 1 > .passphrase
+  LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1 > .passphrase
 fi
 
 PASSPHRASE=$(cat .passphrase)
