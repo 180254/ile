@@ -1,0 +1,2 @@
+# requires openrazer: https://github.com/openrazer/openrazer
+# openrazer is not published on PyPI: https://github.com/openrazer/openrazer/issues/711
