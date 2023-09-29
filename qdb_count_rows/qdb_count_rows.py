@@ -3,7 +3,7 @@ import os
 
 import psycopg2.extras
 
-# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb venv/bin/python3 qdb_count_rows.py
+# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" venv/bin/python3 qdb_count_rows.py
 
 dsn = os.environ.get("QDB_DSN", "postgresql://admin:quest@localhost:8812/qdb")
 

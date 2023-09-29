@@ -5,7 +5,7 @@ import sys
 import psycopg2.extras
 
 # https://github.com/questdb/questdb/issues/3531
-# usage: QDB_DSN="postgresql://useradmin:quest@localhost:8812/qdb" venv/bin/python3 qdb_wal_switch.py true
+# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" venv/bin/python3 qdb_wal_switch.py true
 
 dsn = os.environ.get("QDB_DSN", "postgresql://useradmin:quest@localhost:8812/qdb")
 
