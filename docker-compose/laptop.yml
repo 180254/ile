@@ -58,8 +58,8 @@ services:
 
   tcp-cache:
     build:
-      context: ${ILEDIR}/ile_tcp_cache
-      dockerfile: Dockerfile
+      context: ${ILEDIR}
+      dockerfile: ile_tcp_cache.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
@@ -181,8 +181,8 @@ services:
 
   openrazer-info:
     build:
-      context: ${ILEDIR}/ile_openrazer_info
-      dockerfile: Dockerfile
+      context: ${ILEDIR}
+      dockerfile: ile_openrazer_info.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}

@@ -1,7 +1,7 @@
 FROM python:3.11-bookworm AS build-venv
 RUN python3 -m venv /venv
 RUN /venv/bin/pip3 install --upgrade pip setuptools wheel
-COPY requirements.txt /requirements.txt
+COPY ile_shellyscraper/requirements.txt /requirements.txt
 RUN /venv/bin/pip3 install --disable-pip-version-check -r /requirements.txt
 
 FROM python:3.11-slim-bookworm
@@ -20,6 +20,7 @@ USER nonroot
 
 WORKDIR /app
 COPY --from=build-venv /venv /venv
-COPY tcpcache.py /app
+COPY ile_shellyscraper/shellyscraper.py /app
+COPY ile_shared_tools/*.py /app/ile_shared_tools/
 
-ENTRYPOINT ["/venv/bin/python3", "-u", "/app/tcpcache.py"]
+ENTRYPOINT ["/venv/bin/python3", "-u", "/app/shellyscraper.py"]

@@ -66,8 +66,8 @@ services:
 
   tcp-cache-parcel-collector:
     build:
-      context: ${ILEDIR}/ile_tcp_cache
-      dockerfile: Dockerfile
+      context: ${ILEDIR}
+      dockerfile: ile_tcp_cache.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
@@ -191,8 +191,8 @@ services:
 
   shellyscraper:
     build:
-      context: ${ILEDIR}/ile_shellyscraper
-      dockerfile: Dockerfile
+      context: ${ILEDIR}
+      dockerfile: ile_shellyscraper.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}

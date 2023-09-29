@@ -5,7 +5,6 @@ import enum
 import os
 import random
 import re
-import signal
 import socket
 import socketserver
 import ssl
@@ -18,9 +17,7 @@ from collections.abc import Callable
 
 import redis
 
-if typing.TYPE_CHECKING:
-    import types
-
+from ile_shared_tools import configure_sigterm_handler, print_, print_exception
 
 # ile-tcp-cache is useful when the target TCP server is unreachable from the data-producing device.
 
@@ -185,56 +182,6 @@ class Config:
         map(float, filter(None, Env.ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS.split(","))),
     )
     periodic_jitter: float = float(Env.ITC_PERIODIC_JITTER)
-
-
-# noinspection DuplicatedCode
-def print_(*args, **kwargs) -> None:
-    """Print with timestamp."""
-    timestamp = datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat()
-    new_args = (timestamp, *args)
-    print(*new_args, **kwargs)
-
-
-# noinspection DuplicatedCode
-def print_exception(exception: BaseException) -> None:
-    """Print exception summary."""
-    exc_traceback: types.TracebackType | None = exception.__traceback__
-    if exc_traceback:
-        co_filename = exc_traceback.tb_frame.f_code.co_filename
-        tb_lineno = exc_traceback.tb_lineno
-        co_name = exc_traceback.tb_frame.f_code.co_name
-        format_exception_only = traceback.format_exception_only(type(exception), exception)[0].strip()
-        print_(f"exception: {co_filename}:{tb_lineno} ({co_name}) {format_exception_only}", file=sys.stderr)
-    else:
-        print_(f"exception: {exception}", file=sys.stderr)
-
-
-# noinspection DuplicatedCode
-def configure_sigterm_handler() -> threading.Event:
-    """Configure SIGTERM and SIGINT handler."""
-    sigterm_cnt = [0]
-    sigterm_threading_event = threading.Event()
-
-    def sigterm_handler(signal_number: int, _current_stack_frame) -> None:
-        signal_name = signal.Signals(signal_number).name
-
-        sigterm_cnt[0] += 1
-        if sigterm_cnt[0] == 1:
-            print_(f"Program interrupted by the {signal_name}, graceful shutdown in progress.", file=sys.stderr)
-            sigterm_threading_event.set()
-
-            for thing in threading.enumerate():
-                if isinstance(thing, threading.Timer):
-                    print_(f"Canceling threading.Timer: {thing}")
-                    thing.cancel()
-        else:
-            print_(f"Program interrupted by the {signal_name} again, forced shutdown in progress.", file=sys.stderr)
-            sys.exit(-1)
-
-    for some_signal in [signal.SIGTERM, signal.SIGINT]:
-        signal.signal(some_signal, sigterm_handler)
-
-    return sigterm_threading_event
 
 
 class VerboseThread(threading.Thread):

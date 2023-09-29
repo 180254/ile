@@ -3,6 +3,7 @@ FROM debian:bookworm-slim
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
 
+# python3 = 3.11 (https://packages.debian.org/bookworm/python3)
 RUN set -eux \
   && apt-get update \
   && apt-get install -y --no-install-recommends python3 python3-openrazer \
@@ -13,6 +14,7 @@ RUN set -eux \
 USER nonroot
 
 WORKDIR /app
-COPY ile_openrazer_info.py /app
+COPY ile_openrazer_info/openrazerinfo.py /app
+COPY ile_shared_tools/*.py /app/ile_shared_tools/
 
-ENTRYPOINT ["/usr/bin/python3", "-u", "/app/ile_openrazer_info.py"]
+ENTRYPOINT ["/usr/bin/python3", "-u", "/app/openrazerinfo.py"]
