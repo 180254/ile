@@ -1,5 +1,5 @@
-# https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.27/Dockerfile
-FROM telegraf:1.27.2
+# https://github.com/influxdata/influxdata-docker/blob/master/telegraf/1.28/Dockerfile
+FROM telegraf:1.28.2
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"

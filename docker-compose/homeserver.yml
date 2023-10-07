@@ -42,8 +42,8 @@ services:
       - QUESTDB_UID=${ILE_NONROOT_UID}
       - QUESTDB_GID=${ILE_NONROOT_GID}
       # https://questdb.io/docs/reference/configuration/
-      # https://github.com/questdb/questdb/blob/7.3.1/core/src/main/java/io/questdb/PropertyKey.java
-      # https://github.com/questdb/questdb/blob/7.3.1/core/src/main/java/io/questdb/PropServerConfiguration.java
+      # https://github.com/questdb/questdb/blob/7.3.3/core/src/main/java/io/questdb/PropertyKey.java
+      # https://github.com/questdb/questdb/blob/7.3.3/core/src/main/java/io/questdb/PropServerConfiguration.java
       - QDB_PG_USER=${QDB_PG_USER}
       - QDB_PG_PASSWORD=${QDB_PG_PASSWORD}
       - QDB_PG_READONLY_USER_ENABLED=${QDB_PG_READONLY_USER_ENABLED}
@@ -251,7 +251,7 @@ services:
         max-size: 10m
         max-file: 1
     healthcheck:
-      # https://github.com/influxdata/telegraf/blob/release-1.27/plugins/outputs/health/README.md
+      # https://github.com/influxdata/telegraf/blob/release-1.28/plugins/outputs/health/README.md
       test: timeout -s 15 5 curl -f http://127.0.0.1:8652 || exit 1
       interval: 30s
       timeout: 10s

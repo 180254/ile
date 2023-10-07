@@ -159,7 +159,7 @@ services:
         max-size: 10m
         max-file: 1
     healthcheck:
-      # https://github.com/influxdata/telegraf/blob/release-1.27/plugins/outputs/health/README.md
+      # https://github.com/influxdata/telegraf/blob/release-1.28/plugins/outputs/health/README.md
       test: timeout -s 15 5 curl -f http://127.0.0.1:8652 || exit 1
       interval: 30s
       timeout: 10s

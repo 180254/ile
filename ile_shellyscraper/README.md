@@ -48,7 +48,7 @@ docker run -d --restart=unless-stopped \
     --name=ile-questdb \
     -p 9000:9000 -p 9009:9009 -p 8812:8812 -p 9003:9003 \
     -v ile_data_questdb:/var/lib/questdb \
-    questdb/questdb:7.3.1
+    questdb/questdb:7.3.3
 ```
 
 ```shell
@@ -58,7 +58,7 @@ docker run -d --restart=unless-stopped \
     --name=ile-grafana \
     -p 3000:3000 \
     -v ile_data_grafana:/var/lib/grafana \
-    grafana/grafana-oss:10.0.3-ubuntu
+    grafana/grafana-oss:10.0.8-ubuntu
 ```
 
 ```shell

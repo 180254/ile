@@ -1,6 +1,6 @@
-# https://github.com/docker-library/redis/blob/master/7.0/Dockerfile
+# https://github.com/docker-library/redis/blob/master/7.2/Dockerfile
 
-FROM redis:7.0.12
+FROM redis:7.2.1
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
