@@ -4,8 +4,6 @@ import http.server
 import itertools
 import json
 import os
-import re
-import socket
 import ssl
 import sys
 import threading
@@ -18,7 +16,7 @@ import requests
 import requests.auth
 import websockets
 
-from ile_shared_tools import configure_sigterm_handler, json_dumps, print_, print_debug, print_exception
+import ile_shared_tools
 
 """
 The script will scrape data from Shelly's devices and insert them into QuestDB.
@@ -197,7 +195,7 @@ def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase 
     )
     response.raise_for_status()
     data = response.json()
-    print_debug(lambda: json_dumps(data))
+    ile_shared_tools.print_debug(lambda: ile_shared_tools.json_dumps(data))
     return data
 
 
@@ -223,50 +221,8 @@ def http_rpc_call(
     )
     response.raise_for_status()
     data = response.json()
-    print_debug(lambda: json_dumps(data))
+    ile_shared_tools.print_debug(lambda: ile_shared_tools.json_dumps(data))
     return data
-
-
-# --------------------- QUESTDB -----------------------------------------------
-
-
-# ilp = InfluxDB line protocol
-# https://questdb.io/docs/reference/api/ilp/overview/
-def write_ilp_to_questdb(data: str) -> None:
-    if data is None or data == "":
-        return
-
-    # Fix ilp data.
-    # Remove name=value pairs where value is None.
-    if "None" in data:
-        data = re.sub(r"[a-zA-Z0-9_]+=None,?", "", data).replace(" ,", " ").replace(", ", " ")
-
-    print_(data, end="")
-
-    if Config.questdb_ssl:
-        ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=Config.questdb_ssl_cafile)
-        ssl_context.check_hostname = Config.questdb_ssl_checkhostname
-    else:
-        ssl_context = None
-
-    # https://github.com/questdb/questdb.io/commit/35ca3c326ab0b3448ef9fdb39eb60f1bd45f8506
-    with (
-        socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock0,
-        ssl_context.wrap_socket(sock0, server_hostname=Config.questdb_address[0]) if ssl_context else sock0 as sock,
-    ):
-        sock.settimeout(Config.socket_timeout_seconds)
-        sock.connect(Config.questdb_address)
-        sock.sendall(data.encode())
-
-        # Send one more empty line after a while.
-        # Make sure that the server did not close the connection
-        # (questdb will do that asynchronously if the data was incorrect).
-        # https://github.com/questdb/questdb/blob/7.2.1/core/src/main/java/io/questdb/network/AbstractIODispatcher.java#L149
-        time.sleep(0.050)
-        sock.sendall(b"\n")
-
-        sock.shutdown(socket.SHUT_RDWR)
-        sock.close()
 
 
 # --------------------- SHELLY Gen1&Gen2 --------------------------------------
@@ -319,7 +275,7 @@ def shelly_get_gen1_device_status_ilp(device_ip: str, device_type: str, device_i
         status = http_call(device_ip, "status", auth=Config.shelly_gen1_auth)
         return shelly_gen1_ht_status_to_ilp(device_id, device_name, status)
 
-    print_(
+    ile_shared_tools.print_(
         f"The shelly_get_gen1_device_status_ilp failed for device_ip={device_ip} "
         f"due to unsupported device_type={device_type}.",
         file=sys.stderr,
@@ -414,7 +370,7 @@ class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
             device_ip = self.client_address[0]
 
             if Config.auth_token and Config.auth_token not in self.path:
-                print_(
+                ile_shared_tools.print_(
                     f"The ShellyGen1HtReportSensorValuesHandler failed for device_ip={device_ip} "
                     f"due to unsupported path: '{self.path}'.",
                     file=sys.stderr,
@@ -424,7 +380,7 @@ class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
             url_components = urllib.parse.urlparse(self.path)
             query_string = urllib.parse.parse_qs(url_components.query)
             is_valid_ht_report = "id" in query_string and "temp" in query_string and "hum" in query_string
-            print_debug(lambda: self.path)
+            ile_shared_tools.print_debug(lambda: self.path)
 
             if is_valid_ht_report:
                 device_id = query_string["id"][0]
@@ -440,21 +396,23 @@ class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
                         data += shelly_get_gen1_device_status_ilp(device_ip, device_type, device_id, device_name)
 
                 except Exception as exception:
-                    print_exception(exception)
+                    ile_shared_tools.print_exception(exception)
 
                 # I/O operation that may be happening after the connection is closed.
-                questdb_thread = threading.Thread(target=write_ilp_to_questdb, args=(data,), daemon=False)
+                questdb_thread = threading.Thread(
+                    target=ile_shared_tools.write_ilp_to_questdb, args=(data,), daemon=False
+                )
                 questdb_thread.start()
 
             else:
-                print_(
+                ile_shared_tools.print_(
                     f"The ShellyGen1HtReportSensorValuesHandler failed for device_ip={device_ip} "
                     f"due to unsupported query: '{self.path}'.",
                     file=sys.stderr,
                 )
 
         except Exception as exception:
-            print_exception(exception)
+            ile_shared_tools.print_exception(exception)
 
 
 # --------------------- SHELLY Gen2 -------------------------------------------
@@ -476,7 +434,7 @@ def shelly_get_gen2_device_status_ilp(device_ip: str, device_type: str, device_n
         status = http_rpc_call(device_ip, "Switch.GetStatus", {"id": 0}, auth=Config.shelly_gen2_auth)
         return shelly_gen2_plug_status_to_ilp(device_name, status)
 
-    print_(
+    ile_shared_tools.print_(
         f"The shelly_get_gen2_device_status_ilp failed for device_ip={device_ip} "
         f"due to unsupported device_type={device_type}.",
         file=sys.stderr,
@@ -599,7 +557,7 @@ async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocket
         device_ip = websocket.remote_address[0]
 
         if Config.auth_token and Config.auth_token not in path:
-            print_(
+            ile_shared_tools.print_(
                 f"The shelly_gen2_outbound_websocket_handler failed for device_ip={device_ip} "
                 f"due to unsupported path '{path}'.",
                 file=sys.stderr,
@@ -608,7 +566,7 @@ async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocket
 
         recv = await websocket.recv()
         payload = json.loads(recv)
-        print_debug(lambda: json_dumps(payload))
+        ile_shared_tools.print_debug(lambda: ile_shared_tools.json_dumps(payload))
 
         src = payload["src"]
 
@@ -622,17 +580,19 @@ async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocket
                     device_name = shelly_get_gen2_device_name(device_ip) if not Config.cloud_mode else None
 
                 except Exception as exception:
-                    print_exception(exception)
+                    ile_shared_tools.print_exception(exception)
                     return
 
                 data = shelly_gen2_plusht_status_to_ilp(device_name, payload)
 
                 # I/O operation that may be happening after the connection is closed.
-                questdb_thread = threading.Thread(target=write_ilp_to_questdb, args=(data,), daemon=False)
+                questdb_thread = threading.Thread(
+                    target=ile_shared_tools.write_ilp_to_questdb, args=(data,), daemon=False
+                )
                 questdb_thread.start()
 
         else:
-            print_(
+            ile_shared_tools.print_(
                 f"The shelly_gen2_outbound_websocket_handler failed for device_ip={device_ip} "
                 f"due to unsupported src={src}.",
                 file=sys.stderr,
@@ -666,13 +626,13 @@ def shelly_device_status_loop(sigterm_threading_event: threading.Event, device_i
 
                 else:
                     data = ""
-                    print_(
+                    ile_shared_tools.print_(
                         f"The shelly_device_status_loop failed for device_ip={device_ip} "
                         f"due to unsupported device_gen={device_gen}.",
                         file=sys.stderr,
                     )
 
-                write_ilp_to_questdb(data)
+                ile_shared_tools.write_ilp_to_questdb(data)
 
                 if sigterm_threading_event.wait(Config.scrape_interval_seconds):
                     break
@@ -683,7 +643,7 @@ def shelly_device_status_loop(sigterm_threading_event: threading.Event, device_i
                 break
 
         except Exception as exception:
-            print_exception(exception)
+            ile_shared_tools.print_exception(exception)
             backoff_idx = max(0, min(backoff_idx + 1, len(Config.backoff_strategy_seconds) - 1))
             backoff = Config.backoff_strategy_seconds[backoff_idx]
             if sigterm_threading_event.wait(backoff):
@@ -691,9 +651,9 @@ def shelly_device_status_loop(sigterm_threading_event: threading.Event, device_i
 
 
 def main() -> int:
-    print_("Config" + str(vars(Config)), file=sys.stderr)
+    ile_shared_tools.print_("Config" + str(vars(Config)), file=sys.stderr)
 
-    sigterm_threading_event = configure_sigterm_handler()
+    sigterm_threading_event = ile_shared_tools.configure_sigterm_handler()
 
     for device_ip in itertools.chain(Config.shelly_devices_ips, Config.shelly_devices_ssl_ips):
         status_thread = threading.Thread(
@@ -750,7 +710,7 @@ def main() -> int:
         )
         websocket_sever_thread.start()
 
-    print_("STARTED", file=sys.stderr)
+    ile_shared_tools.print_("STARTED", file=sys.stderr)
     sigterm_threading_event.wait()
     return 0
 

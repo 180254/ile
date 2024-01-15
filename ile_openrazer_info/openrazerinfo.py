@@ -1,15 +1,12 @@
 import json
 import os
-import re
-import socket
-import ssl
 import sys
 import time
 import typing
 
 import openrazer.client
 
-from ile_shared_tools import configure_sigterm_handler, print_, print_exception
+import ile_shared_tools
 
 # ile_openrazer is a program that collects data about razer-manufactured devices and stores it to the db.
 # Useful for monitoring the battery state of the devices.
@@ -121,13 +118,13 @@ def task() -> None:
             f"{timestamp}{nano}\n"
         )
 
-    write_ilp_to_questdb(data)
+    ile_shared_tools.write_ilp_to_questdb(data)
 
 
 def main() -> int:
-    print_("Config" + str(vars(Config)), file=sys.stderr)
+    ile_shared_tools.print_("Config" + str(vars(Config)), file=sys.stderr)
 
-    sigterm_threading_event = configure_sigterm_handler()
+    sigterm_threading_event = ile_shared_tools.configure_sigterm_handler()
 
     backoff_idx = -1
     while True:
@@ -139,7 +136,7 @@ def main() -> int:
                 break
 
         except Exception as exception:
-            print_exception(exception)
+            ile_shared_tools.print_exception(exception)
             backoff_idx = max(0, min(backoff_idx + 1, len(Config.backoff_strategy_seconds) - 1))
             backoff = Config.backoff_strategy_seconds[backoff_idx]
             if sigterm_threading_event.wait(backoff):

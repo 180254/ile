@@ -17,7 +17,7 @@ from collections.abc import Callable
 
 import redis
 
-from ile_shared_tools import configure_sigterm_handler, print_, print_exception
+import ile_shared_tools
 
 # ile-tcp-cache is useful when the target TCP server is unreachable from the data-producing device.
 
@@ -191,7 +191,7 @@ class VerboseThread(threading.Thread):
         try:
             super().run()
         except Exception as e:
-            print_exception(e)
+            ile_shared_tools.print_exception(e)
             traceback.print_tb(e.__traceback__)
             raise
 
@@ -207,7 +207,7 @@ class VerboseInaccurateTimer(threading.Timer):
         try:
             super().run()
         except Exception as e:
-            print_exception(e)
+            ile_shared_tools.print_exception(e)
             traceback.print_tb(e.__traceback__)
             raise
 
@@ -241,7 +241,7 @@ class Periodic:
         try:
             result = self.func()
         except Exception as e:
-            print_exception(e)
+            ile_shared_tools.print_exception(e)
             traceback.print_tb(e.__traceback__)
             result = Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
@@ -310,13 +310,13 @@ class TCPParcelCollector:
                         self.outer.handler_delivery_thread = flush_thread
 
             except Exception as e:
-                print_exception(e)
+                ile_shared_tools.print_exception(e)
 
         def _incr_overloaded_cnt(self) -> None:
             try:
                 self.outer.r.incr(Config.counter_parcel_collector_overloaded, 1)
             except redis.exceptions.RedisError as e:
-                print_exception(e)
+                ile_shared_tools.print_exception(e)
 
     def handler_factory(self, request, client_address, server) -> "TCPParcelCollector.Handler":
         return TCPParcelCollector.Handler(request, client_address, server, self)
@@ -336,7 +336,7 @@ class TCPParcelCollector:
                 flushed += 1
 
         except redis.exceptions.RedisError as e:
-            print_exception(e)
+            ile_shared_tools.print_exception(e)
             if data:
                 self.backpack.appendleft(data)
             return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
@@ -389,7 +389,7 @@ class DeliveryMan:
             )
 
         except redis.exceptions.RedisError as e:
-            print_exception(e)
+            ile_shared_tools.print_exception(e)
             redis_exception = e
             xreadgroup = []
 
@@ -461,7 +461,7 @@ class DeliveryMan:
                 except OSError as e:
                     # Connect error is not a 'final problem', it will be retried later.
                     # Return false as the data was not processed.
-                    print_exception(e)
+                    ile_shared_tools.print_exception(e)
                     return False
 
                 self.last_flush = time.time()
@@ -487,7 +487,7 @@ class DeliveryMan:
                 # Error while sending data is a 'final problem', it will not be retried.
                 # Data may be corrupted, so it is better to drop it.
                 # Print exception, mark data as not delivered and continue.
-                print_exception(e)
+                ile_shared_tools.print_exception(e)
                 delivered = False
 
         # At this pont data was processed - delivered or dropped.
@@ -504,7 +504,7 @@ class DeliveryMan:
                 self.r.incr(Config.counter_dropped_bytes, len(data))
 
         except redis.exceptions.RedisError as e:
-            print_exception(e)
+            ile_shared_tools.print_exception(e)
 
         # Return true as the data was processed.
         return True
@@ -513,7 +513,7 @@ class DeliveryMan:
         try:
             self.r.incr(Config.counter_delivery_man_overloaded, 1)
         except redis.exceptions.RedisError as e:
-            print_exception(e)
+            ile_shared_tools.print_exception(e)
 
 
 def status(
@@ -539,7 +539,7 @@ def status(
         counter_parcel_collector_overloaded = size_fmt(int(r.get(Config.counter_parcel_collector_overloaded) or -1))
         counter_delivery_man_overloaded = size_fmt(int(r.get(Config.counter_delivery_man_overloaded) or -1))
 
-        print_(
+        ile_shared_tools.print_(
             f"threading.active_count: {threading_active_count} | "
             f"parcel_collector.backpack: {parcel_collector_backpack} | "
             f"delivery_man.backpack: {delivery_man_backpack} | "
@@ -555,7 +555,7 @@ def status(
         )
 
     except redis.exceptions.RedisError as e:
-        print_exception(e)
+        ile_shared_tools.print_exception(e)
         return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
     else:
@@ -570,7 +570,7 @@ def wait_for_redis(r: redis.Redis) -> bool:
             r.ping()
 
         except (redis.exceptions.ConnectionError, ConnectionError) as e:
-            print_exception(e)
+            ile_shared_tools.print_exception(e)
 
             if time.time() > must_end:
                 return False
@@ -602,7 +602,7 @@ def redis_init(r: redis.Redis) -> bool:
         r.incr(Config.counter_delivery_man_overloaded, 0)
 
     except redis.exceptions.RedisError as e:
-        print_exception(e)
+        ile_shared_tools.print_exception(e)
         return False
 
     else:
@@ -610,9 +610,9 @@ def redis_init(r: redis.Redis) -> bool:
 
 
 def main() -> int:
-    print_("Config" + str(vars(Config)), file=sys.stderr)
+    ile_shared_tools.print_("Config" + str(vars(Config)), file=sys.stderr)
 
-    sigterm_threading_event = configure_sigterm_handler()
+    sigterm_threading_event = ile_shared_tools.configure_sigterm_handler()
 
     r = redis.Redis(
         host=Config.redis_address[0],
