@@ -18,7 +18,7 @@ docker run -d --restart=unless-stopped \
     -e HOST_VAR=/hostfs/var \
     -e HOST_RUN=/hostfs/run \
     -e HOST_MOUNT_PREFIX=/hostfs \
-    telegraf:1.28.2
+    telegraf:1.29.2
 
 # basic + nvidia config
 # https://github.com/influxdata/telegraf/blob/release-1.28/plugins/inputs/nvidia_smi/
@@ -42,5 +42,5 @@ docker run -d --restart=unless-stopped \
     -v /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro \
     -v "$(find /usr/lib/x86_64-linux-gnu -name 'libnvidia-ml.so')":/usr/lib/x86_64-linux-gnu/libnvidia-ml.so:ro \
     -e LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libnvidia-ml.so \
-    telegraf:1.28.2 \
+    telegraf:1.29.2 \
     telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d

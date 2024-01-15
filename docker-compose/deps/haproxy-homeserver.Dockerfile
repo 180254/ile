@@ -1,5 +1,5 @@
-# https://github.com/docker-library/haproxy/blob/master/2.8/Dockerfile
-FROM haproxy:2.8.3-bullseye
+# https://github.com/docker-library/haproxy/blob/master/2.9/Dockerfile
+FROM haproxy:2.9.2-bookworm
 
 USER root
 
