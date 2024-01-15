@@ -13,9 +13,7 @@ max_reps = 10
 max_time_seconds = 10
 sleep_time_seconds = 0.1
 
-queries = [
-    """tables()""",
-]
+queries = ["""tables()"""]
 
 conn = psycopg2.connect(dsn=dsn, connect_timeout=3)
 
