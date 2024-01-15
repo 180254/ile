@@ -22,7 +22,7 @@ cursor.execute("tables()")
 tables = cursor.fetchall()
 
 for table in tables:
-    name = table["name"]
+    name = table["table_name"]
     print(name)
 
     cursor2 = conn.cursor()

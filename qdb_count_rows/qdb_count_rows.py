@@ -15,7 +15,7 @@ tables = cursor.fetchall()
 
 total = 0
 for table in tables:
-    name = table["name"]
+    name = table["table_name"]
 
     cursor2 = conn.cursor()
     cursor2.execute("select count(*) from %s", (name,))
