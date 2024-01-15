@@ -10,7 +10,7 @@ RUN set -eux \
   && apt-get install -y --no-install-recommends curl ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd -g "${ILE_NONROOT_GID}" nonroot \
-  && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
+  && useradd -l -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
 
 RUN chown -R nonroot:nonroot /data
 

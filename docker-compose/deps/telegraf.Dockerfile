@@ -6,7 +6,7 @@ ARG ILE_NONROOT_GID="1001"
 
 RUN set -eux \
   && groupadd -g "${ILE_NONROOT_GID}" nonroot \
-  && useradd -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
+  && useradd -l -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
 
 USER nonroot
 
