@@ -6,8 +6,15 @@ readme = "README.adoc"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
 keywords = [
-    "Shelly", "Shelly Plug", "Shelly Plus Plug", "Shelly H&T", "Shelly Plus H&T",
-    "QuestDB", "Grafana", "Telegraf"
+    "Shelly",
+    "Shelly Plug",
+    "Shelly Plus Plug",
+    "Shelly H&T",
+    "Shelly Plus H&T",
+    "QuestDB",
+    "Grafana",
+    "Telegraf",
+    "OpenRazer"
 ]
 authors = [
     { name = "180254", email = "180254@users.noreply.github.com" },
@@ -43,7 +50,6 @@ ignore = [
     # https://beta.ruff.rs/docs/rules/pytest-unittest-assertion/
     "PT009"
 ]
-
 line-length = 120
 target-version = "py311"
 
