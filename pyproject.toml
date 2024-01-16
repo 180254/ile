@@ -14,7 +14,8 @@ keywords = [
     "QuestDB",
     "Grafana",
     "Telegraf",
-    "OpenRazer"
+    "OpenRazer",
+    "MET Weather API"
 ]
 authors = [
     { name = "180254", email = "180254@users.noreply.github.com" },
