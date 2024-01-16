@@ -14,13 +14,13 @@ RUN set -eux \
 
 RUN chown -R nonroot:nonroot /data
 
-ARG ILR_REDIS_PASSWORD="redis"
-ARG ILR_REDIS_PORT="6379"
+ARG ILE_ILR_REDIS_PASSWORD="redis"
+ARG ILE_ILR_REDIS_PORT="6379"
 
-ARG ILR_REDIS_SSL="false"
-ARG ILR_REDIS_SSL_CERTFILE="redis.crt"
-ARG ILR_REDIS_SSL_KEYFILE="redis.key"
-ARG ILR_REDIS_SSL_PASSWORD=""
+ARG ILE_ILR_REDIS_SSL="false"
+ARG ILE_ILR_REDIS_SSL_CERTFILE="redis.crt"
+ARG ILE_ILR_REDIS_SSL_KEYFILE="redis.key"
+ARG ILE_ILR_REDIS_SSL_PASSWORD=""
 
 RUN mkdir -p /usr/local/etc/redis
 RUN mkdir -p /usr/local/etc/redis/conf.d
@@ -28,7 +28,7 @@ RUN mkdir -p /usr/local/etc/redis/conf.d
 # https://redis.io/docs/management/config-file/
 COPY <<EOF /usr/local/etc/redis/redis.conf
 bind * -::*
-requirepass ${ILR_REDIS_PASSWORD}
+requirepass ${ILE_ILR_REDIS_PASSWORD}
 dir /data
 include /usr/local/etc/redis/conf.d/*.conf
 EOF
@@ -38,20 +38,20 @@ save 3600 1 300 100 60 10000
 appendonly yes
 EOF
 
-RUN if [ "$ILR_REDIS_SSL" = "false" ]; then \
-  echo "port ${ILR_REDIS_PORT}" >> /usr/local/etc/redis/conf.d/port.conf; \
+RUN if [ "$ILE_ILR_REDIS_SSL" = "false" ]; then \
+  echo "port ${ILE_ILR_REDIS_PORT}" >> /usr/local/etc/redis/conf.d/port.conf; \
 fi
 
-RUN if [ "$ILR_REDIS_SSL" = "true" ]; then \
+RUN if [ "$ILE_ILR_REDIS_SSL" = "true" ]; then \
   echo "port 0" >> /usr/local/etc/redis/conf.d/ssl.conf; \
-  echo "tls-port ${ILR_REDIS_PORT}" >> /usr/local/etc/redis/conf.d/ssl.conf; \
-  echo "tls-cert-file ${ILR_REDIS_SSL_CERTFILE}" >> /usr/local/etc/redis/conf.d/ssl.conf; \
-  echo "tls-key-file ${ILR_REDIS_SSL_KEYFILE}" >> /usr/local/etc/redis/conf.d/ssl.conf; \
+  echo "tls-port ${ILE_ILR_REDIS_PORT}" >> /usr/local/etc/redis/conf.d/ssl.conf; \
+  echo "tls-cert-file ${ILE_ILR_REDIS_SSL_CERTFILE}" >> /usr/local/etc/redis/conf.d/ssl.conf; \
+  echo "tls-key-file ${ILE_ILR_REDIS_SSL_KEYFILE}" >> /usr/local/etc/redis/conf.d/ssl.conf; \
   echo "tls-auth-clients no" >> /usr/local/etc/redis/conf.d/ssl.conf; \
 fi
 
-RUN if [ "$ILR_REDIS_SSL" = "true" ] && [ "${ILR_REDIS_SSL_PASSWORD}" != "" ]; then \
-  echo "tls-key-file-pass ${ILR_REDIS_SSL_PASSWORD}" >> /usr/local/etc/redis/conf.d/ssl.conf; \
+RUN if [ "$ILE_ILR_REDIS_SSL" = "true" ] && [ "${ILE_ILR_REDIS_SSL_PASSWORD}" != "" ]; then \
+  echo "tls-key-file-pass ${ILE_ILR_REDIS_SSL_PASSWORD}" >> /usr/local/etc/redis/conf.d/ssl.conf; \
 fi
 
 USER nonroot

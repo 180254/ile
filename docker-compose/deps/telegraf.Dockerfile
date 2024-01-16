@@ -10,4 +10,4 @@ RUN set -eux \
 
 USER nonroot
 
-CMD telegraf --config /etc/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d
+CMD [ "telegraf", "--config", "/etc/telegraf/telegraf.conf", "--config-directory", "/etc/telegraf/telegraf.d" ]
