@@ -18,10 +18,21 @@ if TYPE_CHECKING:
 
 class Env:
     ILE_DEBUG: str = os.environ.get("ILE_DEBUG", "false")
+    ILE_SOCKET_TIMEOUT: str = os.environ.get("ILE_SOCKET_TIMEOUT", "10")
+    ILE_QUESTDB_HOST: str = os.environ.get("ILE_QUESTDB_HOST", "")
+    ILE_QUESTDB_PORT: str = os.environ.get("ILE_QUESTDB_PORT", "9009")
+    ILE_QUESTDB_SSL: str = os.environ.get("ILE_QUESTDB_SSL", "false")
+    ILE_QUESTDB_SSL_CAFILE: str = os.environ.get("ILE_QUESTDB_SSL_CAFILE", "")
+    ILE_QUESTDB_SSL_CHECKHOSTNAME: str = os.environ.get("ILE_QUESTDB_SSL_CHECKHOSTNAME", "true")
 
 
 class Config:
     debug: bool = Env.ILE_DEBUG.lower() == "true"
+    socket_timeout_seconds: int = int(Env.ILE_SOCKET_TIMEOUT)
+    questdb_address: tuple[str, int] = (Env.ILE_QUESTDB_HOST, int(Env.ILE_QUESTDB_PORT))
+    questdb_ssl: bool = Env.ILE_QUESTDB_SSL.lower() == "true"
+    questdb_ssl_cafile: str | None = Env.ILE_QUESTDB_SSL_CAFILE or None
+    questdb_ssl_checkhostname: bool = Env.ILE_QUESTDB_SSL_CHECKHOSTNAME.lower() == "true"
 
 
 def print_(*args, **kwargs) -> None:

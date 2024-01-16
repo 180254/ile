@@ -36,11 +36,11 @@ Shelly Plus H&T     | SNSN-0013A   | shelly_ht_meter1                           
 
 Device configuration:
 - Scape strategy: API polling
-  Pass the IP address of the device using the ILE_SHELLY_IPS environment variable.
+  Pass the IP address of the device using the ILE_ISS_SHELLY_IPS environment variable.
 - Scape strategy: webhook (HTTP server)
-  Configure your devices so that the "report sensor values" URL is "http://{machine_ip}:9080/{ile_auth_token}".
+  Configure your devices so that the "report sensor values" URL is "http://{machine_ip}:9080/{ILE_ISS_AUTH_TOKEN}".
 - Scape strategy: receiving notification (WebSocket)
-  Configure your devices so that the outgoing WebSocket server is "ws://{machine_ip}:9081/{ile_auth_token}".
+  Configure your devices so that the outgoing WebSocket server is "ws://{machine_ip}:9081/{ILE_ISS_AUTH_TOKEN}".
 
 You can configure the script using environment variables.
 Check the Env class below to determine what variables you can set.
@@ -49,79 +49,70 @@ Check the Env class below to determine what variables you can set.
 
 # --------------------- CONFIG ------------------------------------------------
 
+getenv = os.environ.get
+
 
 class Env:
     # Set to true if shelly devices are not reachable from the machine running the script.
-    ILE_CLOUD_MODE: str = os.environ.get("ILE_CLOUD_MODE", "false")
+    ILE_ISS_CLOUD_MODE: str = getenv("ILE_ISS_CLOUD_MODE", "false")
 
-    ILE_QUESTDB_HOST: str = os.environ.get("ILE_QUESTDB_HOST", "localhost")
-    ILE_QUESTDB_PORT: str = os.environ.get("ILE_QUESTDB_PORT", "9009")
-    ILE_QUESTDB_SSL: str = os.environ.get("ILE_QUESTDB_SSL", "false")
-    ILE_QUESTDB_SSL_CAFILE: str = os.environ.get("ILE_QUESTDB_SSL_CAFILE", "")
-    ILE_QUESTDB_SSL_CHECKHOSTNAME: str = os.environ.get("ILE_QUESTDB_SSL_CHECKHOSTNAME", "true")
-
-    # ILE_SHELLY_IPS=comma-separated list of IPs
+    # ILE_ISS_SHELLY_IPS=comma-separated list of IPs
     # List here the supported devices for which the script uses the 'API polling' strategy, and http protocol.
-    ILE_SHELLY_IPS: str = os.environ.get("ILE_SHELLY_IPS", "")
+    ILE_ISS_SHELLY_IPS: str = getenv("ILE_ISS_SHELLY_IPS", "")
 
-    # ILE_SHELLY_SSL_IPS=comma-separated list of IPs
+    # ILE_ISS_SHELLY_SSL_IPS=comma-separated list of IPs
     # List here the supported devices for which the script uses the 'API polling' strategy, and https protocol.
-    ILE_SHELLY_SSL_IPS: str = os.environ.get("ILE_SHELLY_SSL_IPS", "")
+    ILE_ISS_SHELLY_SSL_IPS: str = getenv("ILE_ISS_SHELLY_SSL_IPS", "")
 
-    # ILE_SHELLY_SSL_IPS_VERIFY=path to the CA file, True, False, empty (= None)
+    # ILE_ISS_SHELLY_SSL_IPS_VERIFY=path to the CA file, True, False, empty (= None)
     # https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification
-    ILE_SHELLY_SSL_IPS_VERIFY: str = os.environ.get("ILE_SHELLY_SSL_IPS_VERIFY", "")
+    ILE_ISS_SHELLY_SSL_IPS_VERIFY: str = getenv("ILE_ISS_SHELLY_SSL_IPS_VERIFY", "")
 
-    # ILE_SOCKET_TIMEOUT=intValue (seconds)
-    # ILE_HTTP_TIMEOUT=intValue (seconds)
-    ILE_SOCKET_TIMEOUT: str = os.environ.get("ILE_SOCKET_TIMEOUT", "10")
-    ILE_HTTP_TIMEOUT: str = os.environ.get("ILE_HTTP_TIMEOUT", "10")
+    # ILE_ISS_SOCKET_TIMEOUT=intValue (seconds)
+    # ILE_ISS_HTTP_TIMEOUT=intValue (seconds)
+    ILE_ISS_SOCKET_TIMEOUT: str = getenv("ILE_ISS_SOCKET_TIMEOUT", "10")
+    ILE_ISS_HTTP_TIMEOUT: str = getenv("ILE_ISS_HTTP_TIMEOUT", "10")
 
-    # ILE_SCRAPE_INTERVAL=floatValue (seconds)
-    # ILE_BACKOFF_STRATEGY=comma-separated list of floats (seconds)
-    ILE_SCRAPE_INTERVAL: str = os.environ.get("ILE_SCRAPE_INTERVAL", "60")
-    ILE_BACKOFF_STRATEGY: str = os.environ.get("ILE_BACKOFF_STRATEGY", "0.5,1,3,3,5,60,90")
+    # ILE_ISS_SCRAPE_INTERVAL=floatValue (seconds)
+    # ILE_ISS_BACKOFF_STRATEGY=comma-separated list of floats (seconds)
+    ILE_ISS_SCRAPE_INTERVAL: str = getenv("ILE_ISS_SCRAPE_INTERVAL", "60")
+    ILE_ISS_BACKOFF_STRATEGY: str = getenv("ILE_ISS_BACKOFF_STRATEGY", "0.5,1,3,3,5,60,90")
 
-    ILE_SHELLY_GEN1_WEBHOOK_ENABLED: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_ENABLED", "true")
-    ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST", "0.0.0.0")
-    ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT", "9080")
-    ILE_SHELLY_GEN1_WEBHOOK_SSL: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_SSL", "false")
-    ILE_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE", "server.crt")
-    ILE_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE", "server.key")
-    ILE_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD: str = os.environ.get("ILE_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD", "")
+    ILE_ISS_SHELLY_GEN1_WEBHOOK_ENABLED: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_ENABLED", "true")
+    ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_HOST: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_HOST", "0.0.0.0")
+    ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_PORT: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_PORT", "9080")
+    ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL", "false")
+    ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE", "server.crt")
+    ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE", "server.key")
+    ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD", "")
 
-    ILE_SHELLY_GEN2_WEBSOCKET_ENABLED: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_ENABLED", "true")
-    ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST", "0.0.0.0")
-    ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT", "9081")
-    ILE_SHELLY_GEN2_WEBSOCKET_SSL: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_SSL", "false")
-    ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE", "server.crt")
-    ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE", "server.key")
-    ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD: str = os.environ.get("ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD", "")
+    ILE_ISS_SHELLY_GEN2_WEBSOCKET_ENABLED: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_ENABLED", "true")
+    ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_HOST: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_HOST", "0.0.0.0")
+    ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT", "9081")
+    ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL", "false")
+    ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE", "server.crt")
+    ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE", "server.key")
+    ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD", "")
 
     # https://shelly-api-docs.shelly.cloud/gen1/#http-dialect
-    ILE_SHELLY_GEN1_AUTH_USERNAME = os.environ.get("ILE_SHELLY_GEN1_AUTH_USERNAME", "")
-    ILE_SHELLY_GEN1_AUTH_PASSWORD = os.environ.get("ILE_SHELLY_GEN1_AUTH_PASSWORD", "")
+    ILE_ISS_SHELLY_GEN1_AUTH_USERNAME = getenv("ILE_ISS_SHELLY_GEN1_AUTH_USERNAME", "")
+    ILE_ISS_SHELLY_GEN1_AUTH_PASSWORD = getenv("ILE_ISS_SHELLY_GEN1_AUTH_PASSWORD", "")
 
     # https://shelly-api-docs.shelly.cloud/gen2/General/Authentication/
-    ILE_SHELLY_GEN2_AUTH_USERNAME = os.environ.get("ILE_SHELLY_GEN2_AUTH_USERNAME", "")
-    ILE_SHELLY_GEN2_AUTH_PASSWORD = os.environ.get("ILE_SHELLY_GEN2_AUTH_PASSWORD", "")
+    ILE_ISS_SHELLY_GEN2_AUTH_USERNAME = getenv("ILE_ISS_SHELLY_GEN2_AUTH_USERNAME", "")
+    ILE_ISS_SHELLY_GEN2_AUTH_PASSWORD = getenv("ILE_ISS_SHELLY_GEN2_AUTH_PASSWORD", "")
 
-    ILE_AUTH_TOKEN: str = os.environ.get("ILE_AUTH_TOKEN", "")
+    ILE_ISS_AUTH_TOKEN: str = getenv("ILE_ISS_AUTH_TOKEN", "")
 
 
 class Config:
-    cloud_mode: bool = Env.ILE_CLOUD_MODE.lower() == "true"
+    cloud_mode: bool = Env.ILE_ISS_CLOUD_MODE.lower() == "true"
 
-    questdb_address: tuple[str, int] = (Env.ILE_QUESTDB_HOST, int(Env.ILE_QUESTDB_PORT))
-    questdb_ssl: bool = Env.ILE_QUESTDB_SSL.lower() == "true"
-    questdb_ssl_cafile: str | None = Env.ILE_QUESTDB_SSL_CAFILE or None
-    questdb_ssl_checkhostname: bool = Env.ILE_QUESTDB_SSL_CHECKHOSTNAME.lower() == "true"
+    shelly_devices_ips: typing.Sequence[str] = list(filter(None, Env.ILE_ISS_SHELLY_IPS.split(",")))
 
-    shelly_devices_ips: typing.Sequence[str] = list(filter(None, Env.ILE_SHELLY_IPS.split(",")))
-
-    shelly_devices_ssl_ips: typing.Sequence[str] = list(filter(None, Env.ILE_SHELLY_SSL_IPS.split(",")))
+    shelly_devices_ssl_ips: typing.Sequence[str] = list(filter(None, Env.ILE_ISS_SHELLY_SSL_IPS.split(",")))
     shelly_devices_ssl_ips_verify: str | bool | None
-    match Env.ILE_SHELLY_SSL_IPS_VERIFY.lower():
+    match Env.ILE_ISS_SHELLY_SSL_IPS_VERIFY.lower():
         case "true":
             shelly_devices_ssl_ips_verify = True
         case "false":
@@ -129,49 +120,48 @@ class Config:
         case "":
             shelly_devices_ssl_ips_verify = None
         case _:
-            shelly_devices_ssl_ips_verify = Env.ILE_SHELLY_SSL_IPS_VERIFY
+            shelly_devices_ssl_ips_verify = Env.ILE_ISS_SHELLY_SSL_IPS_VERIFY
 
-    socket_timeout_seconds: int = int(Env.ILE_SOCKET_TIMEOUT)
-    http_timeout_seconds: int = int(Env.ILE_HTTP_TIMEOUT)
+    http_timeout_seconds: int = int(Env.ILE_ISS_HTTP_TIMEOUT)
 
-    scrape_interval_seconds: int = int(Env.ILE_SCRAPE_INTERVAL)
+    scrape_interval_seconds: int = int(Env.ILE_ISS_SCRAPE_INTERVAL)
     backoff_strategy_seconds: typing.Sequence[float] = list(
-        map(float, filter(None, Env.ILE_BACKOFF_STRATEGY.split(","))),
+        map(float, filter(None, Env.ILE_ISS_BACKOFF_STRATEGY.split(",")))
     )
 
-    shelly_gen1_webhook_enabled: bool = Env.ILE_SHELLY_GEN1_WEBHOOK_ENABLED.lower() == "true"
+    shelly_gen1_webhook_enabled: bool = Env.ILE_ISS_SHELLY_GEN1_WEBHOOK_ENABLED.lower() == "true"
     shelly_gen1_webhook_bind_address: tuple[str, int] = (
-        Env.ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST,
-        int(Env.ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT),
+        Env.ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_HOST,
+        int(Env.ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_PORT),
     )
-    shelly_gen1_webhook_ssl: bool = Env.ILE_SHELLY_GEN1_WEBHOOK_SSL.lower() == "true"
-    shelly_gen1_webhook_ssl_certfile: str = Env.ILE_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE
-    shelly_gen1_webhook_ssl_keyfile: str = Env.ILE_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE
-    shelly_gen1_webhook_ssl_password: str | None = Env.ILE_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD or None
+    shelly_gen1_webhook_ssl: bool = Env.ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL.lower() == "true"
+    shelly_gen1_webhook_ssl_certfile: str = Env.ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE
+    shelly_gen1_webhook_ssl_keyfile: str = Env.ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE
+    shelly_gen1_webhook_ssl_password: str | None = Env.ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD or None
 
-    shelly_gen2_websocket_enabled: bool = Env.ILE_SHELLY_GEN2_WEBSOCKET_ENABLED.lower() == "true"
+    shelly_gen2_websocket_enabled: bool = Env.ILE_ISS_SHELLY_GEN2_WEBSOCKET_ENABLED.lower() == "true"
     shelly_gen2_websocket_bind_address: tuple[str, int] = (
-        Env.ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST,
-        int(Env.ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT),
+        Env.ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_HOST,
+        int(Env.ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT),
     )
-    shelly_gen2_websocket_ssl: bool = Env.ILE_SHELLY_GEN2_WEBSOCKET_SSL.lower() == "true"
-    shelly_gen2_websocket_ssl_certfile: str = Env.ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE
-    shelly_gen2_websocket_ssl_keyfile: str = Env.ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE
-    shelly_gen2_websocket_ssl_password: str | None = Env.ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD or None
+    shelly_gen2_websocket_ssl: bool = Env.ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL.lower() == "true"
+    shelly_gen2_websocket_ssl_certfile: str = Env.ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE
+    shelly_gen2_websocket_ssl_keyfile: str = Env.ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE
+    shelly_gen2_websocket_ssl_password: str | None = Env.ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD or None
 
     shelly_gen1_auth: requests.auth.AuthBase | None = (
-        requests.auth.HTTPBasicAuth(Env.ILE_SHELLY_GEN1_AUTH_USERNAME, Env.ILE_SHELLY_GEN1_AUTH_PASSWORD)
-        if Env.ILE_SHELLY_GEN1_AUTH_USERNAME and Env.ILE_SHELLY_GEN1_AUTH_PASSWORD
+        requests.auth.HTTPBasicAuth(Env.ILE_ISS_SHELLY_GEN1_AUTH_USERNAME, Env.ILE_ISS_SHELLY_GEN1_AUTH_PASSWORD)
+        if Env.ILE_ISS_SHELLY_GEN1_AUTH_USERNAME and Env.ILE_ISS_SHELLY_GEN1_AUTH_PASSWORD
         else None
     )
 
     shelly_gen2_auth: requests.auth.AuthBase | None = (
-        requests.auth.HTTPDigestAuth(Env.ILE_SHELLY_GEN2_AUTH_USERNAME, Env.ILE_SHELLY_GEN2_AUTH_PASSWORD)
-        if Env.ILE_SHELLY_GEN2_AUTH_USERNAME and Env.ILE_SHELLY_GEN2_AUTH_PASSWORD
+        requests.auth.HTTPDigestAuth(Env.ILE_ISS_SHELLY_GEN2_AUTH_USERNAME, Env.ILE_ISS_SHELLY_GEN2_AUTH_PASSWORD)
+        if Env.ILE_ISS_SHELLY_GEN2_AUTH_USERNAME and Env.ILE_ISS_SHELLY_GEN2_AUTH_PASSWORD
         else None
     )
 
-    auth_token: str = Env.ILE_AUTH_TOKEN
+    auth_token: str = Env.ILE_ISS_AUTH_TOKEN
 
 
 # --------------------- HELPERS -----------------------------------------------
@@ -546,8 +536,8 @@ def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: dict) -> s
         f"hum_is_valid={hum_is_valid},"
         f"bat_value={bat_value},"
         f"bat_voltage={bat_voltage},"
-        f"connect_retries=0,"
-        f"sensor_error=0 "
+        "connect_retries=0,"
+        "sensor_error=0 "
         f"{timestamp}{nano}\n"
     )
 
@@ -599,7 +589,7 @@ async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocket
             )
 
     except Exception as exception:
-        print_exception(exception)
+        ile_shared_tools.print_exception(exception)
 
     finally:
         await websocket.close()
@@ -665,6 +655,8 @@ def main() -> int:
 
     # Handle Shelly H&T's action: "report sensor values".
     if Config.shelly_gen1_webhook_enabled:
+        # noinspection PyTypeChecker
+        # (this is correct usage - https://docs.python.org/3.11/library/http.server.html#http.server.HTTPServer)
         shelly_ht_report_webhook = http.server.ThreadingHTTPServer(
             Config.shelly_gen1_webhook_bind_address, ShellyGen1HtReportSensorValuesHandler
         )

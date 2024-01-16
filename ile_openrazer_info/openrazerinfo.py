@@ -13,71 +13,13 @@ import ile_shared_tools
 
 
 class Env:
-    IOR_SOCKET_TIMEOUT: str = os.environ.get("IOR_SOCKET_TIMEOUT", "10")
-
-    IOR_QUESTDB_HOST: str = os.environ.get("IOR_QUESTDB_HOST", "")
-    IOR_QUESTDB_PORT: str = os.environ.get("IOR_QUESTDB_PORT", "9009")
-    IOR_QUESTDB_SSL: str = os.environ.get("IOR_QUESTDB_SSL", "false")
-    IOR_QUESTDB_SSL_CAFILE: str = os.environ.get("IOR_QUESTDB_SSL_CAFILE", "")
-    IOR_QUESTDB_SSL_CHECKHOSTNAME: str = os.environ.get("IOR_QUESTDB_SSL_CHECKHOSTNAME", "true")
-
-    IOR_SCRAPE_INTERVAL: str = os.environ.get("IOR_SCRAPE_INTERVAL", "300")
-    IOR_BACKOFF_STRATEGY: str = os.environ.get("IOR_BACKOFF_STRATEGY", "60,300")
+    ILE_IOR_SCRAPE_INTERVAL: str = os.environ.get("ILE_IOR_SCRAPE_INTERVAL", "300")
+    ILE_IOR_BACKOFF_STRATEGY: str = os.environ.get("ILE_IOR_BACKOFF_STRATEGY", "60,300")
 
 
 class Config:
-    socket_timeout_seconds: int = int(Env.IOR_SOCKET_TIMEOUT)
-
-    questdb_address: tuple[str, int] = (Env.IOR_QUESTDB_HOST, int(Env.IOR_QUESTDB_PORT))
-    questdb_ssl: bool = Env.IOR_QUESTDB_SSL.lower() == "true"
-    questdb_ssl_cafile: str | None = Env.IOR_QUESTDB_SSL_CAFILE or None
-    questdb_ssl_checkhostname: bool = Env.IOR_QUESTDB_SSL_CHECKHOSTNAME.lower() == "true"
-
-    scrape_interval_seconds: int = int(Env.IOR_SCRAPE_INTERVAL)
-    backoff_strategy_seconds: typing.Sequence[float] = [float(x) for x in Env.IOR_BACKOFF_STRATEGY.split(",") if x]
-
-
-# ilp = InfluxDB line protocol
-# https://questdb.io/docs/reference/api/ilp/overview/
-def write_ilp_to_questdb(data: str) -> None:
-    if data is None or data == "":
-        return
-
-    # Fix ilp data.
-    # Remove name=value pairs where value is None.
-    if "None" in data:
-        data = re.sub(r"[a-zA-Z0-9_]+=None,?", "", data).replace(" ,", " ").replace(", ", " ")
-
-    print_(data, end="")
-
-    # Treat empty IOR_QUESTDB_HOST as print-only mode.
-    if not Config.questdb_address[0]:
-        return
-
-    if Config.questdb_ssl:
-        ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=Config.questdb_ssl_cafile)
-        ssl_context.check_hostname = Config.questdb_ssl_checkhostname
-    else:
-        ssl_context = None
-
-    # https://github.com/questdb/questdb.io/commit/35ca3c326ab0b3448ef9fdb39eb60f1bd45f8506
-    with (
-        socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock0,
-        ssl_context.wrap_socket(sock0, server_hostname=Config.questdb_address[0]) if ssl_context else sock0 as sock,
-    ):
-        sock.settimeout(Config.socket_timeout_seconds)
-        sock.connect(Config.questdb_address)
-        sock.sendall(data.encode())
-
-        # Send one more empty line after a while.
-        # Make sure that the server did not close the connection
-        # (questdb will do that asynchronously if the data was incorrect).
-        # https://github.com/questdb/questdb/blob/7.2.1/core/src/main/java/io/questdb/network/AbstractIODispatcher.java#L149
-        time.sleep(0.050)
-        sock.sendall(b"\n")
-
-        sock.shutdown(socket.SHUT_RDWR)
-        sock.close()
+    scrape_interval_seconds: int = int(Env.ILE_IOR_SCRAPE_INTERVAL)
+    backoff_strategy_seconds: typing.Sequence[float] = [float(x) for x in Env.ILE_IOR_BACKOFF_STRATEGY.split(",") if x]
 
 
 def task() -> None:
@@ -107,7 +49,7 @@ def task() -> None:
         device_is_charging2 = device_is_charging
 
         data += (
-            f"openrazer_info1,"
+            "openrazer_info1,"
             f"device_name={device_name2},"
             f"device_type={device_type2},"
             f"device_id={device_serial2} "

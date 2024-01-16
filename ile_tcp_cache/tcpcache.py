@@ -65,123 +65,124 @@ getenv = os.environ.get
 class Env:
     """Configuration, environment variables."""
 
-    ITC_SOCKET_CONNECT_TIMEOUT: str = getenv("ITC_SOCKET_CONNECT_TIMEOUT", "5s")
-    ITC_SOCKET_TIMEOUT: str = getenv("ITC_SOCKET_TIMEOUT", "30s")
+    ILE_ITC_SOCKET_CONNECT_TIMEOUT: str = getenv("ILE_ITC_SOCKET_CONNECT_TIMEOUT", "5s")
+    ILE_ITC_SOCKET_TIMEOUT: str = getenv("ILE_ITC_SOCKET_TIMEOUT", "30s")
 
-    ITC_MY_TCP_BIND_HOST: str = getenv("ITC_MY_TCP_BIND_HOST", "127.0.0.1")
-    ITC_MY_TCP_BIND_PORT: str = getenv("ITC_MY_TCP_BIND_PORT", "9009")
-    ITC_MY_TCP_SSL: str = getenv("ITC_MY_TCP_SSL", "false")
-    ITC_MY_TCP_SSL_CERTFILE: str = getenv("ITC_MY_TCP_SSL_CERTFILE", "server.pem")
-    ITC_MY_TCP_SSL_KEYFILE: str = getenv("ITC_MY_TCP_SSL_KEYFILE", "server.crt")
-    ITC_MY_TCP_SSL_PASSWORD: str = getenv("ITC_MY_TCP_SSL_PASSWORD", "")
+    ILE_ITC_MY_TCP_BIND_HOST: str = getenv("ILE_ITC_MY_TCP_BIND_HOST", "127.0.0.1")
+    ILE_C_MY_TCP_BIND_PORT: str = getenv("ILE_ITC_MY_TCP_BIND_PORT", "9009")
+    ILE_ITC_MY_TCP_SSL: str = getenv("ILE_ITC_MY_TCP_SSL", "false")
+    ILE_ITC_MY_TCP_SSL_CERTFILE: str = getenv("ILE_ITC_MY_TCP_SSL_CERTFILE", "server.pem")
+    ILE_ITC_MY_TCP_SSL_KEYFILE: str = getenv("ILE_ITC_MY_TCP_SSL_KEYFILE", "server.crt")
+    ILE_ITC_MY_TCP_SSL_PASSWORD: str = getenv("ILE_ITC_MY_TCP_SSL_PASSWORD", "")
 
-    ITC_TARGET_TCP_HOST: str = getenv("ITC_TARGET_TCP_HOST", "127.0.0.1")
-    ITC_TARGET_TCP_PORT: str = getenv("ITC_TARGET_TCP_PORT", "9009")
-    ITC_TARGET_TCP_SSL: str = getenv("ITC_TARGET_TCP_SSL", "false")
-    ITC_TARGET_TCP_SSL_CAFILE: str = getenv("ITC_TARGET_TCP_SSL_CAFILE", "")
-    ITC_TARGET_TCP_SSL_CHECKHOSTNAME: str = getenv("ITC_TARGET_TCP_SSL_CHECKHOSTNAME", "true")
+    ILE_ITC_TARGET_TCP_HOST: str = getenv("ILE_ITC_TARGET_TCP_HOST", "127.0.0.1")
+    ILE_ITC_TARGET_TCP_PORT: str = getenv("ILE_ITC_TARGET_TCP_PORT", "9009")
+    ILE_ITC_TARGET_TCP_SSL: str = getenv("ILE_ITC_TARGET_TCP_SSL", "false")
+    ILE_ITC_TARGET_TCP_SSL_CAFILE: str = getenv("ILE_ITC_TARGET_TCP_SSL_CAFILE", "")
+    ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME: str = getenv("ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME", "true")
 
-    ITC_REDIS_HOST: str = getenv("ITC_REDIS_HOST", "127.0.0.1")
-    ITC_REDIS_PORT: str = getenv("ITC_REDIS_PORT", "6379")
-    ITC_REDIS_DB: str = getenv("ITC_REDIS_DB", "0")
-    ITC_REDIS_PASSWORD: str = getenv("ITC_REDIS_PASSWORD", "")
-    ITC_REDIS_SSL: str = getenv("ITC_REDIS_SSL", "false")
-    ITC_REDIS_SSL_CAFILE: str = getenv("ITC_REDIS_SSL_CAFILE", "")
-    ITC_REDIS_SSL_CHECKHOSTNAME: str = getenv("ITC_REDIS_SSL_CHECKHOSTNAME", "true")
+    ILE_ITC_REDIS_HOST: str = getenv("ILE_ITC_REDIS_HOST", "127.0.0.1")
+    ILE_ITC_REDIS_PORT: str = getenv("ILE_ITC_REDIS_PORT", "6379")
+    ILE_ITC_REDIS_DB: str = getenv("ILE_ITC_REDIS_DB", "0")
+    ILE_ITC_REDIS_PASSWORD: str = getenv("ILE_ITC_REDIS_PASSWORD", "")
+    ILE_ITC_REDIS_SSL: str = getenv("ILE_ITC_REDIS_SSL", "false")
+    ILE_ITC_REDIS_SSL_CAFILE: str = getenv("ILE_ITC_REDIS_SSL_CAFILE", "")
+    ILE_ITC_REDIS_SSL_CHECKHOSTNAME: str = getenv("ILE_ITC_REDIS_SSL_CHECKHOSTNAME", "true")
 
-    ITC_REDIS_STARTUP_TIMEOUT: str = getenv("ITC_REDIS_STARTUP_TIMEOUT", "30s")
-    ITC_REDIS_STARTUP_RETRY_INTERVAL: str = getenv("ITC_REDIS_STARTUP_RETRY_INTERVAL", "1s")
+    ILE_ITC_REDIS_STARTUP_TIMEOUT: str = getenv("ILE_ITC_REDIS_STARTUP_TIMEOUT", "30s")
+    ILE_ITC_REDIS_STARTUP_RETRY_INTERVAL: str = getenv("ILE_ITC_REDIS_STARTUP_RETRY_INTERVAL", "1s")
 
-    ITC_REDIS_STREAM_NAME: str = getenv("ITC_REDIS_STREAM_NAME", "itc")
-    ITC_REDIS_STREAM_GROUP_NAME: str = getenv("ITC_REDIS_STREAM_GROUP_NAME", "itc")
-    ITC_REDIS_STREAM_CONSUMER_NAME: str = getenv("ITC_REDIS_STREAM_CONSUMER_NAME", "itc")
+    ILE_ITC_REDIS_STREAM_NAME: str = getenv("ILE_ITC_REDIS_STREAM_NAME", "itc")
+    ILE_ITC_REDIS_STREAM_GROUP_NAME: str = getenv("ILE_ITC_REDIS_STREAM_GROUP_NAME", "itc")
+    ILE_ITC_REDIS_STREAM_CONSUMER_NAME: str = getenv("ILE_ITC_REDIS_STREAM_CONSUMER_NAME", "itc")
 
-    ITC_PARCEL_COLLECTOR_ENABLED: str = getenv("ITC_PARCEL_COLLECTOR_ENABLED", "true")
-    ITC_PARCEL_COLLECTOR_CAPACITY: str = getenv("ITC_PARCEL_COLLECTOR_CAPACITY", "2048")
-    ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL: str = getenv("ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL", "60s")
+    ILE_ITC_PARCEL_COLLECTOR_ENABLED: str = getenv("ILE_ITC_PARCEL_COLLECTOR_ENABLED", "true")
+    ILE_ITC_PARCEL_COLLECTOR_CAPACITY: str = getenv("ILE_ITC_PARCEL_COLLECTOR_CAPACITY", "2048")
+    ILE_ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL: str = getenv("ILE_ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL", "60s")
 
-    ITC_REDIS_STREAM_READ_COUNT: str = getenv("ITC_REDIS_STREAM_READ_COUNT", "2048")
-    ITC_DELIVERY_MAN_CAPACITY: str = getenv("ITC_DELIVERY_MAN_CAPACITY", "4096")
+    ILE_ITC_REDIS_STREAM_READ_COUNT: str = getenv("ILE_ITC_REDIS_STREAM_READ_COUNT", "2048")
+    ILE_ITC_DELIVERY_MAN_CAPACITY: str = getenv("ILE_ITC_DELIVERY_MAN_CAPACITY", "4096")
 
-    ITC_DELIVERY_MAN_ENABLED: str = getenv("ITC_DELIVERY_MAN_ENABLED", "true")
-    ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = getenv("ITC_DELIVERY_MAN_COLLECT_INTERVAL", "60s")
-    ITC_DELIVERY_MAN_FLUSH_INTERVAL: str = getenv("ITC_DELIVERY_MAN_FLUSH_INTERVAL", "60s")
+    ILE_ITC_DELIVERY_MAN_ENABLED: str = getenv("ILE_ITC_DELIVERY_MAN_ENABLED", "true")
+    ILE_ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = getenv("ILE_ITC_DELIVERY_MAN_COLLECT_INTERVAL", "60s")
+    ILE_ITC_DELIVERY_MAN_FLUSH_INTERVAL: str = getenv("ILE_ITC_DELIVERY_MAN_FLUSH_INTERVAL", "60s")
 
-    ITC_COUNTER_HITS_ON_TARGET: str = getenv("ITC_COUNTER_HITS_ON_TARGET", "itc:hitsontarget")
-    ITC_COUNTER_DELIVERED_MSGS: str = getenv("ITC_COUNTER_DELIVERED_MSGS", "itc:deliveredmsgs")
-    ITC_COUNTER_DELIVERED_BYTES: str = getenv("ITC_COUNTER_DELIVERED_BYTES", "itc:deliveredbytes")
-    ITC_COUNTER_DROPPED_MSGS: str = getenv("ITC_COUNTER_DROPPED_MSGS", "itc:droppedmsgs")
-    ITC_COUNTER_DROPPED_BYTES: str = getenv("ITC_COUNTER_DROPPED_BYTES", "itc:droppedbytes")
+    ILE_ITC_COUNTER_HITS_ON_TARGET: str = getenv("ILE_ITC_COUNTER_HITS_ON_TARGET", "itc:hitsontarget")
+    ILE_ITC_COUNTER_DELIVERED_MSGS: str = getenv("ILE_ITC_COUNTER_DELIVERED_MSGS", "itc:deliveredmsgs")
+    ILE_ITC_COUNTER_DELIVERED_BYTES: str = getenv("ILE_ITC_COUNTER_DELIVERED_BYTES", "itc:deliveredbytes")
+    ILE_ITC_COUNTER_DROPPED_MSGS: str = getenv("ILE_ITC_COUNTER_DROPPED_MSGS", "itc:droppedmsgs")
+    ILE_ITC_COUNTER_DROPPED_BYTES: str = getenv("ILE_ITC_COUNTER_DROPPED_BYTES", "itc:droppedbytes")
 
-    ITC_COUNTER_PARCEL_COLLECTOR_OVERLOADED: str = getenv("ITC_COUNTER_PARCEL_COLLECTOR_OVERLOADED", "itc:pcoverloaded")
-    ITC_COUNTER_DELIVERY_MAN_OVERLOADED: str = getenv("ITC_COUNTER_DELIVERY_MAN_OVERLOADED", "itc:dmoverloaded")
-
-    ITC_STATUS_INTERVAL: str = getenv("ITC_STATUS_INTERVAL", "60s")
-
-    ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS: str = getenv(
-        "ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS",
-        "1.1,1.5,2.0,5.0",
+    ILE_ITC_COUNTER_PARCEL_COLLECTOR_OVERLOADED: str = getenv(
+        "ILE_ITC_COUNTER_PARCEL_COLLECTOR_OVERLOADED", "itc:pcoverloaded"
     )
-    ITC_PERIODIC_JITTER: str = getenv("ITC_PERIODIC_JITTER", "0.05")
+    ILE_ITC_COUNTER_DELIVERY_MAN_OVERLOADED: str = getenv("ILE_ITC_COUNTER_DELIVERY_MAN_OVERLOADED", "itc:dmoverloaded")
+
+    ILE_ITC_STATUS_INTERVAL: str = getenv("ILE_ITC_STATUS_INTERVAL", "60s")
+
+    ILE_ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS: str = getenv(
+        "ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS", "1.1,1.5,2.0,5.0"
+    )
+    ILE_ITC_PERIODIC_JITTER: str = getenv("ILE_ITC_PERIODIC_JITTER", "0.05")
 
 
 class Config:
     """Configuration, parsed environment variables."""
 
-    socket_connect_timeout: datetime.timedelta = duration(Env.ITC_SOCKET_CONNECT_TIMEOUT)
-    socket_timeout: datetime.timedelta = duration(Env.ITC_SOCKET_TIMEOUT)
+    socket_connect_timeout: datetime.timedelta = duration(Env.ILE_ITC_SOCKET_CONNECT_TIMEOUT)
+    socket_timeout: datetime.timedelta = duration(Env.ILE_ITC_SOCKET_TIMEOUT)
 
-    my_tcp_bind_address: tuple[str, int] = (Env.ITC_MY_TCP_BIND_HOST, int(Env.ITC_MY_TCP_BIND_PORT))
-    my_tcp_ssl: bool = Env.ITC_MY_TCP_SSL.lower() == "true"
-    my_tcp_ssl_certfile: str = Env.ITC_MY_TCP_SSL_CERTFILE
-    my_tcp_ssl_keyfile: str = Env.ITC_MY_TCP_SSL_KEYFILE
-    my_tcp_ssl_password: str | None = Env.ITC_MY_TCP_SSL_PASSWORD or None
+    my_tcp_bind_address: tuple[str, int] = (Env.ILE_ITC_MY_TCP_BIND_HOST, int(Env.ILE_C_MY_TCP_BIND_PORT))
+    my_tcp_ssl: bool = Env.ILE_ITC_MY_TCP_SSL.lower() == "true"
+    my_tcp_ssl_certfile: str = Env.ILE_ITC_MY_TCP_SSL_CERTFILE
+    my_tcp_ssl_keyfile: str = Env.ILE_ITC_MY_TCP_SSL_KEYFILE
+    my_tcp_ssl_password: str | None = Env.ILE_ITC_MY_TCP_SSL_PASSWORD or None
 
-    target_tcp_address: tuple[str, int] = (Env.ITC_TARGET_TCP_HOST, int(Env.ITC_TARGET_TCP_PORT))
-    target_tcp_ssl: bool = Env.ITC_TARGET_TCP_SSL.lower() == "true"
-    target_tcp_ssl_cafile: str | None = Env.ITC_TARGET_TCP_SSL_CAFILE or None
-    target_tcp_ssl_checkhostname: bool = Env.ITC_TARGET_TCP_SSL_CHECKHOSTNAME.lower() == "true"
+    target_tcp_address: tuple[str, int] = (Env.ILE_ITC_TARGET_TCP_HOST, int(Env.ILE_ITC_TARGET_TCP_PORT))
+    target_tcp_ssl: bool = Env.ILE_ITC_TARGET_TCP_SSL.lower() == "true"
+    target_tcp_ssl_cafile: str | None = Env.ILE_ITC_TARGET_TCP_SSL_CAFILE or None
+    target_tcp_ssl_checkhostname: bool = Env.ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME.lower() == "true"
 
-    redis_address: tuple[str, int] = (Env.ITC_REDIS_HOST, int(Env.ITC_REDIS_PORT))
-    redis_db: int = int(Env.ITC_REDIS_DB)
-    redis_password: str | None = Env.ITC_REDIS_PASSWORD
-    redis_ssl: bool = Env.ITC_REDIS_SSL.lower() == "true"
-    redis_ssl_cafile: str | None = Env.ITC_REDIS_SSL_CAFILE or None
-    redis_ssl_checkhostname: bool = Env.ITC_REDIS_SSL_CHECKHOSTNAME.lower() == "true"
+    redis_address: tuple[str, int] = (Env.ILE_ITC_REDIS_HOST, int(Env.ILE_ITC_REDIS_PORT))
+    redis_db: int = int(Env.ILE_ITC_REDIS_DB)
+    redis_password: str | None = Env.ILE_ITC_REDIS_PASSWORD
+    redis_ssl: bool = Env.ILE_ITC_REDIS_SSL.lower() == "true"
+    redis_ssl_cafile: str | None = Env.ILE_ITC_REDIS_SSL_CAFILE or None
+    redis_ssl_checkhostname: bool = Env.ILE_ITC_REDIS_SSL_CHECKHOSTNAME.lower() == "true"
 
-    redis_startup_timeout: datetime.timedelta = duration(Env.ITC_REDIS_STARTUP_TIMEOUT)
-    redis_startup_retry_interval: datetime.timedelta = duration(Env.ITC_REDIS_STARTUP_RETRY_INTERVAL)
+    redis_startup_timeout: datetime.timedelta = duration(Env.ILE_ITC_REDIS_STARTUP_TIMEOUT)
+    redis_startup_retry_interval: datetime.timedelta = duration(Env.ILE_ITC_REDIS_STARTUP_RETRY_INTERVAL)
 
-    redis_stream_name: str = Env.ITC_REDIS_STREAM_NAME
-    redis_stream_group_name: str = Env.ITC_REDIS_STREAM_GROUP_NAME
-    redis_stream_consumer_name: str = Env.ITC_REDIS_STREAM_CONSUMER_NAME
+    redis_stream_name: str = Env.ILE_ITC_REDIS_STREAM_NAME
+    redis_stream_group_name: str = Env.ILE_ITC_REDIS_STREAM_GROUP_NAME
+    redis_stream_consumer_name: str = Env.ILE_ITC_REDIS_STREAM_CONSUMER_NAME
 
-    parcel_collector_enabled: bool = Env.ITC_PARCEL_COLLECTOR_ENABLED.lower() == "true"
-    parcel_collector_capacity: int = int(Env.ITC_PARCEL_COLLECTOR_CAPACITY)
-    parcel_collector_flush_interval: datetime.timedelta = duration(Env.ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL)
+    parcel_collector_enabled: bool = Env.ILE_ITC_PARCEL_COLLECTOR_ENABLED.lower() == "true"
+    parcel_collector_capacity: int = int(Env.ILE_ITC_PARCEL_COLLECTOR_CAPACITY)
+    parcel_collector_flush_interval: datetime.timedelta = duration(Env.ILE_ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL)
 
-    redis_steam_read_count: int = int(Env.ITC_REDIS_STREAM_READ_COUNT)
-    delivery_man_capacity: int = int(Env.ITC_DELIVERY_MAN_CAPACITY)
+    redis_steam_read_count: int = int(Env.ILE_ITC_REDIS_STREAM_READ_COUNT)
+    delivery_man_capacity: int = int(Env.ILE_ITC_DELIVERY_MAN_CAPACITY)
 
-    delivery_man_enabled: bool = Env.ITC_DELIVERY_MAN_ENABLED.lower() == "true"
-    delivery_man_collect_interval: datetime.timedelta = duration(Env.ITC_DELIVERY_MAN_COLLECT_INTERVAL)
-    delivery_man_flush_interval: datetime.timedelta = duration(Env.ITC_DELIVERY_MAN_FLUSH_INTERVAL)
+    delivery_man_enabled: bool = Env.ILE_ITC_DELIVERY_MAN_ENABLED.lower() == "true"
+    delivery_man_collect_interval: datetime.timedelta = duration(Env.ILE_ITC_DELIVERY_MAN_COLLECT_INTERVAL)
+    delivery_man_flush_interval: datetime.timedelta = duration(Env.ILE_ITC_DELIVERY_MAN_FLUSH_INTERVAL)
 
-    counter_hits_on_target: str = Env.ITC_COUNTER_HITS_ON_TARGET
-    counter_delivered_msgs: str = Env.ITC_COUNTER_DELIVERED_MSGS
-    counter_delivered_bytes: str = Env.ITC_COUNTER_DELIVERED_BYTES
-    counter_dropped_msgs: str = Env.ITC_COUNTER_DROPPED_MSGS
-    counter_dropped_bytes: str = Env.ITC_COUNTER_DROPPED_BYTES
+    counter_hits_on_target: str = Env.ILE_ITC_COUNTER_HITS_ON_TARGET
+    counter_delivered_msgs: str = Env.ILE_ITC_COUNTER_DELIVERED_MSGS
+    counter_delivered_bytes: str = Env.ILE_ITC_COUNTER_DELIVERED_BYTES
+    counter_dropped_msgs: str = Env.ILE_ITC_COUNTER_DROPPED_MSGS
+    counter_dropped_bytes: str = Env.ILE_ITC_COUNTER_DROPPED_BYTES
 
-    counter_parcel_collector_overloaded: str = Env.ITC_COUNTER_PARCEL_COLLECTOR_OVERLOADED
-    counter_delivery_man_overloaded: str = Env.ITC_COUNTER_DELIVERY_MAN_OVERLOADED
+    counter_parcel_collector_overloaded: str = Env.ILE_ITC_COUNTER_PARCEL_COLLECTOR_OVERLOADED
+    counter_delivery_man_overloaded: str = Env.ILE_ITC_COUNTER_DELIVERY_MAN_OVERLOADED
 
-    status_interval: datetime.timedelta = duration(Env.ITC_STATUS_INTERVAL)
+    status_interval: datetime.timedelta = duration(Env.ILE_ITC_STATUS_INTERVAL)
 
     periodic_failure_backoff_multipliers: typing.Sequence[float] = list(
-        map(float, filter(None, Env.ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS.split(","))),
+        map(float, filter(None, Env.ILE_ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS.split(",")))
     )
-    periodic_jitter: float = float(Env.ITC_PERIODIC_JITTER)
+    periodic_jitter: float = float(Env.ILE_ITC_PERIODIC_JITTER)
 
 
 class VerboseThread(threading.Thread):
