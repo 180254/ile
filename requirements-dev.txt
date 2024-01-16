@@ -1,5 +1,4 @@
 black
 ruff
-pylint
 mypy
 pyright
