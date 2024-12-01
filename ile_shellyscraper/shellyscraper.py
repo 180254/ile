@@ -46,7 +46,6 @@ You can configure the script using environment variables.
 Check the Env class below to determine what variables you can set.
 """
 
-
 # --------------------- CONFIG ------------------------------------------------
 
 getenv = os.environ.get
@@ -303,7 +302,7 @@ def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: dic
     )
 
     # PlugS only
-    if status.get("temperature", None) is not None:
+    if status.get("temperature") is not None:
         data += (
             f"shelly_plugs_temperature1,device_id={device_id},device_name={device_name} "
             f"overtemperature={status['overtemperature']},"

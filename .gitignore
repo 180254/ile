@@ -5,10 +5,7 @@ notepad.txt
 .mypy_cache/
 .ruff_cache/
 data_*/
-.passphrase
-*.env
-!*example.env
-*.pem
-*.csr
-*csr.json
-!*example.csr.json
+000-backups/
+docker-compose/envs/prod/
+docker-compose/tls/prod/
+!.keep

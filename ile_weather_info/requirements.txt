@@ -1,2 +1,0 @@
-requests>=2,<3
-requests-cache>=1,<2

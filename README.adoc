@@ -13,7 +13,7 @@ insert them into QuestDB, and visualize them in Grafana.
 |Some telegraf configuration.
 
 |ile_tcp_cache
-|Ensure data preservation for not-always-reachable TCP servers.
+|Don't lose data when the persistent data store is not always reachable.
 
 |qdb_count_rows
 |Check how much data you have in your QuestDB.
@@ -21,13 +21,6 @@ insert them into QuestDB, and visualize them in Grafana.
 |qdb_wal_switch
 |Turn WAL on/off in the QuestDB, https://github.com/questdb/questdb/issues/3531[you may need].
 
-|docker-compose-1.yml +
-.env
+|docker-compose
 | Combines ile_* in the docker compose configuration. +
-Intended to be run on a home server.
-
-|docker-compose-2.yml +
-.env
-| Combines ile_* in the docker compose configuration. +
-Intended to be run on end-user computers.
 |===

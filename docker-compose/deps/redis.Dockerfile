@@ -1,6 +1,6 @@
-# https://github.com/docker-library/redis/blob/master/7.2/Dockerfile
+# https://github.com/docker-library/redis/blob/master/7.4/Dockerfile
 
-FROM redis:7.2.4-bookworm
+FROM redis:7.4.1-bookworm
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"

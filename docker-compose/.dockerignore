@@ -6,3 +6,4 @@ notepad.txt
 .mypy_cache/
 .ruff_cache/
 data_*/
+000-backups/

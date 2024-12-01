@@ -3,7 +3,7 @@ name = "ile"
 version = "0.0.1"
 description = "one's home measurements"
 readme = "README.adoc"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 license = { file = "LICENSE" }
 keywords = [
     "Shelly",
@@ -14,8 +14,6 @@ keywords = [
     "QuestDB",
     "Grafana",
     "Telegraf",
-    "OpenRazer",
-    "MET Weather API"
 ]
 authors = [
     { name = "180254", email = "180254@users.noreply.github.com" },
@@ -28,13 +26,17 @@ maintainers = [
 
 [tool.black]
 line-length = 120
-target-version = ["py311", "py312"]
+target-version = ["py313"]
 
 [tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
 select = ["ALL"]
 ignore = [
     # https://beta.ruff.rs/docs/rules/missing-type-self/
-    "ANN101",
+    # "ANN101", # the rule has been removed
     # https://beta.ruff.rs/docs/rules/#pydocstyle-d
     "D100",
     "D101",
@@ -49,20 +51,21 @@ ignore = [
     # https://beta.ruff.rs/docs/rules/missing-trailing-comma/
     "COM812",
     # https://beta.ruff.rs/docs/rules/pytest-unittest-assertion/
-    "PT009"
+    "PT009",
+    # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
+    # the rule may cause conflicts when used with the formatter
+    "ISC001"
 ]
-line-length = 120
-target-version = "py311"
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 python_executable = "./venv/bin/python3"
 
 [tool.pyright]
 venvPath = "."
 venv = "venv"
-pythonVersion = "3.11"
+pythonVersion = "3.13"
 pythonPlatform = "Linux"
