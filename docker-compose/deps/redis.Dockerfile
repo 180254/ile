@@ -1,5 +1,4 @@
 # https://github.com/redis/docker-library-redis/blob/master/7.4/debian/Dockerfile
-
 FROM redis:7.4.1-bookworm
 
 ARG ILE_NONROOT_UID="1001"

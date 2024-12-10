@@ -35,7 +35,7 @@ services:
     networks:
       vnet:
         ipv4_address: 192.168.130.20
-    ports: []
+    ports: [ ]
     environment:
       - QUESTDB_UID=${ILE_NONROOT_UID}
       - QUESTDB_GID=${ILE_NONROOT_GID}
@@ -95,7 +95,7 @@ services:
     networks:
       vnet:
         ipv4_address: 192.168.130.21
-    ports: []
+    ports: [ ]
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
@@ -122,7 +122,30 @@ services:
           cpus: '0.4'
         reservations:
           cpus: '0.3'
-
+    # https://github.com/grafana/grafana/blob/v11.4.0/Dockerfile
+    entrypoint: >
+      sh -c "
+        mkdir -p /etc/grafana/provisioning/datasources && \
+        echo '
+        apiVersion: 1
+        datasources:
+          - name: questdb
+            type: postgres
+            access: proxy
+            url: 192.168.130.20:8812
+            database: qdb
+            user: ${QDB_PG_READONLY_USER}
+            secureJsonData:
+              password: ${QDB_PG_READONLY_PASSWORD}
+            jsonData:
+              sslmode: disable
+              postgresVersion: 1500
+              timescaledb: false
+              enableSecureSocksProxy: false
+            isDefault: true
+        ' > /etc/grafana/provisioning/datasources/questdb.yaml && \
+        /run.sh
+      "
   shellyscraper:
     build:
       context: ${ILEDIR}

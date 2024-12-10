@@ -6,6 +6,8 @@ notepad.txt
 .ruff_cache/
 data_*/*
 000-backups/
-docker-compose/envs/prod/
-docker-compose/tls/prod/
+docker-compose/envs/prod/*
+docker-compose/tls/prod/*
+docker-compose/tls/local/*.pem
+docker-compose/tls/local/*.csr
 !.keep
