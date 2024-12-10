@@ -41,8 +41,8 @@ services:
       - "${ILR_REDIS_PORT}:${ILR_REDIS_PORT}"
     volumes:
       - redis_data:/data
-      - ${PWD}/tls/cloudserver.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/prod/cloudserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/prod/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
@@ -96,9 +96,9 @@ services:
       - ITC_REDIS_SSL_CAFILE=/tls/ca.pem
       - ITC_REDIS_SSL_CHECKHOSTNAME=true
     volumes:
-      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
-      - ${PWD}/tls/cloudserver.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/prod/cloudserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/prod/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
@@ -159,7 +159,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${ILEDIR}/ile_telegraf/telegraf-writerssl.conf:/etc/telegraf/telegraf.d/telegraf-writerssl.conf:ro
-      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
       - apparmor:unconfined
@@ -224,9 +224,9 @@ services:
       - ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD=${ILE_TLS_PASSWORD}
       - ILE_AUTH_TOKEN=${ILE_AUTH_TOKEN}
     volumes:
-      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
-      - ${PWD}/tls/cloudserver.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/prod/cloudserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/prod/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m

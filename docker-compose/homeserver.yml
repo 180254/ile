@@ -174,9 +174,9 @@ services:
       - ILE_SHELLY_GEN2_AUTH_PASSWORD=${ILE_SHELLY_GEN2_AUTH_PASSWORD}
       - ILE_AUTH_TOKEN=${ILE_AUTH_TOKEN}
     volumes:
-      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
-      - ${PWD}/tls/homeserver.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/homeserver-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/prod/homeserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/prod/homeserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
@@ -242,7 +242,7 @@ services:
       - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${ILEDIR}/ile_telegraf/telegraf-writerssl.conf:/etc/telegraf/telegraf.d/telegraf-writerssl.conf:ro
       - ${ILEDIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
-      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
       - apparmor:unconfined
@@ -304,7 +304,7 @@ services:
       - ITC_REDIS_SSL_CAFILE=/tls/ca.pem
       - ITC_REDIS_SSL_CHECKHOSTNAME=${ITC_REDIS_SSL_CHECKHOSTNAME}
     volumes:
-      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
     logging:
       options:
         max-size: 10m
@@ -360,7 +360,7 @@ services:
       - "9009:9009" # questdb - InfluxDB line protocol
       - "3000:3000" # grafana
     volumes:
-      - ${PWD}/tls/homeserver-full.pem:/tls/full.pem:ro
+      - ${PWD}/tls/prod/homeserver-full.pem:/tls/full.pem:ro
     logging:
       options:
         max-size: 10m
