@@ -1,5 +1,3 @@
-version: "3.8"
-
 name: ile-laptop
 
 networks:
@@ -23,8 +21,8 @@ services:
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
-        ILR_REDIS_PORT: 6379
-        ILR_REDIS_PASSWORD: ${ILR_REDIS_PASSWORD}
+        ILE_IDR_REDIS_PORT: 6379
+        ILE_IDR_REDIS_PASSWORD: ${ILE_IDR_REDIS_PASSWORD}
       no_cache: false
       pull: true
     image: ile-laptop-redis:0.0.1
@@ -41,7 +39,7 @@ services:
         max-size: 10m
         max-file: 1
     healthcheck:
-      test: timeout -s 15 5 redis-cli -h localhost -p 6379 -a ${ILR_REDIS_PASSWORD} ping | grep -qaFi PONG || exit 1
+      test: timeout -s 15 5 redis-cli -h localhost -p 6379 -a ${ILE_IDR_REDIS_PASSWORD} ping | grep -qaFi PONG || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s
@@ -73,16 +71,16 @@ services:
         ipv4_address: 192.168.130.31
     ports: [ ]
     environment:
-      - ITC_MY_TCP_BIND_HOST=0.0.0.0
-      - ITC_MY_TCP_BIND_PORT=9152
-      - ITC_TARGET_TCP_HOST=${ITC_TARGET_TCP_HOST}
-      - ITC_TARGET_TCP_PORT=${ITC_TARGET_TCP_PORT}
-      - ITC_TARGET_TCP_SSL=${ITC_TARGET_TCP_SSL}
-      - ITC_TARGET_TCP_SSL_CAFILE=/tls/ca.pem
-      - ITC_TARGET_TCP_SSL_CHECKHOSTNAME=${ITC_TARGET_TCP_SSL_CHECKHOSTNAME}
-      - ITC_REDIS_HOST=192.168.130.30
-      - ITC_REDIS_PORT=6379
-      - ITC_REDIS_PASSWORD=${ILR_REDIS_PASSWORD}
+      - ILE_ITC_MY_TCP_BIND_HOST=0.0.0.0
+      - ILE_ITC_MY_TCP_BIND_PORT=9152
+      - ILE_ITC_TARGET_TCP_HOST=${ITC_TARGET_TCP_HOST}
+      - ILE_ITC_TARGET_TCP_PORT=${ITC_TARGET_TCP_PORT}
+      - ILE_ITC_TARGET_TCP_SSL=${ITC_TARGET_TCP_SSL}
+      - ILE_ITC_TARGET_TCP_SSL_CAFILE=/tls/ca.pem
+      - ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME=${ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME}
+      - ILE_ITC_REDIS_HOST=192.168.130.30
+      - ILE_ITC_REDIS_PORT=6379
+      - ILE_ITC_REDIS_PASSWORD=${ILE_IDR_REDIS_PASSWORD}
     volumes:
       - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
     logging:
@@ -179,50 +177,3 @@ services:
         reservations:
           cpus: '0.3'
 
-  openrazer-info:
-    build:
-      context: ${ILEDIR}
-      dockerfile: ile_openrazer_info.Dockerfile
-      args:
-        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
-        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
-      no_cache: false
-      pull: true
-    image: ile-laptop-openrazer-info:0.0.1
-    user: nonroot:nonroot
-    privileged: true
-    restart: always
-    networks:
-      vnet:
-        ipv4_address: 192.168.130.33
-    environment:
-      - IOR_QUESTDB_HOST=192.168.130.31
-      - IOR_QUESTDB_PORT=9152
-      - IOR_QUESTDB_SSL=false
-      - DBUS_SESSION_BUS_ADDRESS=unix:path=/hostfs/run/user/${ILE_NONROOT_UID}/bus
-    ports: []
-    volumes:
-      - /:/hostfs:ro
-    logging:
-      options:
-        max-size: 10m
-        max-file: 1
-    healthcheck:
-      test: timeout -s 15 5 true || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 20s
-      retries: 3
-    depends_on:
-      tcp-cache:
-        condition: service_started
-        restart: true
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-      resources:
-        limits:
-          cpus: '0.4'
-        reservations:
-          cpus: '0.3'

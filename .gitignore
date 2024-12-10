@@ -4,7 +4,7 @@ venv/
 notepad.txt
 .mypy_cache/
 .ruff_cache/
-data_*/
+data_*/*
 000-backups/
 docker-compose/envs/prod/
 docker-compose/tls/prod/

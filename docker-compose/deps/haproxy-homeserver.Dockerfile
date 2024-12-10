@@ -10,13 +10,14 @@ RUN set -eux \
 
 USER haproxy
 
-ARG ILE_IHH_CRT_FILE="/tls/full.pem"
-ARG ILE_IHH_QUESTDB_HOST="questdb"
-ARG ILE_IHH_QUESTDB_RESTAPI_USERNAME="admin"
-ARG ILE_IHH_QUESTDB_RESTAPI_PASSWORD="password"
-ARG ILE_IHH_GRAFANA_HOST="grafana"
-ARG ILE_IHH_QUESTDB_STATS_USERNAME="admin"
-ARG ILE_IHH_QUESTDB_STATS_PASSWORD="password"
+# IHH = ile dep HAProxy
+ARG ILE_IDH_CRT_FILE="/tls/full.pem"
+ARG ILE_IDH_QUESTDB_HOST="questdb"
+ARG ILE_IDH_QUESTDB_RESTAPI_USERNAME="admin"
+ARG ILE_IDH_QUESTDB_RESTAPI_PASSWORD="password"
+ARG ILE_IDH_GRAFANA_HOST="grafana"
+ARG ILE_IDH_QUESTDB_STATS_USERNAME="admin"
+ARG ILE_IDH_QUESTDB_STATS_PASSWORD="password"
 
 # http://docs.haproxy.org/2.8/configuration.html
 # tcplog  - http://docs.haproxy.org/2.8/configuration.html#8.2.2
@@ -47,63 +48,63 @@ frontend health
 
 frontend stats
     mode http
-    bind *:4040 ssl crt ${ILE_IHH_CRT_FILE} alpn h2,http/1.1
+    bind *:4040 ssl crt ${ILE_IDH_CRT_FILE} alpn h2,http/1.1
     stats enable
     stats uri /
-    stats auth ${ILE_IHH_QUESTDB_STATS_USERNAME}:${ILE_IHH_QUESTDB_STATS_PASSWORD}
+    stats auth ${ILE_IDH_QUESTDB_STATS_USERNAME}:${ILE_IDH_QUESTDB_STATS_PASSWORD}
 
 userlist questdb_rest_api_and_web_console_userlist
-   user ${ILE_IHH_QUESTDB_RESTAPI_USERNAME} insecure-password ${ILE_IHH_QUESTDB_RESTAPI_PASSWORD}
+   user ${ILE_IDH_QUESTDB_RESTAPI_USERNAME} insecure-password ${ILE_IDH_QUESTDB_RESTAPI_PASSWORD}
 
 frontend questdb_rest_api_and_web_console
     mode http
     option httplog
-    bind :9000 ssl crt ${ILE_IHH_CRT_FILE} alpn h2,http/1.1
+    bind :9000 ssl crt ${ILE_IDH_CRT_FILE} alpn h2,http/1.1
     http-request auth unless { http_auth(questdb_rest_api_and_web_console_userlist) }
     use_backend questdb_rest_api_and_web_console
 
 backend questdb_rest_api_and_web_console
     mode http
-    server server1 ${ILE_IHH_QUESTDB_HOST}:9000
+    server server1 ${ILE_IDH_QUESTDB_HOST}:9000
 
 frontend questdb_influxdb_line_protocol
     mode tcp
     option tcplog
-    bind :9009 ssl crt ${ILE_IHH_CRT_FILE}
+    bind :9009 ssl crt ${ILE_IDH_CRT_FILE}
     use_backend questdb_influxdb_line_protocol
 
 backend questdb_influxdb_line_protocol
     mode tcp
-    server server1 ${ILE_IHH_QUESTDB_HOST}:9009
+    server server1 ${ILE_IDH_QUESTDB_HOST}:9009
 
 frontend questdb_prostgres_wire_protocol
     mode tcp
     option tcplog
-    #bind :8812 ssl crt ${ILE_IHH_CRT_FILE}
+    #bind :8812 ssl crt ${ILE_IDH_CRT_FILE}
     bind :8812
     use_backend questdb_prostgres_wire_protocol
 
 backend questdb_prostgres_wire_protocol
     mode tcp
-    server server1 ${ILE_IHH_QUESTDB_HOST}:8812
+    server server1 ${ILE_IDH_QUESTDB_HOST}:8812
 
 frontend questdb_min_health_and_prometheus_metrics
     mode http
     option httplog
-    bind :9003 ssl crt ${ILE_IHH_CRT_FILE} alpn h2,http/1.1
+    bind :9003 ssl crt ${ILE_IDH_CRT_FILE} alpn h2,http/1.1
     use_backend questdb_min_health_and_prometheus_metrics
 
 backend questdb_min_health_and_prometheus_metrics
     mode http
-    server server1 ${ILE_IHH_QUESTDB_HOST}:9003
+    server server1 ${ILE_IDH_QUESTDB_HOST}:9003
 
 frontend grafana
     mode http
     option httplog
-    bind :3000 ssl crt ${ILE_IHH_CRT_FILE} alpn h2,http/1.1
+    bind :3000 ssl crt ${ILE_IDH_CRT_FILE} alpn h2,http/1.1
     use_backend grafana
 
 backend grafana
     mode http
-    server server1 ${ILE_IHH_GRAFANA_HOST}:3000
+    server server1 ${ILE_IDH_GRAFANA_HOST}:3000
 EOF

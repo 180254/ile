@@ -5,7 +5,18 @@ if ! [ -x "$(command -v cfssl)" ]; then
   exit 1
 fi
 
-pushd "prod" || (echo 'err: no prod directory' && exit 1)
+if [[ "$#" -lt 1 ]]; then
+  echo >&2 "Usage: $0 environment"
+  echo >&2 "  environment: local, prod"
+  exit 1
+fi
+
+ENVIRONMENT="$1"
+
+if ! pushd "$ENVIRONMENT" 2> /dev/null; then
+  echo "err: no $ENVIRONMENT directory"
+  exit 1
+fi
 
 if [ ! -f .passphrase ]; then
   LC_ALL=C tr -dc 'a-zA-Z0-9' </dev/urandom | fold -w 32 | head -n 1 >.passphrase

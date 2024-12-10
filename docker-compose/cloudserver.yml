@@ -1,5 +1,3 @@
-version: "3.8"
-
 name: ile-cloudserver
 
 networks:
@@ -23,12 +21,12 @@ services:
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
-        ILR_REDIS_PORT: ${ILR_REDIS_PORT}
-        ILR_REDIS_PASSWORD: ${ILR_REDIS_PASSWORD}
-        ILR_REDIS_SSL: true
-        ILR_REDIS_SSL_CERTFILE: /tls/certfile.pem
-        ILR_REDIS_SSL_KEYFILE: /tls/keyfile.pem
-        ILR_REDIS_SSL_PASSWORD: ${ILE_TLS_PASSWORD}
+        ILE_IDR_REDIS_PORT: ${ILE_IDR_REDIS_PORT}
+        ILE_IDR_REDIS_PASSWORD: ${ILE_IDR_REDIS_PASSWORD}
+        ILE_IDR_REDIS_SSL: true
+        ILE_IDR_REDIS_SSL_CERTFILE: /tls/certfile.pem
+        ILE_IDR_REDIS_SSL_KEYFILE: /tls/keyfile.pem
+        ILE_IDR_REDIS_SSL_PASSWORD: ${ILE_TLS_PASSWORD}
       no_cache: false
       pull: true
     image: ile-cloudserver-redis:0.0.1
@@ -38,18 +36,18 @@ services:
       vnet:
         ipv4_address: 192.168.130.10
     ports:
-      - "${ILR_REDIS_PORT}:${ILR_REDIS_PORT}"
+      - "${ILE_IDR_REDIS_PORT}:${ILE_IDR_REDIS_PORT}"
     volumes:
       - redis_data:/data
-      - ${PWD}/tls/prod/cloudserver.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/prod/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/cloudserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
         max-file: 1
     healthcheck:
       # https://questdb.io/doc-s/operations/health-monitoring/
-      test: timeout -s 15 5 redis-cli -h localhost -p ${ILR_REDIS_PORT} -a ${ILR_REDIS_PASSWORD} --tls --insecure ping | grep -qaFi PONG || exit 1
+      test: timeout -s 15 5 redis-cli -h localhost -p ${ILE_IDR_REDIS_PORT} -a ${ILE_IDR_REDIS_PASSWORD} --tls --insecure ping | grep -qaFi PONG || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s
@@ -64,7 +62,7 @@ services:
         reservations:
           cpus: '0.3'
 
-  tcp-cache-parcel-collector:
+  tcp-cache:
     build:
       context: ${ILEDIR}
       dockerfile: ile_tcp_cache.Dockerfile
@@ -81,24 +79,24 @@ services:
         ipv4_address: 192.168.130.11
     ports: [ ]
     environment:
-      - ITC_PARCEL_COLLECTOR_ENABLED=true
-      - ITC_DELIVERY_MAN_ENABLED=false
-      - ITC_MY_TCP_BIND_HOST=0.0.0.0
-      - ITC_MY_TCP_BIND_PORT=9152
-      - ITC_MY_TCP_SSL=true
-      - ITC_MY_TCP_SSL_CERTFILE=/tls/certfile.pem
-      - ITC_MY_TCP_SSL_KEYFILE=/tls/keyfile.pem
-      - ITC_MY_TCP_SSL_PASSWORD=${ILE_TLS_PASSWORD}
-      - ITC_REDIS_HOST=192.168.130.10
-      - ITC_REDIS_PORT=${ILR_REDIS_PORT}
-      - ITC_REDIS_PASSWORD=${ILR_REDIS_PASSWORD}
-      - ITC_REDIS_SSL=true
-      - ITC_REDIS_SSL_CAFILE=/tls/ca.pem
-      - ITC_REDIS_SSL_CHECKHOSTNAME=true
+      - ILE_ITC_PARCEL_COLLECTOR_ENABLED=true
+      - ILE_ITC_DELIVERY_MAN_ENABLED=false
+      - ILE_ITC_MY_TCP_BIND_HOST=0.0.0.0
+      - ILE_ITC_MY_TCP_BIND_PORT=9152
+      - ILE_ITC_MY_TCP_SSL=true
+      - ILE_ITC_MY_TCP_SSL_CERTFILE=/tls/certfile.pem
+      - ILE_ITC_MY_TCP_SSL_KEYFILE=/tls/keyfile.pem
+      - ILE_ITC_MY_TCP_SSL_PASSWORD=${ILE_TLS_PASSWORD}
+      - ILE_ITC_REDIS_HOST=192.168.130.10
+      - ILE_ITC_REDIS_PORT=${ILE_IDR_REDIS_PORT}
+      - ILE_ITC_REDIS_PASSWORD=${ILE_IDR_REDIS_PASSWORD}
+      - ILE_ITC_REDIS_SSL=true
+      - ILE_ITC_REDIS_SSL_CAFILE=/tls/ca.pem
+      - ILE_ITC_REDIS_SSL_CHECKHOSTNAME=true
     volumes:
-      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
-      - ${PWD}/tls/prod/cloudserver.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/prod/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/cloudserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
@@ -149,17 +147,17 @@ services:
       - HOST_VAR=/hostfs/var
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
-      - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.11:9152
-      - ILT_TLS_CA=/tls/ca.pem
-      - ILT_TLS_INSECURE_SKIP_VERIFY=false
-      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
-      - ILT_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
+      - ILE_ITF_SOCKET_WRITER_ADDRESS=tcp://192.168.130.11:9152
+      - ILE_ITF_TLS_CA=/tls/ca.pem
+      - ILE_ITF_TLS_INSECURE_SKIP_VERIFY=false
+      - ILE_ITF_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
+      - ILE_ITF_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${ILEDIR}/ile_telegraf/telegraf-writerssl.conf:/etc/telegraf/telegraf.d/telegraf-writerssl.conf:ro
-      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/tls/ca.pem:ro
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
       - apparmor:unconfined
@@ -175,7 +173,7 @@ services:
       start_period: 20s
       retries: 3
     depends_on:
-      tcp-cache-parcel-collector:
+      tcp-cache:
         condition: service_started
         restart: true
     deploy:
@@ -204,41 +202,41 @@ services:
       vnet:
         ipv4_address: 192.168.130.13
     ports:
-      - "${ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT}:${ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT}"
+      - "${ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT}:${ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT}"
     environment:
       - ILE_QUESTDB_HOST=192.168.130.11
       - ILE_QUESTDB_PORT=9152
       - ILE_QUESTDB_SSL=true
       - ILE_QUESTDB_SSL_CAFILE=/tls/ca.pem
       - ILE_QUESTDB_SSL_CHECKHOSTNAME=true
-      - ILE_SHELLY_IPS=
+      - ILE_ISS_SHELLY_IPS=
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_CLOUD_MODE=true
-      - ILE_SHELLY_GEN1_WEBHOOK_ENABLED=false
-      - ILE_SHELLY_GEN2_WEBSOCKET_ENABLED=true
-      - ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST=0.0.0.0
-      - ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT=${ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT}
-      - ILE_SHELLY_GEN2_WEBSOCKET_SSL=true
-      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE=/tls/certfile.pem
-      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE=/tls/keyfile.pem
-      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD=${ILE_TLS_PASSWORD}
-      - ILE_AUTH_TOKEN=${ILE_AUTH_TOKEN}
+      - ILE_ISS_SHELLY_GEN1_WEBHOOK_ENABLED=false
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_ENABLED=true
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_HOST=0.0.0.0
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT=${ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT}
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL=true
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE=/tls/certfile.pem
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE=/tls/keyfile.pem
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD=${ILE_TLS_PASSWORD}
+      - ILE_ISS_AUTH_TOKEN=${ILE_ISS_AUTH_TOKEN}
     volumes:
-      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
-      - ${PWD}/tls/prod/cloudserver.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/prod/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/cloudserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
         max-file: 1
     healthcheck:
-      test: timeout -s 15 5 socat -t5 -T5 /dev/null TCP:127.0.0.1:${ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT} || exit 1
+      test: timeout -s 15 5 socat -t5 -T5 /dev/null TCP:127.0.0.1:${ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT} || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s
       retries: 3
     depends_on:
-      tcp-cache-parcel-collector:
+      tcp-cache:
         condition: service_started
         restart: true
     deploy:

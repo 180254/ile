@@ -1,5 +1,3 @@
-version: "3.8"
-
 name: ile-homeserver
 
 networks:
@@ -149,34 +147,34 @@ services:
       - ILE_QUESTDB_SSL=true
       - ILE_QUESTDB_SSL_CAFILE=/tls/ca.pem
       - ILE_QUESTDB_SSL_CHECKHOSTNAME=true
-      - ILE_SHELLY_IPS=${ILE_SHELLY_IPS}
-      - ILE_SHELLY_SSL_IPS=${ILE_SHELLY_SSL_IPS}
-      - ILE_SHELLY_SSL_IPS_VERIFY=${ILE_SHELLY_SSL_IPS_VERIFY}
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_CLOUD_MODE=false
-      - ILE_SHELLY_GEN1_WEBHOOK_ENABLED=true
-      - ILE_SHELLY_GEN1_WEBHOOK_BIND_HOST=0.0.0.0
-      - ILE_SHELLY_GEN1_WEBHOOK_BIND_PORT=9080
-      - ILE_SHELLY_GEN1_WEBHOOK_SSL=false
-      - ILE_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE=/tls/certfile.pem
-      - ILE_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE=/tls/keyfile.pem
-      - ILE_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD=${ILE_TLS_PASSWORD}
-      - ILE_SHELLY_GEN2_WEBSOCKET_ENABLED=true
-      - ILE_SHELLY_GEN2_WEBSOCKET_BIND_HOST=0.0.0.0
-      - ILE_SHELLY_GEN2_WEBSOCKET_BIND_PORT=9081
-      - ILE_SHELLY_GEN2_WEBSOCKET_SSL=true
-      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE=/tls/certfile.pem
-      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE=/tls/keyfile.pem
-      - ILE_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD=${ILE_TLS_PASSWORD}
-      - ILE_SHELLY_GEN1_AUTH_USERNAME=${ILE_SHELLY_GEN1_AUTH_USERNAME}
-      - ILE_SHELLY_GEN1_AUTH_PASSWORD=${ILE_SHELLY_GEN1_AUTH_PASSWORD}
-      - ILE_SHELLY_GEN2_AUTH_USERNAME=${ILE_SHELLY_GEN2_AUTH_USERNAME}
-      - ILE_SHELLY_GEN2_AUTH_PASSWORD=${ILE_SHELLY_GEN2_AUTH_PASSWORD}
-      - ILE_AUTH_TOKEN=${ILE_AUTH_TOKEN}
+      - ILE_ISS_SHELLY_IPS=${ILE_ISS_SHELLY_IPS}
+      - ILE_ISS_SHELLY_SSL_IPS=${ILE_ISS_SHELLY_SSL_IPS}
+      - ILE_ISS_SHELLY_SSL_IPS_VERIFY=${ILE_ISS_SHELLY_SSL_IPS_VERIFY}
+      - ILE_ISS_SHELLY_GEN1_WEBHOOK_ENABLED=true
+      - ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_HOST=0.0.0.0
+      - ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_PORT=9080
+      - ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL=false
+      - ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE=/tls/certfile.pem
+      - ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_KEYFILE=/tls/keyfile.pem
+      - ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD=${ILE_TLS_PASSWORD}
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_ENABLED=true
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_HOST=0.0.0.0
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT=9081
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL=true
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE=/tls/certfile.pem
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_KEYFILE=/tls/keyfile.pem
+      - ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_PASSWORD=${ILE_TLS_PASSWORD}
+      - ILE_ISS_SHELLY_GEN1_AUTH_USERNAME=${ILE_ISS_SHELLY_GEN1_AUTH_USERNAME}
+      - ILE_ISS_SHELLY_GEN1_AUTH_PASSWORD=${ILE_ISS_SHELLY_GEN1_AUTH_PASSWORD}
+      - ILE_ISS_SHELLY_GEN2_AUTH_USERNAME=${ILE_ISS_SHELLY_GEN2_AUTH_USERNAME}
+      - ILE_ISS_SHELLY_GEN2_AUTH_PASSWORD=${ILE_ISS_SHELLY_GEN2_AUTH_PASSWORD}
+      - ILE_ISS_AUTH_TOKEN=${ILE_ISS_AUTH_TOKEN}
     volumes:
-      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
-      - ${PWD}/tls/prod/homeserver.pem:/tls/certfile.pem:ro
-      - ${PWD}/tls/prod/homeserver-key-enc.pem:/tls/keyfile.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver.pem:/tls/certfile.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:
       options:
         max-size: 10m
@@ -231,18 +229,18 @@ services:
       - HOST_VAR=/hostfs/var
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
-      - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.25:9009
-      - ILT_TLS_CA=/tls/ca.pem
-      - ILT_TLS_INSECURE_SKIP_VERIFY=false
-      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
-      - ILT_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
+      - ILE_ITF_SOCKET_WRITER_ADDRESS=tcp://192.168.130.25:9009
+      - ILE_ITF_TLS_CA=/tls/ca.pem
+      - ILE_ITF_TLS_INSECURE_SKIP_VERIFY=false
+      - ILE_ITF_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
+      - ILE_ITF_AGENT_INTERVAL=${ILE_ITF_AGENT_INTERVAL:-20s}
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${ILEDIR}/ile_telegraf/telegraf-writerssl.conf:/etc/telegraf/telegraf.d/telegraf-writerssl.conf:ro
       - ${ILEDIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
-      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/tls/ca.pem:ro
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
       - apparmor:unconfined
@@ -274,7 +272,7 @@ services:
         reservations:
           cpus: '0.3'
 
-  tcp-cache-delivery-man:
+  tcp-cache:
     build:
       context: ${ILEDIR}
       dockerfile: ile_tcp_cache.Dockerfile
@@ -290,21 +288,21 @@ services:
       vnet:
         ipv4_address: 192.168.130.24
     environment:
-      - ITC_PARCEL_COLLECTOR_ENABLED=false
-      - ITC_DELIVERY_MAN_ENABLED=true
-      - ITC_TARGET_TCP_HOST=192.168.130.25
-      - ITC_TARGET_TCP_PORT=9009
-      - ITC_TARGET_TCP_SSL=true
-      - ITC_TARGET_TCP_SSL_CAFILE=/tls/ca.pem
-      - ITC_TARGET_TCP_SSL_CHECKHOSTNAME=true
-      - ITC_REDIS_HOST=${ITC_REDIS_HOST}
-      - ITC_REDIS_PORT=${ITC_REDIS_PORT}
-      - ITC_REDIS_PASSWORD=${ITC_REDIS_PASSWORD}
-      - ITC_REDIS_SSL=${ITC_REDIS_SSL}
-      - ITC_REDIS_SSL_CAFILE=/tls/ca.pem
-      - ITC_REDIS_SSL_CHECKHOSTNAME=${ITC_REDIS_SSL_CHECKHOSTNAME}
+      - ILE_ITC_PARCEL_COLLECTOR_ENABLED=false
+      - ILE_ITC_DELIVERY_MAN_ENABLED=true
+      - ILE_ITC_TARGET_TCP_HOST=192.168.130.25
+      - ILE_ITC_TARGET_TCP_PORT=9009
+      - ILE_ITC_TARGET_TCP_SSL=true
+      - ILE_ITC_TARGET_TCP_SSL_CAFILE=/tls/ca.pem
+      - ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME=true
+      - ILE_ITC_REDIS_HOST=${ILE_ITC_REDIS_HOST}
+      - ILE_ITC_REDIS_PORT=${ILE_ITC_REDIS_PORT}
+      - ILE_ITC_REDIS_PASSWORD=${ILE_ITC_REDIS_PASSWORD}
+      - ILE_ITC_REDIS_SSL=${ILE_ITC_REDIS_SSL}
+      - ILE_ITC_REDIS_SSL_CAFILE=/tls/ca.pem
+      - ILE_ITC_REDIS_SSL_CHECKHOSTNAME=${ILE_ITC_REDIS_SSL_CHECKHOSTNAME}
     volumes:
-      - ${PWD}/tls/prod/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/tls/ca.pem:ro
     logging:
       options:
         max-size: 10m
@@ -337,13 +335,13 @@ services:
       context: ${PWD}/deps
       dockerfile: haproxy-homeserver.Dockerfile
       args:
-        IHH_CRT_FILE: /tls/full.pem
-        IHH_QUESTDB_HOST: 192.168.130.20
-        IHH_QUESTDB_RESTAPI_USERNAME: ${QDB_PG_USER}
-        IHH_QUESTDB_RESTAPI_PASSWORD: ${QDB_PG_PASSWORD}
-        IHH_GRAFANA_HOST: 192.168.130.21
-        IHH_QUESTDB_STATS_USERNAME: ${IHH_QUESTDB_STATS_USERNAME}
-        IHH_QUESTDB_STATS_PASSWORD: ${IHH_QUESTDB_STATS_PASSWORD}
+        ILE_IDH_CRT_FILE: /tls/full.pem
+        ILE_IDH_QUESTDB_HOST: 192.168.130.20
+        ILE_IDH_QUESTDB_RESTAPI_USERNAME: ${ILE_IDH_QUESTDB_RESTAPI_USERNAME}
+        ILE_IDH_QUESTDB_RESTAPI_PASSWORD: ${ILE_IDH_QUESTDB_RESTAPI_PASSWORD}
+        ILE_IDH_GRAFANA_HOST: 192.168.130.21
+        ILE_IDH_QUESTDB_STATS_USERNAME: ${ILE_IDH_QUESTDB_STATS_USERNAME}
+        ILE_IDH_QUESTDB_STATS_PASSWORD: ${ILE_IDH_QUESTDB_STATS_PASSWORD}
       no_cache: false
       pull: true
     image: ile-homeserver-haproxy-tls:0.0.1
@@ -360,7 +358,7 @@ services:
       - "9009:9009" # questdb - InfluxDB line protocol
       - "3000:3000" # grafana
     volumes:
-      - ${PWD}/tls/prod/homeserver-full.pem:/tls/full.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver-full.pem:/tls/full.pem:ro
     logging:
       options:
         max-size: 10m

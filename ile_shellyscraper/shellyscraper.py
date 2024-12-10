@@ -51,6 +51,7 @@ Check the Env class below to determine what variables you can set.
 getenv = os.environ.get
 
 
+# ISS = ile shelly scraper
 class Env:
     # Set to true if shelly devices are not reachable from the machine running the script.
     ILE_ISS_CLOUD_MODE: str = getenv("ILE_ISS_CLOUD_MODE", "false")
