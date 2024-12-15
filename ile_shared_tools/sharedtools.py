@@ -9,6 +9,7 @@ import sys
 import threading
 import time
 import traceback
+import typing
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -58,7 +59,7 @@ def print_exception(exception: BaseException) -> None:
         print_(f"exception: {exception}", file=sys.stderr)
 
 
-def json_dumps(data: dict) -> str:
+def json_dumps(data: typing.Any) -> str:
     return json.dumps(data, separators=(",", ":"))
 
 
@@ -66,7 +67,7 @@ def configure_sigterm_handler() -> threading.Event:
     sigterm_cnt = [0]
     sigterm_threading_event = threading.Event()
 
-    def sigterm_handler(signal_number: int, _current_stack_frame) -> None:
+    def sigterm_handler(signal_number: int, _current_stack_frame: typing.Any) -> None:
         signal_name = signal.Signals(signal_number).name
 
         sigterm_cnt[0] += 1

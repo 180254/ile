@@ -63,6 +63,7 @@ convention = "google"
 [tool.mypy]
 python_version = "3.13"
 python_executable = "./venv/bin/python3"
+strict = true
 
 [tool.pyright]
 venvPath = "."

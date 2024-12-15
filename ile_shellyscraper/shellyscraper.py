@@ -15,6 +15,7 @@ import urllib.request
 import requests
 import requests.auth
 import websockets
+from websockets.legacy.server import WebSocketServerProtocol
 
 import ile_shared_tools
 
@@ -144,7 +145,7 @@ def time_is_synced(unix_timestamp_seconds: float) -> bool:
     return unix_timestamp_seconds > one_day_in_seconds
 
 
-def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase | None = None) -> dict:
+def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase | None = None) -> typing.Any:
     ssl_ = device_ip in Config.shelly_devices_ssl_ips
     proto = "https" if ssl_ else "http"
     verify = Config.shelly_devices_ssl_ips_verify if ssl_ else None
@@ -163,8 +164,11 @@ def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase 
 
 # https://shelly-api-docs.shelly.cloud/gen2/General/RPCProtocol
 def http_rpc_call(
-    device_ip: str, method: str, params: dict | None = None, auth: requests.auth.AuthBase | None = None
-) -> dict:
+    device_ip: str,
+    method: str,
+    params: dict[typing.Any, typing.Any] | None = None,
+    auth: requests.auth.AuthBase | None = None,
+) -> typing.Any:
     ssl_ = device_ip in Config.shelly_devices_ssl_ips
     proto = "https" if ssl_ else "http"
     verify = Config.shelly_devices_ssl_ips_verify if ssl_ else None
@@ -245,7 +249,7 @@ def shelly_get_gen1_device_status_ilp(device_ip: str, device_type: str, device_i
     return ""
 
 
-def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: dict) -> str:
+def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: typing.Any) -> str:
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-plug-plugs-status
 
     timestamp = status["unixtime"]
@@ -287,7 +291,7 @@ def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: dic
     return data
 
 
-def shelly_gen1_ht_status_to_ilp(device_id: str, device_name: str, status: dict) -> str:
+def shelly_gen1_ht_status_to_ilp(device_id: str, device_name: str, status: typing.Any) -> str:
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-h-amp-t-status
 
     timestamp = status["unixtime"]
@@ -383,7 +387,8 @@ class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
 def shelly_get_gen2_device_name(device_ip: str) -> str:
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Sys#sysgetconfig
     sysconfig = http_call(device_ip, "rpc/Sys.GetConfig", auth=Config.shelly_gen2_auth)
-    return sysconfig["device"]["name"]
+    device_name: str = sysconfig["device"]["name"]
+    return device_name
 
 
 def shelly_get_gen2_device_status_ilp(device_ip: str, device_type: str, device_name: str) -> str:
@@ -406,7 +411,7 @@ def shelly_get_gen2_device_status_ilp(device_ip: str, device_type: str, device_n
     return ""
 
 
-def shelly_gen2_plug_status_to_ilp(device_name: str, status: dict) -> str:
+def shelly_gen2_plug_status_to_ilp(device_name: str, status: typing.Any) -> str:
     # status = Switch.GetStatus result
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch#status
 
@@ -470,7 +475,7 @@ def shelly_gen2_plug_status_to_ilp(device_name: str, status: dict) -> str:
     return data
 
 
-def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: dict) -> str:
+def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: typing.Any) -> str:
     # status = status in "NotifyFullStatus" notification format
     # https://shelly-api-docs.shelly.cloud/gen2/General/Notifications/#notifyfullstatus
 
@@ -516,7 +521,7 @@ def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: dict) -> s
     )
 
 
-async def shelly_gen2_outbound_websocket_handler(websocket: websockets.WebSocketServerProtocol, path: str) -> None:
+async def shelly_gen2_outbound_websocket_handler(websocket: WebSocketServerProtocol, path: str) -> None:
     try:
         device_ip = websocket.remote_address[0]
 
@@ -661,7 +666,7 @@ def main() -> int:
             else:
                 websocket_ssl_context = None
 
-            ws_server = await websockets.serve(
+            ws_server = await websockets.legacy.server.serve(
                 shelly_gen2_outbound_websocket_handler,
                 Config.shelly_gen2_websocket_bind_address[0],
                 Config.shelly_gen2_websocket_bind_address[1],
