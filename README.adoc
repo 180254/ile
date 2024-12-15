@@ -6,21 +6,21 @@ ile is a collection of scripts and tools for some home measurements.
 |Subproject |Summary
 
 |ile_shellyscraper
-|Scrape the data from Shelly Plug (S) and Shelly H&T, +
+|Scrape the data from Shelly Plug and Shelly H&T devices,
 insert them into QuestDB, and visualize them in Grafana.
 
 |ile_telegraf
-|Some telegraf configuration.
+|Some telegraf configuration, and appropriate grafana dashboard.
 
 |ile_tcp_cache
-|Don't lose data when the persistent data store is not always reachable.
+|Temporary data store. Don't lose data when the persistent data store is not always reachable.
 
 |qdb_count_rows
-|Check how much data you have in your QuestDB.
+|QuestDB utility script. Check how much data you have in your QuestDB.
 
 |qdb_wal_switch
-|Turn WAL on/off in the QuestDB, https://github.com/questdb/questdb/issues/3531[you may need].
+|QuestDB utility script.  Turn WAL on/off in the QuestDB, https://github.com/questdb/questdb/issues/3531[you may need].
 
 |docker-compose
-| Combines ile_* in the docker compose configuration. +
+|Startup script. Combines ile_* in the docker compose configuration.
 |===

@@ -18,34 +18,6 @@ import websockets
 
 import ile_shared_tools
 
-"""
-The script will scrape data from Shelly's devices and insert them into QuestDB.
-
-Supported devices:
-Name                | Model        | Tables in the QuestDB db                      | Scrape strategy
-Shelly Plug         | SHPLG-1      | shelly_plugs_meter1                           | API polling
-Shelly Plug S       | SHPLG-S      | shelly_plugs_meter1,shelly_plugs_temperature1 | API polling
-Shelly Plug US      | SHPLG-U1     | shelly_plugs_meter1                           | API polling
-Shelly Plug E       | SHPLG2-1     | shelly_plugs_meter1                           | API polling
-Shelly Plus Plug IT | SNPL-00110IT | shelly_plugs_meter1,shelly_plugs_temperature1 | API polling
-Shelly Plus Plug S  | SNPL-00112EU | shelly_plugs_meter1,shelly_plugs_temperature1 | API polling
-Shelly Plus Plug UK | SNPL-00112UK | shelly_plugs_meter1,shelly_plugs_temperature1 | API polling
-Shelly Plus Plug US | SNPL-00116US | shelly_plugs_meter1,shelly_plugs_temperature1 | API polling
-Shelly H&T          | SHHT-1       | shelly_ht_meter1,shelly_ht_meter2             | webhook (HTTP server)
-Shelly Plus H&T     | SNSN-0013A   | shelly_ht_meter1                              | receiving notifications (WebSocket)
-
-Device configuration:
-- Scape strategy: API polling
-  Pass the IP address of the device using the ILE_ISS_SHELLY_IPS environment variable.
-- Scape strategy: webhook (HTTP server)
-  Configure your devices so that the "report sensor values" URL is "http://{machine_ip}:9080/{ILE_ISS_AUTH_TOKEN}".
-- Scape strategy: receiving notification (WebSocket)
-  Configure your devices so that the outgoing WebSocket server is "ws://{machine_ip}:9081/{ILE_ISS_AUTH_TOKEN}".
-
-You can configure the script using environment variables.
-Check the Env class below to determine what variables you can set.
-"""
-
 # --------------------- CONFIG ------------------------------------------------
 
 getenv = os.environ.get
@@ -656,7 +628,7 @@ def main() -> int:
     # Handle Shelly H&T's action: "report sensor values".
     if Config.shelly_gen1_webhook_enabled:
         # noinspection PyTypeChecker
-        # (this is correct usage - https://docs.python.org/3.11/library/http.server.html#http.server.HTTPServer)
+        # (this is correct usage - https://docs.python.org/3.13/library/http.server.html#http.server.HTTPServer)
         shelly_ht_report_webhook = http.server.ThreadingHTTPServer(
             Config.shelly_gen1_webhook_bind_address, ShellyGen1HtReportSensorValuesHandler
         )

@@ -1,4 +1,5 @@
-"ile" project - ile-tcp-cache - Don't lose data when the persistent data store is not always reachable.
+"ile" project - ile-tcp-cache - Temporary data store.
+                                Don't lose data when the persistent data store is not always reachable.
 
 ile-tcp-cache is useful when the target TCP server is unreachable from the data-producing device.
 

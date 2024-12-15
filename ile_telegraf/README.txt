@@ -1,1 +1,1 @@
-"ile" project - ile_telegraf - Some telegraf configuration.
+"ile" project - Some telegraf configuration, and appropriate grafana dashboard.
