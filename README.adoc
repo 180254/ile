@@ -6,7 +6,8 @@ ile is a collection of scripts and tools for some home measurements.
 |Subproject |Summary
 
 |link:ile_shellyscraper/[ile_shellyscraper]
-|Scrape the data from Shelly Plug and Shelly H&T devices, insert them into QuestDB, and visualize them in Grafana.
+|Scrape the data from Shelly Plug and Shelly H&T devices, +
+insert them into QuestDB, and visualize them in Grafana.
 
 |link:ile_telegraf/[ile_telegraf]
 |Some telegraf configuration, and appropriate grafana dashboard.
