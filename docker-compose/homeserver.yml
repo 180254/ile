@@ -11,13 +11,13 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ${ILEDIR}/data_questdb
+      device: ${ILE_DIR}/data_questdb
 
   grafana_data:
     driver_opts:
       o: bind
       type: none
-      device: ${ILEDIR}/data_grafana
+      device: ${ILE_DIR}/data_grafana
 
 services:
   questdb:
@@ -148,7 +148,7 @@ services:
       "
   shellyscraper:
     build:
-      context: ${ILEDIR}
+      context: ${ILE_DIR}
       dockerfile: ile_shellyscraper.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
@@ -260,9 +260,9 @@ services:
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${ILEDIR}/ile_telegraf/telegraf-writerssl.conf:/etc/telegraf/telegraf.d/telegraf-writerssl.conf:ro
-      - ${ILEDIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf-writerssl.conf:/etc/telegraf/telegraf.d/telegraf-writerssl.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
       - ${PWD}/tls/${ILE_ENV}/ca.pem:/tls/ca.pem:ro
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
@@ -297,7 +297,7 @@ services:
 
   tcp-cache:
     build:
-      context: ${ILEDIR}
+      context: ${ILE_DIR}
       dockerfile: ile_tcp_cache.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}

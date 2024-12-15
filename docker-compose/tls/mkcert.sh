@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if ! [ -x "$(command -v cfssl)" ]; then
-  echo >&2 'err: cfssl is not installed (https://github.com/cloudflare/cfssl)'
+if ! command -v cfssl &>/dev/null; then
+  echo >&2 "Error: cfssl is not installed (https://github.com/cloudflare/cfssl)"
   exit 1
 fi
 
@@ -13,8 +13,8 @@ fi
 
 ENVIRONMENT="$1"
 
-if ! pushd "$ENVIRONMENT" 2> /dev/null; then
-  echo "err: no $ENVIRONMENT directory"
+if ! pushd "$ENVIRONMENT" &>/dev/null; then
+  echo "Error: no $ENVIRONMENT directory"
   exit 1
 fi
 
@@ -25,16 +25,24 @@ fi
 PASSPHRASE=$(cat .passphrase)
 
 if [ ! -f ca.pem ]; then
+  if [ ! -f ca-csr.json ]; then
+    echo "Error: no ca-csr.json file"
+    exit 1
+  fi
   cfssl genkey -initca "ca-csr.json" | cfssljson -bare "ca"
   openssl ec -in "ca-key.pem" -out "ca-key-enc.pem" -aes256 -passout "pass:$PASSPHRASE"
 fi
 
-for i in cloudserver homeserver; do
-  cfssl gencert -profile www -ca ca.pem -ca-key ca-key.pem "$i-csr.json" | cfssljson -bare "$i"
-  openssl ec -in "$i-key.pem" -out "$i-key-enc.pem" -aes256 -passout "pass:$PASSPHRASE"
-  cat "$i.pem" "$i-key.pem" >"$i-full.pem"
+for server in cloudserver homeserver; do
+  if [ ! -f "$server-csr.json" ]; then
+    echo "Error: no $server-csr.json file"
+    exit 1
+  fi
+  cfssl gencert -profile www -ca ca.pem -ca-key ca-key.pem "$server-csr.json" | cfssljson -bare "$server"
+  openssl ec -in "$server-key.pem" -out "$server-key-enc.pem" -aes256 -passout "pass:$PASSPHRASE"
+  cat "$server.pem" "$server-key.pem" >"$server-full.pem"
 done
 
-echo "passphrase: $PASSPHRASE"
+echo "Passphrase: $PASSPHRASE"
 
 popd || exit 1

@@ -11,7 +11,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ${ILEDIR}/data_redis_laptop
+      device: ${ILE_DIR}/data_redis_laptop
 
 services:
   redis:
@@ -56,7 +56,7 @@ services:
 
   tcp-cache:
     build:
-      context: ${ILEDIR}
+      context: ${ILE_DIR}
       dockerfile: ile_tcp_cache.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
@@ -73,16 +73,16 @@ services:
     environment:
       - ILE_ITC_MY_TCP_BIND_HOST=0.0.0.0
       - ILE_ITC_MY_TCP_BIND_PORT=9152
-      - ILE_ITC_TARGET_TCP_HOST=${ITC_TARGET_TCP_HOST}
-      - ILE_ITC_TARGET_TCP_PORT=${ITC_TARGET_TCP_PORT}
-      - ILE_ITC_TARGET_TCP_SSL=${ITC_TARGET_TCP_SSL}
+      - ILE_ITC_TARGET_TCP_HOST=${ILE_ITC_TARGET_TCP_HOST}
+      - ILE_ITC_TARGET_TCP_PORT=${ILE_ITC_TARGET_TCP_PORT}
+      - ILE_ITC_TARGET_TCP_SSL=${ILE_ITC_TARGET_TCP_SSL}
       - ILE_ITC_TARGET_TCP_SSL_CAFILE=/tls/ca.pem
       - ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME=${ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME}
       - ILE_ITC_REDIS_HOST=192.168.130.30
       - ILE_ITC_REDIS_PORT=6379
       - ILE_ITC_REDIS_PASSWORD=${ILE_IDR_REDIS_PASSWORD}
     volumes:
-      - ${PWD}/tls/ca.pem:/tls/ca.pem:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/tls/ca.pem:ro
     logging:
       options:
         max-size: 10m
@@ -134,16 +134,16 @@ services:
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
       - LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libnvidia-ml.so
-      - ILT_SOCKET_WRITER_ADDRESS=tcp://192.168.130.31:9152
-      - ILT_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
-      - ILT_AGENT_INTERVAL=${ILT_AGENT_INTERVAL:-20s}
+      - ILE_ITF_SOCKET_WRITER_ADDRESS=tcp://192.168.130.31:9152
+      - ILE_ITF_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
+      - ILE_ITF_AGENT_INTERVAL=${ILE_ITF_AGENT_INTERVAL:-20s}
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${ILEDIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${ILEDIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
-      - ${ILEDIR}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
-      - ${ILEDIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
       - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
       - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so:ro
     devices:

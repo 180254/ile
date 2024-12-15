@@ -1,23 +1,25 @@
 #!/usr/bin/env bash
 
+function usage() {
+  cat >&2 <<EOF
+Usage: $0 environment machine-types [OPTIONS] COMMAND
+  environment: local, prod
+  machine-types: $(find ./*.yml -printf "%f " | sed 's/\.yml//g')
+  command: up, down, ...
+
+Examples:
+  ./docker-compose.sh prod base,laptop up
+  ./docker-compose.sh prod laptop,base down
+  ./docker-compose.sh prod base,cloudserver up
+  ./docker-compose.sh prod cloudserver,base down
+  ./docker-compose.sh prod base,homeserver up
+  ./docker-compose.sh prod homeserver,base down
+  ./docker-compose.sh local base,cloudserver,homeserver up
+  ./docker-compose.sh local cloudserver,homeserver,base down
+EOF
+}
 if [[ "$#" -lt 2 ]]; then
-  echo >&2 "Usage: $0 environment machine-types [OPTIONS] COMMAND"
-  echo >&2 "  environment: local, prod"
-  echo >&2 "  machine-types: $(find ./*.yml -printf "%f " | sed 's/\.yml//g')"
-
-  # example:
-  #   ./docker-compose.sh prod base,laptop up
-  #   ./docker-compose.sh laptop,base down
-  # example:
-  #   ./docker-compose.sh prod base,cloudserver up
-  #   ./docker-compose.sh prod cloudserver,base down
-  # example:
-  #   ./docker-compose.sh prod base,homeserver up
-  #   ./docker-compose.sh prod homeserver,base down
-  # example:
-  #   ./docker-compose.sh local base,cloudserver,homeserver up
-  #   ./docker-compose.sh local cloudserver,homeserver,base down
-
+  usage
   exit 1
 fi
 
@@ -27,16 +29,42 @@ shift 2
 COMMAND=("$@")
 
 if [[ "${#COMMAND[@]}" -eq 1 ]]; then
-  if [[ "${COMMAND[0]}" == "up" ]]; then
+  case "${COMMAND[0]}" in
+  up)
     COMMAND=("up" "-d" "--build" "--pull" "always" "--remove-orphans")
-  elif [[ "${COMMAND[0]}" == "down" ]]; then
+    ;;
+  down)
     COMMAND=("down" "--remove-orphans")
-  fi
+    ;;
+  esac
 fi
 
-for MACHINE_TYPE in $(echo "${MACHINE_TYPES}" | tr ',' '\n'); do
+ILE_DIR=$(realpath "${PWD}/../")
+
+function create_directories() {
+  local type=$1
+  case "$type" in
+  cloudserver)
+    mkdir -p "${ILE_DIR}/data_redis"
+    ;;
+  homeserver)
+    mkdir -p "${ILE_DIR}/data_questdb" "${ILE_DIR}/data_grafana"
+    ;;
+  laptop)
+    mkdir -p "${ILE_DIR}/data_redis_laptop"
+    ;;
+  esac
+}
+
+IFS=',' read -ra TYPES <<<"$MACHINE_TYPES"
+
+for TYPE in "${TYPES[@]}"; do
+  create_directories "$TYPE"
+done
+
+for MACHINE_TYPE in "${TYPES[@]}"; do
   PWD="$(realpath "${PWD}")" \
-  ILEDIR=$(realpath "${PWD}/../") \
+  ILE_DIR="${ILE_DIR}" \
   HOSTNAME="$(hostname)" \
   ILE_NONROOT_UID="$(id -u)" \
   ILE_NONROOT_GID="$(id -g)" \
