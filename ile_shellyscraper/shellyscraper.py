@@ -195,10 +195,10 @@ def shelly_get_device_gen_and_type(device_ip: str) -> tuple[int, str]:
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly/#http-endpoint-shelly
     shelly = http_call(device_ip, "shelly")
 
-    # gen2
+    # gen2+
     if "gen" in shelly:
         device_gen = shelly["gen"]
-        device_type = shelly["model"] if device_gen == 2 else "_unknown_"
+        device_type = shelly["model"]
 
     # gen1
     else:
@@ -389,9 +389,11 @@ def shelly_get_gen2_device_name(device_ip: str) -> str:
 def shelly_get_gen2_device_status_ilp(device_ip: str, device_type: str, device_name: str) -> str:
     # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-it
     # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-s
+    # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-s-v2
     # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-uk
     # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-us
-    if device_type in ("SNPL-00110IT", "SNPL-00112EU", "SNPL-00112UK", "SNPL-00116US"):
+    # https://kb.shelly.cloud/knowledge-base/shelly-plug-s-mtr-gen3
+    if device_type in ("SNPL-00110IT", "SNPL-00112EU", "SNPL-10112EU", "SNPL-00112UK", "SNPL-00116US", "S3PL-00112EU"):
         # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch#status
         status = http_rpc_call(device_ip, "Switch.GetStatus", {"id": 0}, auth=Config.shelly_gen2_auth)
         return shelly_gen2_plug_status_to_ilp(device_name, status)
@@ -582,7 +584,7 @@ def shelly_device_status_loop(sigterm_threading_event: threading.Event, device_i
                     device_type, device_id, device_name = shelly_get_gen1_device_info(device_ip)
                     data = shelly_get_gen1_device_status_ilp(device_ip, device_type, device_id, device_name)
 
-                elif device_gen == 2:
+                elif device_gen in (2, 3):
                     device_name = shelly_get_gen2_device_name(device_ip)
                     data = shelly_get_gen2_device_status_ilp(device_ip, device_type, device_name)
 
