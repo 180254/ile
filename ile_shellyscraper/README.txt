@@ -15,6 +15,7 @@ Shelly Plus Plug US (Gen2)    | SNPL-00116US | shelly_plugs_meter1,shelly_plugs_
 Shelly Plug S MTR   (Gen3)    | S3PL-00112EU | shelly_plugs_meter1,shelly_plugs_temperature1 | API polling
 Shelly H&T      (Gen1)        | SHHT-1       | shelly_ht_meter1,shelly_ht_meter2             | webhook (HTTP server)
 Shelly Plus H&T (Gen2)        | SNSN-0013A   | shelly_ht_meter1                              | receiving notifications (WebSocket)
+Shelly H&T      (Gen3)        | S3SN-0U12AU  | shelly_ht_meter1                              | receiving notifications (WebSocket)
 
 How to configure Shelly devices:
 - Scape strategy: API polling

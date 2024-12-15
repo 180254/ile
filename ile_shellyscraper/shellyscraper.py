@@ -539,7 +539,9 @@ async def shelly_gen2_outbound_websocket_handler(websocket: WebSocketServerProto
 
         src = payload["src"]
 
-        if src.startswith("shellyplusht-"):
+        # https://kb.shelly.cloud/knowledge-base/shelly-plus-h-t
+        # https://kb.shelly.cloud/knowledge-base/shelly-h-t-gen3
+        if src.startswith(("shellyplusht-", "shellyhtg3-")):
             # "NotifyFullStatus" messages are valuable.
             # https://shelly-api-docs.shelly.cloud/gen2/General/Notifications/#notifyfullstatus
             # https://shelly-api-docs.shelly.cloud/gen2/General/SleepManagementForBatteryDevices
