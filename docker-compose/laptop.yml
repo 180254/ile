@@ -16,8 +16,8 @@ volumes:
 services:
   redis:
     build:
-      context: ${PWD}/deps
-      dockerfile: redis.Dockerfile
+      context: ${PWD}
+      dockerfile: deps/redis.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
@@ -57,7 +57,7 @@ services:
   tcp-cache:
     build:
       context: ${ILE_DIR}
-      dockerfile: ile_tcp_cache.Dockerfile
+      dockerfile: ile_tcp_cache/ile_tcp_cache.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
@@ -111,8 +111,8 @@ services:
   # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
   telegraf:
     build:
-      context: ${PWD}/deps
-      dockerfile: telegraf.Dockerfile
+      context: ${PWD}
+      dockerfile: deps/telegraf.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}

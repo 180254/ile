@@ -22,8 +22,8 @@ volumes:
 services:
   questdb:
     build:
-      context: ${PWD}/deps
-      dockerfile: questdb.Dockerfile
+      context: ${PWD}
+      dockerfile: deps/questdb.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
@@ -82,8 +82,8 @@ services:
 
   grafana:
     build:
-      context: ${PWD}/deps
-      dockerfile: grafana-oss.Dockerfile
+      context: ${PWD}
+      dockerfile: deps/grafana-oss.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
@@ -149,7 +149,7 @@ services:
   shellyscraper:
     build:
       context: ${ILE_DIR}
-      dockerfile: ile_shellyscraper.Dockerfile
+      dockerfile: ile_shellyscraper/ile_shellyscraper.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
@@ -232,8 +232,8 @@ services:
   # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
   telegraf:
     build:
-      context: ${PWD}/deps
-      dockerfile: telegraf.Dockerfile
+      context: ${PWD}
+      dockerfile: deps/telegraf.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
@@ -298,7 +298,7 @@ services:
   tcp-cache:
     build:
       context: ${ILE_DIR}
-      dockerfile: ile_tcp_cache.Dockerfile
+      dockerfile: ile_tcp_cache/ile_tcp_cache.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
@@ -355,8 +355,8 @@ services:
 
   haproxy-tls:
     build:
-      context: ${PWD}/deps
-      dockerfile: haproxy-homeserver.Dockerfile
+      context: ${PWD}
+      dockerfile: deps/haproxy-homeserver.Dockerfile
       args:
         ILE_IDH_CRT_FILE: /tls/full.pem
         ILE_IDH_QUESTDB_HOST: 192.168.130.20
