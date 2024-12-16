@@ -140,9 +140,9 @@ class Config:
 # --------------------- HELPERS -----------------------------------------------
 
 
-def time_is_synced(unix_timestamp_seconds: float) -> bool:
-    one_day_in_seconds = 24 * 60 * 60
-    return unix_timestamp_seconds > one_day_in_seconds
+def time_is_synced(first_timestamp: float, second_timestamp: float) -> bool:
+    one_minute = 60
+    return first_timestamp > 0 and second_timestamp > 0 and abs(first_timestamp - second_timestamp) < one_minute
 
 
 def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase | None = None) -> typing.Any:
@@ -252,9 +252,14 @@ def shelly_get_gen1_device_status_ilp(device_ip: str, device_type: str, device_i
 def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: typing.Any) -> str:
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-plug-plugs-status
 
-    timestamp = status["unixtime"]
-    if not time_is_synced(timestamp):
-        timestamp = int(time.time())
+    status_timestamp = status["unixtime"]
+    os_timestamp = int(time.time())
+
+    if time_is_synced(status_timestamp, os_timestamp):
+        timestamp = status_timestamp
+    else:
+        timestamp = os_timestamp
+
     nano = "000000000"
 
     # InfluxDB line protocol data
@@ -294,9 +299,14 @@ def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: typ
 def shelly_gen1_ht_status_to_ilp(device_id: str, device_name: str, status: typing.Any) -> str:
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-h-amp-t-status
 
-    timestamp = status["unixtime"]
-    if not time_is_synced(timestamp):
-        timestamp = int(time.time())
+    status_timestamp = status["unixtime"]
+    os_timestamp = int(time.time())
+
+    if time_is_synced(status_timestamp, os_timestamp):
+        timestamp = status_timestamp
+    else:
+        timestamp = os_timestamp
+
     nano = "000000000"
 
     # InfluxDB line protocol data
@@ -485,9 +495,18 @@ def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: typing.Any
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Temperature/
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Humidity/
 
-    timestamp = int(status["params"]["ts"] or 0)
-    if not time_is_synced(timestamp):
-        timestamp = int(time.time())
+    status_timestamp = int(status["params"]["ts"] or 0)
+    sys_timestamp = int(status["params"]["sys"]["unixtime"] or 0)
+    os_timestamp = int(time.time())
+
+    # https://community.shelly.cloud/topic/3444-time-from-the-past-and-an-ntp-issue-when-starting-up/
+    if time_is_synced(status_timestamp, os_timestamp):
+        timestamp = status_timestamp
+    elif time_is_synced(sys_timestamp, os_timestamp):
+        timestamp = sys_timestamp
+    else:
+        timestamp = os_timestamp
+
     nano = "000000000"
 
     device_id = status["src"]
