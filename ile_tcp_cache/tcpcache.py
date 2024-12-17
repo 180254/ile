@@ -19,6 +19,7 @@ import redis
 
 import ile_shared_tools
 
+
 # ile-tcp-cache is useful when the target TCP server is unreachable from the data-producing device.
 
 # Use case example: telegraf on a laptop with access to the database (target TCP server) once a day.
@@ -60,6 +61,7 @@ def size_fmt(num: float, mode: typing.Literal["metric", "binary"] = "metric", su
 
 
 getenv = os.environ.get
+
 
 # ITC = ile tcp cache
 class Env:
