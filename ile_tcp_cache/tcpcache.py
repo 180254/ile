@@ -19,7 +19,6 @@ import redis
 
 import ile_shared_tools
 
-
 # ile-tcp-cache is useful when the target TCP server is unreachable from the data-producing device.
 
 # Use case example: telegraf on a laptop with access to the database (target TCP server) once a day.
@@ -36,16 +35,16 @@ import ile_shared_tools
 
 def duration(value: str) -> datetime.timedelta:
     """Convert values like 1m30s100ms or 3s to datetime.timedelta."""
-    match = re.match(r"((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?((?P<milliseconds>\d+)ms)?", value)
+    pattern = r"^((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?((?P<milliseconds>\d+)ms)?$"
+    match = re.match(pattern, value)
     if not match:
         msg = f"Invalid duration: {value}"
         raise ValueError(msg)
-    matchdict = match.groupdict()
-    return datetime.timedelta(
-        minutes=int(matchdict["minutes"] or 0),
-        seconds=int(matchdict["seconds"] or 0),
-        milliseconds=int(matchdict["milliseconds"] or 0),
-    )
+    groupdict = match.groupdict()
+    minutes = int(groupdict["minutes"] or 0)
+    seconds = int(groupdict["seconds"] or 0)
+    milliseconds = int(groupdict["milliseconds"] or 0)
+    return datetime.timedelta(minutes=minutes, seconds=seconds, milliseconds=milliseconds)
 
 
 # https://stackoverflow.com/a/1094933/8574922
@@ -125,7 +124,8 @@ class Env:
     ILE_ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS: str = getenv(
         "ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS", "1.1,1.5,2.0,5.0"
     )
-    ILE_ITC_PERIODIC_JITTER: str = getenv("ILE_ITC_PERIODIC_JITTER", "0.05")
+    ILE_ITC_PERIODIC_JITTER_MULTIPLIER: str = getenv("ILE_ITC_PERIODIC_JITTER_MULTIPLIER", "0.05")
+    ILE_ITC_PERIODIC_DECELATOR: str = getenv("ILE_ITC_PERIODIC_DECELATOR", "250ms")
 
 
 class Config:
@@ -184,7 +184,8 @@ class Config:
     periodic_failure_backoff_multipliers: typing.Sequence[float] = list(
         map(float, filter(None, Env.ILE_ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS.split(",")))
     )
-    periodic_jitter: float = float(Env.ILE_ITC_PERIODIC_JITTER)
+    periodic_jitter_multiplier: float = float(Env.ILE_ITC_PERIODIC_JITTER_MULTIPLIER)
+    periodic_decelerator: datetime.timedelta = duration(Env.ILE_ITC_PERIODIC_DECELATOR)
 
 
 class VerboseThread(threading.Thread):
@@ -203,8 +204,8 @@ class VerboseInaccurateTimer(threading.Timer):
     """Timer with exception handling and untuned clock."""
 
     def __init__(self, interval: float, function: Callable[..., typing.Any], args=None, kwargs=None) -> None:
-        jitter = random.uniform(-Config.periodic_jitter, Config.periodic_jitter) * interval
-        super().__init__(interval + jitter, function, args, kwargs)
+        pjm = random.uniform(-Config.periodic_jitter_multiplier, Config.periodic_jitter_multiplier)
+        super().__init__(interval * (1.0 + pjm), function, args, kwargs)
 
     def run(self) -> None:
         try:
@@ -248,6 +249,7 @@ class Periodic:
             traceback.print_tb(e.__traceback__)
             result = Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
+        delay: float
         if result == Periodic.PeriodicResult.REPEAT_ON_SCHEDULE:
             self.backoff_idx = -1
             delay = self.interval.total_seconds()
@@ -256,7 +258,7 @@ class Periodic:
             delay = Config.periodic_failure_backoff_multipliers[self.backoff_idx] * self.interval.total_seconds()
         elif result == Periodic.PeriodicResult.REPEAT_IMMEDIATELY:
             self.backoff_idx = -1
-            delay = 0
+            delay = Config.periodic_decelerator.total_seconds()
         else:
             raise NotImplementedError
 
