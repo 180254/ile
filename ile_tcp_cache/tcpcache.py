@@ -615,7 +615,7 @@ def redis_init(r: redis.Redis) -> bool:
 
 
 def main() -> int:
-    ile_shared_tools.print_("Config" + str(vars(Config)), file=sys.stderr)
+    ile_shared_tools.print_vars(Config)
 
     sigterm_threading_event = ile_shared_tools.configure_sigterm_handler()
 

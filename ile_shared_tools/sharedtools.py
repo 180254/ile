@@ -47,6 +47,11 @@ def print_debug(msg_supplier: Callable[[], str]) -> None:
         print_(msg_supplier())
 
 
+def print_vars(obj: typing.Any) -> None:
+    obj_vars = {k: v for k, v in vars(obj).items() if not k.startswith("_")}
+    print_(type(obj).__name__ + str(obj_vars), file=sys.stderr)
+
+
 def print_exception(exception: BaseException) -> None:
     exc_traceback: types.TracebackType | None = exception.__traceback__
     if exc_traceback:

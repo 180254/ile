@@ -641,7 +641,7 @@ def shelly_device_status_loop(sigterm_threading_event: threading.Event, device_i
 
 
 def main() -> int:
-    ile_shared_tools.print_("Config" + str(vars(Config)), file=sys.stderr)
+    ile_shared_tools.print_vars(Config)
 
     sigterm_threading_event = ile_shared_tools.configure_sigterm_handler()
 
