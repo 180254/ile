@@ -5,7 +5,7 @@ notepad.txt
 .mypy_cache/
 .ruff_cache/
 data_*/*
-000-backups/
+scripts/*
 docker-compose/envs/prod/*
 docker-compose/tls/prod/*
 docker-compose/tls/local/*.pem
