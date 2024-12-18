@@ -32,3 +32,14 @@ Components of the setup:
     Docker Compose configuration files, one for each type of machine.
 - docker-compose.yml
     The main Docker Compose startup script.
+
+QuestDB capacity planning:
+  - https://questdb.io/docs/deployment/capacity-planning/
+    $ cat /etc/security/limits.conf
+      ...
+      * soft nofile 1048576
+      * hard nofile 1048576
+    $ cat /etc/sysctl.conf
+      ...
+      fs.file-max=1048576
+      vm.max_map_count=1048576

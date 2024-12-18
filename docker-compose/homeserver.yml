@@ -40,8 +40,8 @@ services:
       - QUESTDB_UID=${ILE_NONROOT_UID}
       - QUESTDB_GID=${ILE_NONROOT_GID}
       # https://questdb.io/docs/reference/configuration/
-      # https://github.com/questdb/questdb/blob/7.3.3/core/src/main/java/io/questdb/PropertyKey.java
-      # https://github.com/questdb/questdb/blob/7.3.3/core/src/main/java/io/questdb/PropServerConfiguration.java
+      # https://github.com/questdb/questdb/blob/8.2.1/core/src/main/java/io/questdb/PropertyKey.java
+      # https://github.com/questdb/questdb/blob/8.2.1/core/src/main/java/io/questdb/PropServerConfiguration.java
       - QDB_PG_USER=${QDB_PG_USER}
       - QDB_PG_PASSWORD=${QDB_PG_PASSWORD}
       - QDB_PG_READONLY_USER_ENABLED=${QDB_PG_READONLY_USER_ENABLED}
@@ -53,8 +53,8 @@ services:
       - QDB_LINE_TCP_WRITER_WORKER_SLEEP_THRESHOLD=100
       - QDB_LINE_TCP_IO_WORKER_SLEEP_THRESHOLD=100
       - QDB_PG_WORKER_SLEEP_THRESHOLD=100
-      - QDB_WAL_APPLY_WORKER_SLEEP_THRESHOLD=100
       - QDB_SHARED_WORKER_SLEEP_THRESHOLD=100
+      - QDB_WAL_APPLY_WORKER_SLEEP_THRESHOLD=100
       # https://github.com/questdb/questdb/issues/3531
       - QDB_CAIRO_COMMIT_MODE=sync
     volumes:
@@ -70,6 +70,11 @@ services:
       timeout: 10s
       start_period: 20s
       retries: 3
+    # https://questdb.io/docs/deployment/capacity-planning/
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
     deploy:
       restart_policy:
         condition: any
