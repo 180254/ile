@@ -108,6 +108,8 @@ class Env:
     ILE_ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = getenv("ILE_ITC_DELIVERY_MAN_COLLECT_INTERVAL", "60s")
     ILE_ITC_DELIVERY_MAN_FLUSH_INTERVAL: str = getenv("ILE_ITC_DELIVERY_MAN_FLUSH_INTERVAL", "60s")
 
+    ILE_ITC_DELIVERY_MAN_THROTTLER: str = getenv("ILE_ITC_DELIVERY_MAN_THROTTLER", "4096/2s")
+
     ILE_ITC_COUNTER_HITS_ON_TARGET: str = getenv("ILE_ITC_COUNTER_HITS_ON_TARGET", "itc:hitsontarget")
     ILE_ITC_COUNTER_DELIVERED_MSGS: str = getenv("ILE_ITC_COUNTER_DELIVERED_MSGS", "itc:deliveredmsgs")
     ILE_ITC_COUNTER_DELIVERED_BYTES: str = getenv("ILE_ITC_COUNTER_DELIVERED_BYTES", "itc:deliveredbytes")
@@ -125,7 +127,7 @@ class Env:
         "ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS", "1.1,1.5,2.0,5.0"
     )
     ILE_ITC_PERIODIC_JITTER_MULTIPLIER: str = getenv("ILE_ITC_PERIODIC_JITTER_MULTIPLIER", "0.05")
-    ILE_ITC_PERIODIC_DECELATOR: str = getenv("ILE_ITC_PERIODIC_DECELATOR", "250ms")
+    ILE_ITC_PERIODIC_DECELATOR: str = getenv("ILE_ITC_PERIODIC_DECELATOR", "500ms")
 
 
 class Config:
@@ -170,6 +172,9 @@ class Config:
     delivery_man_collect_interval: datetime.timedelta = duration(Env.ILE_ITC_DELIVERY_MAN_COLLECT_INTERVAL)
     delivery_man_flush_interval: datetime.timedelta = duration(Env.ILE_ITC_DELIVERY_MAN_FLUSH_INTERVAL)
 
+    delivery_man_throttler_weight_limit: int = int(Env.ILE_ITC_DELIVERY_MAN_THROTTLER.split("/")[0])
+    delivery_man_throttler_time_window: datetime.timedelta = duration(Env.ILE_ITC_DELIVERY_MAN_THROTTLER.split("/")[1])
+
     counter_hits_on_target: str = Env.ILE_ITC_COUNTER_HITS_ON_TARGET
     counter_delivered_msgs: str = Env.ILE_ITC_COUNTER_DELIVERED_MSGS
     counter_delivered_bytes: str = Env.ILE_ITC_COUNTER_DELIVERED_BYTES
@@ -198,6 +203,48 @@ class VerboseThread(threading.Thread):
             ile_shared_tools.print_exception(e)
             traceback.print_tb(e.__traceback__)
             raise
+
+
+class Throttler:
+    """Throttle with a weight limit within a given sliding time window."""
+
+    class Permit:
+        def __init__(self, p_time: float, p_weight: int) -> None:
+            super().__init__()
+            self.p_time = p_time
+            self.p_weight = p_weight
+
+    def __init__(self, weight_limit: int, time_window: datetime.timedelta):
+        super().__init__()
+        self.weight_limit = weight_limit
+        self.time_window = time_window
+        self.issued_permits: collections.deque[Throttler.Permit] = collections.deque()
+        self.rlock = threading.RLock()
+
+    def get_permit(self, requested_weight: int) -> Throttler.Permit:
+        """Get a permit for the requested weight.
+
+        :return: the permit, allowed weight may be 0 if the request was fully throttled.
+        """
+        with self.rlock:
+            current_time = time.time()
+
+            expired_time = current_time - self.time_window.total_seconds()
+            while self.issued_permits and self.issued_permits[0].p_time < expired_time:
+                self.issued_permits.popleft()
+
+            total_weight = sum(permit.p_weight for permit in self.issued_permits)
+            permit_weight = max(min(requested_weight, self.weight_limit - total_weight), 0)
+
+            result_permit = Throttler.Permit(current_time, permit_weight)
+            if permit_weight > 0:
+                self.issued_permits.append(result_permit)
+
+            return result_permit
+
+    def cancel(self, permit: Throttler.Permit) -> None:
+        """Cancel permit, mark as unused."""
+        self.issued_permits.remove(permit)
 
 
 class VerboseInaccurateTimer(threading.Timer):
@@ -362,9 +409,16 @@ class DeliveryMan:
             self.message_id: str = rstream_entry[0]
             self.data: bytes = rstream_entry[1]["data"].encode("utf-8")
 
-    def __init__(self, r: redis.Redis) -> None:
+    class DeliveryResult(enum.Enum):
+        OK_DELIVERED = enum.auto()
+        OK_DROPPED = enum.auto()
+        OK_THROTTLED = enum.auto()
+        FAIL_EXCEPTION = enum.auto()
+
+    def __init__(self, r: redis.Redis, throttler: Throttler) -> None:
         super().__init__()
         self.r = r
+        self.throttler = throttler
         self.backpack: list[DeliveryMan.Message] = []
         self.backpack_rlock = threading.RLock()
         self.last_flush = time.time()
@@ -377,7 +431,8 @@ class DeliveryMan:
         """
         if len(self.backpack) >= Config.delivery_man_capacity:
             self._incr_overloaded_cnt()
-            if not self._deliver_to_target_tcp():
+            delivery_result = self._deliver_to_target_tcp()
+            if delivery_result == DeliveryMan.DeliveryResult.FAIL_EXCEPTION:
                 return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
         xread = min(max(Config.delivery_man_capacity - len(self.backpack), 1), Config.redis_steam_read_count)
@@ -415,8 +470,8 @@ class DeliveryMan:
         if len(self.backpack) >= Config.delivery_man_capacity or (
             (time.time() - self.last_flush) >= Config.delivery_man_flush_interval.total_seconds()
         ):
-            delivered = self._deliver_to_target_tcp()
-            if not delivered:
+            delivery_result = self._deliver_to_target_tcp()
+            if delivery_result == DeliveryMan.DeliveryResult.FAIL_EXCEPTION:
                 return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
         if redis_exception is not None:
@@ -427,13 +482,14 @@ class DeliveryMan:
 
         return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
 
-    def _deliver_to_target_tcp(self) -> bool:
-        """Handle [Delivery man] -> [Destination location: target TCP].
-
-        :return: true if all data was processed (delivered or dropped), false otherwise
-        """
+    def _deliver_to_target_tcp(self) -> DeliveryResult:
+        """Handle [Delivery man] -> [Destination location: target TCP]."""
         if len(self.backpack) == 0:
-            return True
+            return DeliveryMan.DeliveryResult.OK_DELIVERED
+
+        throttler_permit = self.throttler.get_permit(len(self.backpack))
+        if throttler_permit.p_weight == 0:
+            return DeliveryMan.DeliveryResult.OK_THROTTLED
 
         if Config.target_tcp_ssl:
             ssl_context = ssl.create_default_context(
@@ -452,13 +508,15 @@ class DeliveryMan:
             # Synchronize access to the backpack:
             #   collect bytes, connect to the target TCP, empty the backpack.
             # If these operations are successful, the data will be processed.
-            # If any of these operations fail, end the method by returning false.
+            # If any of these operations fail, end the method by delivery fail.
             with self.backpack_rlock:
                 if len(self.backpack) == 0:
-                    return True
+                    return DeliveryMan.DeliveryResult.OK_DELIVERED
 
-                data = b"\n".join(message.data for message in self.backpack) + b"\n"
-                message_ids = [message.message_id for message in self.backpack]
+                backpack_throttled = self.backpack[: throttler_permit.p_weight]
+
+                data = b"\n".join(message.data for message in backpack_throttled) + b"\n"
+                message_ids = [message.message_id for message in backpack_throttled]
 
                 try:
                     sock.settimeout(Config.socket_connect_timeout.total_seconds())
@@ -467,10 +525,11 @@ class DeliveryMan:
                     # Connect error is not a 'final problem', it will be retried later.
                     # Return false as the data was not processed.
                     ile_shared_tools.print_exception(e)
-                    return False
+                    self.throttler.cancel(throttler_permit)
+                    return DeliveryMan.DeliveryResult.FAIL_EXCEPTION
 
                 self.last_flush = time.time()
-                self.backpack = []
+                self.backpack = self.backpack[throttler_permit.p_weight :]
 
             # Socket is connected, deliver the data or drop it.
             try:
@@ -481,7 +540,7 @@ class DeliveryMan:
                 # Make sure that the server did not close the connection
                 # (questdb will do that asynchronously if the data was incorrect).
                 # https://github.com/questdb/questdb/blob/7.2.1/core/src/main/java/io/questdb/network/AbstractIODispatcher.java#L149
-                time.sleep(0.050)
+                time.sleep(0.250)
                 sock.sendall(b"\n")
 
                 sock.shutdown(socket.SHUT_RDWR)
@@ -512,7 +571,7 @@ class DeliveryMan:
             ile_shared_tools.print_exception(e)
 
         # Return true as the data was processed.
-        return True
+        return DeliveryMan.DeliveryResult.OK_DELIVERED
 
     def _incr_overloaded_cnt(self) -> None:
         try:
@@ -663,7 +722,10 @@ def main() -> int:
 
     if Config.delivery_man_enabled:
         # [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP]
-        delivery_man = DeliveryMan(r)
+        delivery_throttler = Throttler(
+            Config.delivery_man_throttler_weight_limit, Config.delivery_man_throttler_time_window
+        )
+        delivery_man = DeliveryMan(r, delivery_throttler)
         delivery_man_periodic_collect = Periodic(
             delivery_man.collect_from_warehouse_and_occasionally_deliver_to_target_tcp,
             Config.delivery_man_collect_interval,
