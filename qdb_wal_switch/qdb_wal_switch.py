@@ -9,7 +9,10 @@ import psycopg2.extras
 
 dsn = os.environ.get("QDB_DSN", "postgresql://useradmin:quest@localhost:8812/qdb")
 
-wal_cfg = sys.argv[1] if len(sys.argv) >= 2 else os.environ.get("QDB_WAL", "True")
+wal_arg_index = 1
+min_arg_len = 2
+
+wal_cfg = sys.argv[wal_arg_index] if len(sys.argv) >= min_arg_len else os.environ.get("QDB_WAL", "True")
 wal = wal_cfg.lower() in ("true", "1", "t", "y", "yes")
 
 print("wal: " + str(wal))

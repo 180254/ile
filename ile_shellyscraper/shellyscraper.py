@@ -145,7 +145,7 @@ def time_is_synced(first_timestamp: float, second_timestamp: float) -> bool:
     return first_timestamp > 0 and second_timestamp > 0 and abs(first_timestamp - second_timestamp) < one_minute
 
 
-def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase | None = None) -> typing.Any:
+def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase | None = None) -> dict[str, typing.Any]:
     ssl_ = device_ip in Config.shelly_devices_ssl_ips
     proto = "https" if ssl_ else "http"
     verify = Config.shelly_devices_ssl_ips_verify if ssl_ else None
@@ -157,7 +157,7 @@ def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase 
         verify=verify,
     )
     response.raise_for_status()
-    data = response.json()
+    data = typing.cast(dict[str, typing.Any], response.json())
     ile_shared_tools.print_debug(lambda: ile_shared_tools.json_dumps(data))
     return data
 
@@ -166,9 +166,9 @@ def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase 
 def http_rpc_call(
     device_ip: str,
     method: str,
-    params: dict[typing.Any, typing.Any] | None = None,
+    params: dict[str, typing.Any] | None = None,
     auth: requests.auth.AuthBase | None = None,
-) -> typing.Any:
+) -> dict[str, typing.Any]:
     ssl_ = device_ip in Config.shelly_devices_ssl_ips
     proto = "https" if ssl_ else "http"
     verify = Config.shelly_devices_ssl_ips_verify if ssl_ else None
@@ -186,7 +186,7 @@ def http_rpc_call(
         verify=verify,
     )
     response.raise_for_status()
-    data = response.json()
+    data = typing.cast(dict[str, typing.Any], response.json())
     ile_shared_tools.print_debug(lambda: ile_shared_tools.json_dumps(data))
     return data
 
@@ -249,7 +249,7 @@ def shelly_get_gen1_device_status_ilp(device_ip: str, device_type: str, device_i
     return ""
 
 
-def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: typing.Any) -> str:
+def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: dict[str, typing.Any]) -> str:
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-plug-plugs-status
 
     status_timestamp = status["unixtime"]
@@ -296,7 +296,7 @@ def shelly_gen1_plug_status_to_ilp(device_id: str, device_name: str, status: typ
     return data
 
 
-def shelly_gen1_ht_status_to_ilp(device_id: str, device_name: str, status: typing.Any) -> str:
+def shelly_gen1_ht_status_to_ilp(device_id: str, device_name: str, status: dict[str, typing.Any]) -> str:
     # status = https://shelly-api-docs.shelly.cloud/gen1/#shelly-h-amp-t-status
 
     status_timestamp = status["unixtime"]
@@ -421,7 +421,7 @@ def shelly_get_gen2_device_status_ilp(device_ip: str, device_type: str, device_n
     return ""
 
 
-def shelly_gen2_plug_status_to_ilp(device_name: str, status: typing.Any) -> str:
+def shelly_gen2_plug_status_to_ilp(device_name: str, status: dict[str, typing.Any]) -> str:
     # status = Switch.GetStatus result
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch#status
 
@@ -485,7 +485,7 @@ def shelly_gen2_plug_status_to_ilp(device_name: str, status: typing.Any) -> str:
     return data
 
 
-def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: typing.Any) -> str:
+def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: dict[str, typing.Any]) -> str:
     # status = status in "NotifyFullStatus" notification format
     # https://shelly-api-docs.shelly.cloud/gen2/General/Notifications/#notifyfullstatus
 

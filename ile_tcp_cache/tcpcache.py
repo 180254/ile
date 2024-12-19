@@ -1,4 +1,7 @@
 #!venv/bin/python3
+# https://github.com/python/typeshed/issues/7597#issuecomment-1117572695
+from __future__ import annotations
+
 import collections
 import datetime
 import enum
@@ -13,7 +16,9 @@ import threading
 import time
 import traceback
 import typing
-from collections.abc import Callable
+
+if typing.TYPE_CHECKING:
+    from collections.abc import Callable
 
 import redis
 
@@ -214,7 +219,7 @@ class Throttler:
             self.p_time = p_time
             self.p_weight = p_weight
 
-    def __init__(self, weight_limit: int, time_window: datetime.timedelta):
+    def __init__(self, weight_limit: int, time_window: datetime.timedelta) -> None:
         super().__init__()
         self.weight_limit = weight_limit
         self.time_window = time_window
@@ -250,7 +255,13 @@ class Throttler:
 class VerboseInaccurateTimer(threading.Timer):
     """Timer with exception handling and untuned clock."""
 
-    def __init__(self, interval: float, function: Callable[..., typing.Any], args=None, kwargs=None) -> None:
+    def __init__(
+        self,
+        interval: float,
+        function: Callable[..., typing.Any],
+        args: tuple[typing.Any] | None = None,
+        kwargs: dict[typing.Any, typing.Any] | None = None,
+    ) -> None:
         pjm = random.uniform(-Config.periodic_jitter_multiplier, Config.periodic_jitter_multiplier)
         super().__init__(interval * (1.0 + pjm), function, args, kwargs)
 
@@ -321,7 +332,7 @@ class TCPParcelCollector:
     Handle processing: [Pickup location: my TCP] -> [Parcel collector] -> [Warehouse: Redis stream].
     """
 
-    def __init__(self, r: redis.Redis, sigterm_threading_event: threading.Event) -> None:
+    def __init__(self, r: redis.Redis[str], sigterm_threading_event: threading.Event) -> None:
         super().__init__()
         self.r = r
         self.sigterm_threading_event = sigterm_threading_event
@@ -331,7 +342,13 @@ class TCPParcelCollector:
     class Handler(socketserver.StreamRequestHandler):
         """Handle processing: [Pickup location: my TCP] -> [Parcel collector]."""
 
-        def __init__(self, request, client_address, server, outer: "TCPParcelCollector") -> None:
+        def __init__(
+            self,
+            request: socket.socket,
+            client_address: tuple[str, int],
+            server: socketserver.ThreadingTCPServer,
+            outer: TCPParcelCollector,
+        ) -> None:
             self.outer = outer
             super().__init__(request, client_address, server)
 
@@ -370,7 +387,9 @@ class TCPParcelCollector:
             except redis.exceptions.RedisError as e:
                 ile_shared_tools.print_exception(e)
 
-    def handler_factory(self, request, client_address, server) -> "TCPParcelCollector.Handler":
+    def handler_factory(
+        self, request: socket.socket, client_address: tuple[str, int], server: socketserver.ThreadingTCPServer
+    ) -> TCPParcelCollector.Handler:
         return TCPParcelCollector.Handler(request, client_address, server, self)
 
     def deliver_to_warehouse(self) -> Periodic.PeriodicResult:
@@ -404,7 +423,7 @@ class DeliveryMan:
     """
 
     class Message:
-        def __init__(self, rstream_entry: tuple[str, dict]) -> None:
+        def __init__(self, rstream_entry: tuple[str, dict[str, str]]) -> None:
             super().__init__()
             self.message_id: str = rstream_entry[0]
             self.data: bytes = rstream_entry[1]["data"].encode("utf-8")
@@ -415,7 +434,7 @@ class DeliveryMan:
         OK_THROTTLED = enum.auto()
         FAIL_EXCEPTION = enum.auto()
 
-    def __init__(self, r: redis.Redis, throttler: Throttler) -> None:
+    def __init__(self, r: redis.Redis[str], throttler: Throttler) -> None:
         super().__init__()
         self.r = r
         self.throttler = throttler
@@ -581,7 +600,7 @@ class DeliveryMan:
 
 
 def status(
-    parcel_collector: TCPParcelCollector | None, delivery_man: DeliveryMan | None, r: redis.Redis
+    parcel_collector: TCPParcelCollector | None, delivery_man: DeliveryMan | None, r: redis.Redis[str]
 ) -> Periodic.PeriodicResult:
     try:
         threading_active_count = threading.active_count()
@@ -626,7 +645,7 @@ def status(
         return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
 
 
-def wait_for_redis(r: redis.Redis) -> bool:
+def wait_for_redis(r: redis.Redis[str]) -> bool:
     must_end = time.time() + Config.redis_startup_timeout.total_seconds()
 
     while True:
@@ -645,7 +664,7 @@ def wait_for_redis(r: redis.Redis) -> bool:
             return True
 
 
-def redis_init(r: redis.Redis) -> bool:
+def redis_init(r: redis.Redis[str]) -> bool:
     try:
         init_id = r.xadd(name=Config.redis_stream_name, id="*", fields={"init": "1"})
         r.xdel(Config.redis_stream_name, init_id)

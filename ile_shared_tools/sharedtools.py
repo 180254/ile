@@ -9,12 +9,9 @@ import sys
 import threading
 import time
 import traceback
+import types
 import typing
 from collections.abc import Callable
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    import types
 
 
 class Env:
@@ -36,7 +33,7 @@ class Config:
     questdb_ssl_checkhostname: bool = Env.ILE_QUESTDB_SSL_CHECKHOSTNAME.lower() == "true"
 
 
-def print_(*args, **kwargs) -> None:
+def print_(*args: str, **kwargs: typing.Any) -> None:
     timestamp = datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat()
     new_args = (timestamp, *args)
     print(*new_args, **kwargs)
@@ -47,7 +44,7 @@ def print_debug(msg_supplier: Callable[[], str]) -> None:
         print_(msg_supplier())
 
 
-def print_vars(obj: typing.Any) -> None:
+def print_vars(obj: object) -> None:
     obj_vars = {k: v for k, v in vars(obj).items() if not k.startswith("_")}
     print_(type(obj).__name__ + str(obj_vars), file=sys.stderr)
 
@@ -64,7 +61,7 @@ def print_exception(exception: BaseException) -> None:
         print_(f"exception: {exception}", file=sys.stderr)
 
 
-def json_dumps(data: typing.Any) -> str:
+def json_dumps(data: dict[str, typing.Any]) -> str:
     return json.dumps(data, separators=(",", ":"))
 
 
@@ -72,7 +69,7 @@ def configure_sigterm_handler() -> threading.Event:
     sigterm_cnt = [0]
     sigterm_threading_event = threading.Event()
 
-    def sigterm_handler(signal_number: int, _current_stack_frame: typing.Any) -> None:
+    def sigterm_handler(signal_number: int, _current_stack_frame: types.FrameType | None) -> None:
         signal_name = signal.Signals(signal_number).name
 
         sigterm_cnt[0] += 1
