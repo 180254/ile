@@ -1,4 +1,5 @@
 from .sharedtools import (
+    QUESTDB_EXTRA_ASYNC_SLEEP,
     configure_sigterm_handler,
     json_dumps,
     print_,
@@ -9,6 +10,7 @@ from .sharedtools import (
 )
 
 __all__ = [
+    "QUESTDB_EXTRA_ASYNC_SLEEP",
     "configure_sigterm_handler",
     "json_dumps",
     "print_",

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import json
 import os
@@ -9,9 +11,13 @@ import sys
 import threading
 import time
 import traceback
-import types
 import typing
-from collections.abc import Callable
+
+if typing.TYPE_CHECKING:
+    import types
+    from collections.abc import Callable
+
+QUESTDB_EXTRA_ASYNC_SLEEP: float = 0.250
 
 
 class Env:
@@ -33,7 +39,7 @@ class Config:
     questdb_ssl_checkhostname: bool = Env.ILE_QUESTDB_SSL_CHECKHOSTNAME.lower() == "true"
 
 
-def print_(*args: str, **kwargs: typing.Any) -> None:
+def print_(*args: str, **kwargs: typing.Any) -> None:  # noqa: ANN401
     timestamp = datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat()
     new_args = (timestamp, *args)
     print(*new_args, **kwargs)
@@ -126,8 +132,8 @@ def write_ilp_to_questdb(data: str) -> None:
         # Send one more empty line after a while.
         # Make sure that the server did not close the connection
         # (questdb will do that asynchronously if the data was incorrect).
-        # https://github.com/questdb/questdb/blob/7.2.1/core/src/main/java/io/questdb/network/AbstractIODispatcher.java#L149
-        time.sleep(0.050)
+        # https://github.com/questdb/questdb/blob/8.2.1/core/src/main/java/io/questdb/network/AbstractIODispatcher.java#L159
+        time.sleep(QUESTDB_EXTRA_ASYNC_SLEEP)
         sock.sendall(b"\n")
 
         sock.shutdown(socket.SHUT_RDWR)

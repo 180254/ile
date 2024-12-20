@@ -262,7 +262,7 @@ class VerboseInaccurateTimer(threading.Timer):
         args: tuple[typing.Any] | None = None,
         kwargs: dict[typing.Any, typing.Any] | None = None,
     ) -> None:
-        pjm = random.uniform(-Config.periodic_jitter_multiplier, Config.periodic_jitter_multiplier)
+        pjm = random.uniform(-Config.periodic_jitter_multiplier, Config.periodic_jitter_multiplier)  # noqa: S311
         super().__init__(interval * (1.0 + pjm), function, args, kwargs)
 
     def run(self) -> None:
@@ -558,8 +558,8 @@ class DeliveryMan:
                 # Send one more empty line after a while.
                 # Make sure that the server did not close the connection
                 # (questdb will do that asynchronously if the data was incorrect).
-                # https://github.com/questdb/questdb/blob/7.2.1/core/src/main/java/io/questdb/network/AbstractIODispatcher.java#L149
-                time.sleep(0.250)
+                # https://github.com/questdb/questdb/blob/8.2.1/core/src/main/java/io/questdb/network/AbstractIODispatcher.java#L159
+                time.sleep(ile_shared_tools.QUESTDB_EXTRA_ASYNC_SLEEP)
                 sock.sendall(b"\n")
 
                 sock.shutdown(socket.SHUT_RDWR)
@@ -590,7 +590,7 @@ class DeliveryMan:
             ile_shared_tools.print_exception(e)
 
         # Return true as the data was processed.
-        return DeliveryMan.DeliveryResult.OK_DELIVERED
+        return DeliveryMan.DeliveryResult.OK_DELIVERED if delivered else DeliveryMan.DeliveryResult.OK_DROPPED
 
     def _incr_overloaded_cnt(self) -> None:
         try:

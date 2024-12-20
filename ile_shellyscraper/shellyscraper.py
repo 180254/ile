@@ -1,4 +1,6 @@
 #!venv/bin/python3
+from __future__ import annotations
+
 import asyncio
 import http.server
 import itertools
@@ -15,7 +17,10 @@ import urllib.request
 import requests
 import requests.auth
 import websockets
-from websockets.legacy.server import WebSocketServerProtocol
+import websockets.legacy.server
+
+if typing.TYPE_CHECKING:
+    from websockets.legacy.server import WebSocketServerProtocol
 
 import ile_shared_tools
 
@@ -52,7 +57,7 @@ class Env:
     ILE_ISS_BACKOFF_STRATEGY: str = getenv("ILE_ISS_BACKOFF_STRATEGY", "0.5,1,3,3,5,60,90")
 
     ILE_ISS_SHELLY_GEN1_WEBHOOK_ENABLED: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_ENABLED", "true")
-    ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_HOST: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_HOST", "0.0.0.0")
+    ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_HOST: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_HOST", "0.0.0.0")  # noqa: S104
     ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_PORT: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_BIND_PORT", "9080")
     ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL", "false")
     ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_CERTFILE", "server.crt")
@@ -60,7 +65,7 @@ class Env:
     ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD: str = getenv("ILE_ISS_SHELLY_GEN1_WEBHOOK_SSL_PASSWORD", "")
 
     ILE_ISS_SHELLY_GEN2_WEBSOCKET_ENABLED: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_ENABLED", "true")
-    ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_HOST: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_HOST", "0.0.0.0")
+    ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_HOST: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_HOST", "0.0.0.0")  # noqa: S104
     ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_BIND_PORT", "9081")
     ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL", "false")
     ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE: str = getenv("ILE_ISS_SHELLY_GEN2_WEBSOCKET_SSL_CERTFILE", "server.crt")
@@ -338,7 +343,7 @@ def shelly_gen1_ht_report_to_ilp(device_id: str, temp: str, hum: str) -> str:
 # Handler for Shelly H&T's action "report sensor values".
 # https://shelly-api-docs.shelly.cloud/gen1/#shelly-h-amp-t-settings-actions
 class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
+    def do_GET(self) -> None:  # noqa: N802
         try:
             self.send_response(200)
             self.end_headers()
