@@ -5,9 +5,10 @@ notepad.txt
 .mypy_cache/
 .ruff_cache/
 data_*/*
-scripts/*
 docker-compose/envs/prod/*
 docker-compose/tls/prod/*
 docker-compose/tls/local/*.pem
 docker-compose/tls/local/*.csr
+extra-scripts/sync-servers.txt
 !.keep
+sync.tar.zst
