@@ -249,7 +249,8 @@ class Throttler:
 
     def cancel(self, permit: Throttler.Permit) -> None:
         """Cancel permit, mark as unused."""
-        self.issued_permits.remove(permit)
+        with self.rlock:
+            self.issued_permits.remove(permit)
 
 
 class VerboseInaccurateTimer(threading.Timer):
