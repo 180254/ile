@@ -137,6 +137,7 @@ services:
           - name: questdb
             type: postgres
             access: proxy
+            uid: questdb
             url: 192.168.130.20:8812
             database: qdb
             user: ${QDB_PG_READONLY_USER}
