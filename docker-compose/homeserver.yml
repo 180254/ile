@@ -244,11 +244,9 @@ services:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
     image: ile-homeserver-telegraf:0.0.1
-    user: nonroot:999
+    user: nonroot:${ILE_DOCKER_GID}
     restart: always
-    networks:
-      vnet:
-        ipv4_address: 192.168.130.23
+    network_mode: host
     ports: [ ]
     hostname: ${HOSTNAME}
     environment:

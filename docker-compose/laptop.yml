@@ -119,11 +119,9 @@ services:
       no_cache: false
       pull: true
     image: ile-laptop-telegraf:0.0.1
-    user: nonroot:999
+    user: nonroot:${ILE_DOCKER_GID}
     restart: always
-    networks:
-      vnet:
-        ipv4_address: 192.168.130.32
+    network_mode: host
     ports: [ ]
     hostname: ${HOSTNAME}
     environment:
