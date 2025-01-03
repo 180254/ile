@@ -51,8 +51,14 @@ def print_debug(msg_supplier: Callable[[], str]) -> None:
 
 
 def print_vars(obj: object) -> None:
-    obj_vars = {k: v for k, v in vars(obj).items() if not k.startswith("_")}
-    print_(type(obj).__name__ + str(obj_vars), file=sys.stderr)
+    if isinstance(obj, type):
+        class_name = obj.__name__
+        attrs = vars(obj).items()
+    else:
+        class_name = type(obj).__name__
+        attrs = {**vars(obj.__class__), **vars(obj)}.items()
+    pub_attrs = {key: value for key, value in attrs if not key.startswith("_")}
+    print(f"{class_name} {pub_attrs}", file=sys.stderr)
 
 
 def print_exception(exception: BaseException) -> None:
