@@ -35,6 +35,11 @@ services:
     networks:
       vnet:
         ipv4_address: 192.168.130.20
+    # https://questdb.com/docs/quick-start/#enjoy-questdb
+    # 9000 - REST API and Web Console
+    # 9000 - InfluxDB Line Protocol (ILP)
+    # 8812 - Postgres Wire Protocol (PGWire)
+    # 9003 - Min health server
     ports: [ ]
     environment:
       - QUESTDB_UID=${ILE_NONROOT_UID}
@@ -56,6 +61,7 @@ services:
       - QDB_SHARED_WORKER_SLEEP_THRESHOLD=100
       - QDB_WAL_APPLY_WORKER_SLEEP_THRESHOLD=100
       # https://github.com/questdb/questdb/issues/3531
+      # https://github.com/questdb/questdb/issues/4829
       - QDB_CAIRO_COMMIT_MODE=sync
     volumes:
       - questdb_data:/var/lib/questdb
