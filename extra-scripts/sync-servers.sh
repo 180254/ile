@@ -9,8 +9,10 @@ ILE_DIR=$(realpath "${SCRIPT_DIR}/../")
 pushd "${SCRIPT_DIR}" >/dev/null
 
 servers=(
-  "srv1.example.com 22 ubuntu ~/.ssh/my.key /home/ubuntu/ile homeserver"
-  "srv2.example.com 10392 ubuntu ~/.ssh/my.key /home/ubuntu/ile cloudserver"
+  "ip=srv1.example.com port=22 user=ubuntu key=~/.ssh/my.key path=/home/ubuntu/ile roles=homeserver"
+  "ip=srv2.example.com port=10392 user=ubuntu key=~/.ssh/my.key path=/home/ubuntu/ile roles=cloudserver"
+  "#ip=10.10.10.20 port=22 user=ubuntu key=~/.ssh/my.key path=/home/ubuntu/ile roles=laptop"
+  "ip=localhost roles=laptop"
 )
 
 if [ -f sync-servers.txt ]; then
@@ -40,28 +42,39 @@ rm -f "${tar_zstd}" || true
 tar --use-compress-program zstd -cf "${tar_zstd}" "${paths[@]}" >/dev/null
 
 for server in "${servers[@]}"; do
-  IFS=" " read -r -a server <<<"$server"
-  ip="${server[0]}"
-  port="${server[1]}"
-  user="${server[2]}"
-  key="${server[3]}"
-  path="${server[4]}"
-  roles="${server[5]}"
+  declare -A server_info
+  for kv in $server; do
+    IFS="=" read -r key value <<<"$kv"
+    server_info[$key]=$value
+  done
 
-  echo " > syncing with ${ip}"
-  scp -P "${port}" -i "${key}" -r "${tar_zstd}" "${user}@${ip}:${path}"
-  ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path} && tar --use-compress-program zstd -xf ${tar_zstd} && rm ${tar_zstd}"
+  ip="${server_info[ip]:-}"
+  port="${server_info[port]:-}"
+  user="${server_info[user]:-}"
+  key="${server_info[key]:-}"
+  path="${server_info[path]:-}"
+  roles="${server_info[roles]:-}"
 
-  echo "  > docker-compose on ${ip}"
-  ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path}/docker-compose && ./docker-compose.sh prod ${roles},base down"
-  ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path}/docker-compose && ./docker-compose.sh prod base,${roles} up"
+  if [[ "${ip}" == \#* ]]; then
+    echo " > skipping ${ip}"
+    continue
+  fi
+
+  if [[ "${ip}" == "localhost" ]]; then
+    echo " > docker-compose on localhost"
+    (cd "docker-compose" && ./docker-compose.sh prod "${roles},base" down)
+    (cd "docker-compose" && ./docker-compose.sh prod "base,${roles}" up)
+  else
+    echo " > syncing with ${ip}"
+    scp -P "${port}" -i "${key}" -r "${tar_zstd}" "${user}@${ip}:${path}"
+    ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path} && tar --use-compress-program zstd -xf ${tar_zstd} && rm ${tar_zstd}"
+
+    echo "  > docker-compose on ${ip}"
+    ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path}/docker-compose && ./docker-compose.sh prod ${roles},base down"
+    ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path}/docker-compose && ./docker-compose.sh prod base,${roles} up"
+  fi
 done
 
 rm -f "${tar_zstd}"
-
-echo " > docker-compose on localhost"
-(cd "docker-compose" && ./docker-compose.sh prod laptop,base down)
-(cd "docker-compose" && ./docker-compose.sh prod base,laptop up)
-pwd
 
 popd >/dev/null
