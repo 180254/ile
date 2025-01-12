@@ -17,6 +17,8 @@ import time
 import traceback
 import typing
 
+import requests
+
 if typing.TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -86,6 +88,9 @@ class Env:
     ILE_ITC_TARGET_TCP_SSL: str = getenv("ILE_ITC_TARGET_TCP_SSL", "false")
     ILE_ITC_TARGET_TCP_SSL_CAFILE: str = getenv("ILE_ITC_TARGET_TCP_SSL_CAFILE", "")
     ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME: str = getenv("ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME", "true")
+    ILE_ITC_TARGET_TCP_HEALTH_HTTP_URLS: str = getenv(
+        "ILE_ITC_TARGET_TCP_HEALTH_HTTP_URLS", "http://localhost:9000/ping"
+    )
 
     ILE_ITC_REDIS_HOST: str = getenv("ILE_ITC_REDIS_HOST", "127.0.0.1")
     ILE_ITC_REDIS_PORT: str = getenv("ILE_ITC_REDIS_PORT", "6379")
@@ -151,6 +156,9 @@ class Config:
     target_tcp_ssl: bool = Env.ILE_ITC_TARGET_TCP_SSL.lower() == "true"
     target_tcp_ssl_cafile: str | None = Env.ILE_ITC_TARGET_TCP_SSL_CAFILE or None
     target_tcp_ssl_checkhostname: bool = Env.ILE_ITC_TARGET_TCP_SSL_CHECKHOSTNAME.lower() == "true"
+    target_tcp_health_http_urls: typing.Sequence[str] = list(
+        map(str.strip, filter(None, Env.ILE_ITC_TARGET_TCP_HEALTH_HTTP_URLS.split(",")))
+    )
 
     redis_address: tuple[str, int] = (Env.ILE_ITC_REDIS_HOST, int(Env.ILE_ITC_REDIS_PORT))
     redis_db: int = int(Env.ILE_ITC_REDIS_DB)
@@ -502,6 +510,27 @@ class DeliveryMan:
 
         return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
 
+    @staticmethod
+    def _health_check_target_tcp() -> bool:
+        """Check if the target TCP is healthy."""
+        if not Config.target_tcp_health_http_urls:
+            return True
+        try:
+            timeout = (Config.socket_connect_timeout.total_seconds(), Config.socket_timeout.total_seconds())
+            verify = Config.target_tcp_ssl_cafile if Config.target_tcp_ssl_checkhostname else False
+            with requests.session() as session:
+                for health_url in Config.target_tcp_health_http_urls:
+                    with session.get(health_url, timeout=timeout, verify=verify) as response:
+                        ile_shared_tools.print_debug(
+                            lambda h_url=health_url: f"target_tcp_health: {h_url} -> {response.status_code}"
+                        )
+                        response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            ile_shared_tools.print_exception(e)
+            return False
+        else:
+            return True
+
     def _deliver_to_target_tcp(self) -> DeliveryResult:
         """Handle [Delivery man] -> [Destination location: target TCP]."""
         if len(self.backpack) == 0:
@@ -529,14 +558,16 @@ class DeliveryMan:
             #   collect bytes, connect to the target TCP, empty the backpack.
             # If these operations are successful, the data will be processed.
             # If any of these operations fail, end the method by delivery fail.
+
+            if not DeliveryMan._health_check_target_tcp():
+                # Healthcheck error is not a 'final problem', it will be retried later.
+                # Return false as the data was not processed.
+                self.throttler.cancel(throttler_permit)
+                return DeliveryMan.DeliveryResult.FAIL_EXCEPTION
+
             with self.backpack_rlock:
                 if len(self.backpack) == 0:
                     return DeliveryMan.DeliveryResult.OK_DELIVERED
-
-                backpack_throttled = self.backpack[: throttler_permit.p_weight]
-
-                data = b"\n".join(message.data for message in backpack_throttled) + b"\n"
-                message_ids = [message.message_id for message in backpack_throttled]
 
                 try:
                     sock.settimeout(Config.socket_connect_timeout.total_seconds())
@@ -547,6 +578,11 @@ class DeliveryMan:
                     ile_shared_tools.print_exception(e)
                     self.throttler.cancel(throttler_permit)
                     return DeliveryMan.DeliveryResult.FAIL_EXCEPTION
+
+                backpack_throttled = self.backpack[: throttler_permit.p_weight]
+
+                data = b"\n".join(message.data for message in backpack_throttled) + b"\n"
+                message_ids = [message.message_id for message in backpack_throttled]
 
                 self.last_flush = time.time()
                 self.backpack = self.backpack[throttler_permit.p_weight :]
