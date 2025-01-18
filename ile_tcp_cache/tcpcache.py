@@ -5,6 +5,7 @@ from __future__ import annotations
 import collections
 import datetime
 import enum
+import functools
 import os
 import random
 import re
@@ -112,13 +113,13 @@ class Env:
     ILE_ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL: str = getenv("ILE_ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL", "60s")
 
     ILE_ITC_REDIS_STREAM_READ_COUNT: str = getenv("ILE_ITC_REDIS_STREAM_READ_COUNT", "2048")
-    ILE_ITC_DELIVERY_MAN_CAPACITY: str = getenv("ILE_ITC_DELIVERY_MAN_CAPACITY", "4096")
+    ILE_ITC_DELIVERY_MAN_CAPACITY: str = getenv("ILE_ITC_DELIVERY_MAN_CAPACITY", "2048")
 
     ILE_ITC_DELIVERY_MAN_ENABLED: str = getenv("ILE_ITC_DELIVERY_MAN_ENABLED", "true")
     ILE_ITC_DELIVERY_MAN_COLLECT_INTERVAL: str = getenv("ILE_ITC_DELIVERY_MAN_COLLECT_INTERVAL", "60s")
     ILE_ITC_DELIVERY_MAN_FLUSH_INTERVAL: str = getenv("ILE_ITC_DELIVERY_MAN_FLUSH_INTERVAL", "60s")
 
-    ILE_ITC_DELIVERY_MAN_THROTTLER: str = getenv("ILE_ITC_DELIVERY_MAN_THROTTLER", "4096/2s")
+    ILE_ITC_DELIVERY_MAN_THROTTLER: str = getenv("ILE_ITC_DELIVERY_MAN_THROTTLER", "2048/5s")
 
     ILE_ITC_COUNTER_HITS_ON_TARGET: str = getenv("ILE_ITC_COUNTER_HITS_ON_TARGET", "itc:hitsontarget")
     ILE_ITC_COUNTER_DELIVERED_MSGS: str = getenv("ILE_ITC_COUNTER_DELIVERED_MSGS", "itc:deliveredmsgs")
@@ -137,7 +138,7 @@ class Env:
         "ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS", "1.1,1.5,2.0,5.0"
     )
     ILE_ITC_PERIODIC_JITTER_MULTIPLIER: str = getenv("ILE_ITC_PERIODIC_JITTER_MULTIPLIER", "0.05")
-    ILE_ITC_PERIODIC_DECELATOR: str = getenv("ILE_ITC_PERIODIC_DECELATOR", "500ms")
+    ILE_ITC_PERIODIC_DECELERATOR_DELAY: str = getenv("ILE_ITC_PERIODIC_DECELERATOR_DELAY", "500ms")
 
 
 class Config:
@@ -203,7 +204,7 @@ class Config:
         map(float, filter(None, Env.ILE_ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS.split(",")))
     )
     periodic_jitter_multiplier: float = float(Env.ILE_ITC_PERIODIC_JITTER_MULTIPLIER)
-    periodic_decelerator: datetime.timedelta = duration(Env.ILE_ITC_PERIODIC_DECELATOR)
+    periodic_decelerator_delay: datetime.timedelta = duration(Env.ILE_ITC_PERIODIC_DECELERATOR_DELAY)
 
 
 class VerboseThread(threading.Thread):
@@ -255,6 +256,19 @@ class Throttler:
 
             return result_permit
 
+    def next_at(self) -> float:
+        """Get next non-throttled permit time.
+
+        Retrieves the time when the next permit will be available.
+        This method should be called only after get_permit() when the permit request was throttled.
+
+        :return: timestamp indicating when the next permit will be available.
+        """
+        with self.rlock:
+            if self.issued_permits:
+                return self.issued_permits[0].p_time + self.time_window.total_seconds()
+            return time.time()
+
     def cancel(self, permit: Throttler.Permit) -> None:
         """Cancel permit, mark as unused."""
         with self.rlock:
@@ -292,17 +306,20 @@ class Periodic:
         REPEAT_ON_SCHEDULE = enum.auto()  # use the default interval
         REPEAT_WITH_BACKOFF = enum.auto()  # backoff is configurable using Config.periodic_failure_backoff_multipliers
         REPEAT_IMMEDIATELY = enum.auto()  # just repeat immediately
+        REPEAT_THROTTLED = enum.auto()  # repeat almost immediately, take throttler into account
 
     def __init__(
         self,
         func: Callable[[], PeriodicResult],
         interval: datetime.timedelta,
         sigterm_threading_event: threading.Event,
+        throttler: Throttler | None = None,
     ) -> None:
         super().__init__()
         self.func = func
         self.interval = interval
         self.sigterm_threading_event = sigterm_threading_event
+        self.throttler = throttler
         self.backoff_idx = -1
 
     def start(self) -> None:
@@ -317,17 +334,28 @@ class Periodic:
             result = Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
         delay: float
-        if result == Periodic.PeriodicResult.REPEAT_ON_SCHEDULE:
-            self.backoff_idx = -1
-            delay = self.interval.total_seconds()
-        elif result == Periodic.PeriodicResult.REPEAT_WITH_BACKOFF:
-            self.backoff_idx = min(self.backoff_idx + 1, len(Config.periodic_failure_backoff_multipliers) - 1)
-            delay = Config.periodic_failure_backoff_multipliers[self.backoff_idx] * self.interval.total_seconds()
-        elif result == Periodic.PeriodicResult.REPEAT_IMMEDIATELY:
-            self.backoff_idx = -1
-            delay = Config.periodic_decelerator.total_seconds()
-        else:
-            raise NotImplementedError
+        match result:
+            case Periodic.PeriodicResult.REPEAT_ON_SCHEDULE:
+                self.backoff_idx = -1
+                delay = self.interval.total_seconds()
+            case Periodic.PeriodicResult.REPEAT_WITH_BACKOFF:
+                self.backoff_idx = min(self.backoff_idx + 1, len(Config.periodic_failure_backoff_multipliers) - 1)
+                delay = Config.periodic_failure_backoff_multipliers[self.backoff_idx] * self.interval.total_seconds()
+            case Periodic.PeriodicResult.REPEAT_IMMEDIATELY:
+                self.backoff_idx = -1
+                delay = Config.periodic_decelerator_delay.total_seconds()
+            case Periodic.PeriodicResult.REPEAT_THROTTLED:
+                if not self.throttler:
+                    msg = "Throttler is not set, but the task requested throttling."
+                    raise ValueError(msg)
+                self.backoff_idx = -1
+                delay = max(
+                    self.throttler.next_at() - time.time(),
+                    Config.periodic_decelerator_delay.total_seconds(),
+                )
+            case _:
+                msg = f"Unknown PeriodicResult: {result}"
+                raise NotImplementedError(msg)
 
         if not self.sigterm_threading_event.is_set():
             timer = VerboseInaccurateTimer(delay, self._run)
@@ -457,40 +485,20 @@ class DeliveryMan:
         Does the [Warehouse: Redis stream] -> [Delivery man] processing..
         Also, occasionally calls handling [Delivery man] -> [Destination location: target TCP].
         """
-        if len(self.backpack) >= Config.delivery_man_capacity:
-            self._incr_overloaded_cnt()
-            delivery_result = self._deliver_to_target_tcp()
-            if delivery_result == DeliveryMan.DeliveryResult.FAIL_EXCEPTION:
-                return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
-
         xread = min(max(Config.delivery_man_capacity - len(self.backpack), 1), Config.redis_steam_read_count)
         redis_exception = None
-
         try:
-            # xreadgroup = [(stream_name, [(message_id, {field: value}), ...]), ...]
-            xreadgroup = self.r.xreadgroup(
-                groupname=Config.redis_stream_group_name,
-                consumername=Config.redis_stream_consumer_name,
-                streams={Config.redis_stream_name: ">"},
-                count=xread,
-                noack=False,
-            )
-
+            messages = self._collect_from_warehouse(xread)
         except redis.exceptions.RedisError as e:
             ile_shared_tools.print_exception(e)
+            # Failed to collect new messages.
+            # However, there might be something in the backpack.
+            # Further processing is needed. Store the exception and continue.
             redis_exception = e
-            xreadgroup = []
-
-        if len(xreadgroup) > 0:
-            data = xreadgroup[0][1]
-            data = filter(lambda entry: bool(entry[1]), data)  # skip marked as deleted (entry[1] == {})
-            data = filter(lambda entry: "data" in entry[1], data)  # skip invalid entries
-            messages = [DeliveryMan.Message(entry) for entry in data]
-
-            with self.backpack_rlock:
-                self.backpack.extend(messages)
-        else:
             messages = []
+
+        with self.backpack_rlock:
+            self.backpack.extend(messages)
 
         if len(self.backpack) >= Config.delivery_man_capacity:
             self._incr_overloaded_cnt()
@@ -499,16 +507,57 @@ class DeliveryMan:
             (time.time() - self.last_flush) >= Config.delivery_man_flush_interval.total_seconds()
         ):
             delivery_result = self._deliver_to_target_tcp()
-            if delivery_result == DeliveryMan.DeliveryResult.FAIL_EXCEPTION:
-                return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
+
+            match delivery_result:
+                case DeliveryMan.DeliveryResult.FAIL_EXCEPTION | DeliveryMan.DeliveryResult.OK_DROPPED:
+                    return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
+
+                case DeliveryMan.DeliveryResult.OK_THROTTLED:
+                    return Periodic.PeriodicResult.REPEAT_THROTTLED
+
+                case DeliveryMan.DeliveryResult.OK_DELIVERED:
+                    pass  # nice, continue
+
+                case _:
+                    msg = f"Unknown DeliveryResult: {delivery_result}"
+                    raise NotImplementedError(msg)
 
         if redis_exception is not None:
             return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
-        if len(messages) == xread:
+        if len(messages) >= xread:
             return Periodic.PeriodicResult.REPEAT_IMMEDIATELY
 
         return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
+
+    def _collect_from_warehouse(self, count: int) -> list[DeliveryMan.Message]:
+        """Collect messages from the warehouse (Redis stream).
+
+        :param count: maximum number of messages to collect.
+        :return: list of DeliveryMan.Message.
+        :raises: redis.exceptions.RedisError.
+        """
+        if count == 0:
+            return []
+
+        # xreadgroup = [(stream_name, [(message_id, {field: value}), ...]), ...]
+        xreadgroup = self.r.xreadgroup(
+            groupname=Config.redis_stream_group_name,
+            consumername=Config.redis_stream_consumer_name,
+            streams={Config.redis_stream_name: ">"},
+            count=count,
+            noack=False,
+        )
+
+        if len(xreadgroup) > 0:
+            data = xreadgroup[0][1]
+            data = filter(lambda entry: bool(entry[1]), data)  # skip marked as deleted (entry[1] == {})
+            data = filter(lambda entry: "data" in entry[1], data)  # skip invalid entries
+            messages = [DeliveryMan.Message(entry) for entry in data]
+        else:
+            messages = []
+
+        return messages
 
     @staticmethod
     def _health_check_target_tcp() -> bool:
@@ -522,7 +571,9 @@ class DeliveryMan:
                 for health_url in Config.target_tcp_health_http_urls:
                     with session.get(health_url, timeout=timeout, verify=verify) as response:
                         ile_shared_tools.print_debug(
-                            lambda h_url=health_url: f"target_tcp_health: {h_url} -> {response.status_code}"
+                            functools.partial(
+                                lambda h_url: f"target_tcp_health: {h_url} -> {response.status_code}", h_url=health_url
+                            )
                         )
                         response.raise_for_status()
         except requests.exceptions.RequestException as e:
@@ -786,6 +837,7 @@ def main() -> int:
             delivery_man.collect_from_warehouse_and_occasionally_deliver_to_target_tcp,
             Config.delivery_man_collect_interval,
             sigterm_threading_event,
+            delivery_throttler,
         )
         delivery_man_periodic_collect.start()
     else:
