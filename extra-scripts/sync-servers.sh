@@ -35,6 +35,7 @@ paths=(
   "qdb_count_rows"
   "qdb_wal_switch"
   "extra-scripts"
+  "requirements-dev.txt"
 )
 
 tar_zstd="sync.tar.zst"
@@ -42,6 +43,15 @@ rm -f "${tar_zstd}" || true
 tar --use-compress-program zstd -cf "${tar_zstd}" "${paths[@]}" >/dev/null
 
 for server in "${servers[@]}"; do
+  if [[ -z "${server// }" ]]; then
+    continue
+  fi
+
+  if [[ "${server}" == \#* ]]; then
+    echo " > skipping ${server}"
+    continue
+  fi
+
   declare -A server_info
   for kv in $server; do
     IFS="=" read -r key value <<<"$kv"
@@ -54,11 +64,6 @@ for server in "${servers[@]}"; do
   key="${server_info[key]:-}"
   path="${server_info[path]:-}"
   roles="${server_info[roles]:-}"
-
-  if [[ "${ip}" == \#* ]]; then
-    echo " > skipping ${ip}"
-    continue
-  fi
 
   if [[ "${ip}" == "localhost" ]]; then
     echo " > docker-compose on localhost"
