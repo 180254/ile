@@ -59,6 +59,8 @@ ignore = [
     "SIM108",
     # https://docs.astral.sh/ruff/rules/print/
     "T201",
+    # https://docs.astral.sh/ruff/rules/p-print/
+    "T203",
     # https://docs.astral.sh/ruff/rules/blind-except/
     "BLE001"
 ]

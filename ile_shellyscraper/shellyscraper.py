@@ -14,13 +14,10 @@ import typing
 import urllib.parse
 import urllib.request
 
+import aiohttp
 import requests
 import requests.auth
 import websockets
-import websockets.legacy.server
-
-if typing.TYPE_CHECKING:
-    from websockets.legacy.server import WebSocketServerProtocol
 
 import ile_shared_tools
 
@@ -150,7 +147,11 @@ def time_is_synced(first_timestamp: float, second_timestamp: float) -> bool:
     return first_timestamp > 0 and second_timestamp > 0 and abs(first_timestamp - second_timestamp) < one_minute
 
 
-def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase | None = None) -> dict[str, typing.Any]:
+def http_call(
+    device_ip: str,
+    path_and_query: str,
+    auth: requests.auth.AuthBase | None = None,
+) -> dict[str, typing.Any]:
     ssl_ = device_ip in Config.shelly_devices_ssl_ips
     proto = "https" if ssl_ else "http"
     verify = Config.shelly_devices_ssl_ips_verify if ssl_ else None
@@ -162,7 +163,7 @@ def http_call(device_ip: str, path_and_query: str, auth: requests.auth.AuthBase 
         verify=verify,
     )
     response.raise_for_status()
-    data = typing.cast(dict[str, typing.Any], response.json())
+    data = typing.cast("dict[str, typing.Any]", response.json())
     ile_shared_tools.print_debug(lambda: ile_shared_tools.json_dumps(data))
     return data
 
@@ -191,9 +192,42 @@ def http_rpc_call(
         verify=verify,
     )
     response.raise_for_status()
-    data = typing.cast(dict[str, typing.Any], response.json())
+    data = typing.cast("dict[str, typing.Any]", response.json())
     ile_shared_tools.print_debug(lambda: ile_shared_tools.json_dumps(data))
     return data
+
+
+async def http_call_async(
+    device_ip: str,
+    path_and_query: str,
+    auth: requests.auth.AuthBase | None = None,
+) -> dict[str, typing.Any]:
+    ssl_ = device_ip in Config.shelly_devices_ssl_ips
+    proto = "https" if ssl_ else "http"
+    verify = Config.shelly_devices_ssl_ips_verify if ssl_ else None
+
+    timeout = aiohttp.ClientTimeout(total=Config.http_timeout_seconds)
+
+    if verify and isinstance(verify, str):  # verify=CA file path
+        ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=verify)
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+    elif verify is False:  # verify=False
+        connector = aiohttp.TCPConnector(ssl=False)
+    else:  # verify=True/verify=None
+        connector = aiohttp.TCPConnector()
+
+    auth2 = None
+    if auth and isinstance(auth, requests.auth.HTTPBasicAuth):
+        auth2 = aiohttp.BasicAuth(str(auth.username), str(auth.password))
+
+    async with (
+        aiohttp.ClientSession(timeout=timeout, connector=connector, auth=auth2) as session,
+        session.get(f"{proto}://{device_ip}/{path_and_query}") as response,
+    ):
+        response.raise_for_status()
+        data = typing.cast("dict[str, typing.Any]", await response.json())
+        ile_shared_tools.print_debug(lambda: ile_shared_tools.json_dumps(data))
+        return data
 
 
 # --------------------- SHELLY Gen1&Gen2 --------------------------------------
@@ -343,7 +377,7 @@ def shelly_gen1_ht_report_to_ilp(device_id: str, temp: str, hum: str) -> str:
 # Handler for Shelly H&T's action "report sensor values".
 # https://shelly-api-docs.shelly.cloud/gen1/#shelly-h-amp-t-settings-actions
 class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         try:
             self.send_response(200)
             self.end_headers()
@@ -402,6 +436,13 @@ class ShellyGen1HtReportSensorValuesHandler(http.server.BaseHTTPRequestHandler):
 def shelly_get_gen2_device_name(device_ip: str) -> str:
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Sys#sysgetconfig
     sysconfig = http_call(device_ip, "rpc/Sys.GetConfig", auth=Config.shelly_gen2_auth)
+    device_name: str = sysconfig["device"]["name"]
+    return device_name
+
+
+async def shelly_get_gen2_device_name_async(device_ip: str) -> str:
+    # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Sys#sysgetconfig
+    sysconfig = await http_call_async(device_ip, "rpc/Sys.GetConfig", auth=Config.shelly_gen2_auth)
     device_name: str = sysconfig["device"]["name"]
     return device_name
 
@@ -545,10 +586,19 @@ def shelly_gen2_plusht_status_to_ilp(device_name: str | None, status: dict[str, 
     )
 
 
-async def shelly_gen2_outbound_websocket_handler(websocket: WebSocketServerProtocol, path: str) -> None:
+async def shelly_gen2_outbound_websocket_handler(websocket: websockets.ServerConnection) -> None:
     try:
         device_ip = websocket.remote_address[0]
 
+        if not websocket.request:
+            ile_shared_tools.print_(
+                f"The shelly_gen2_outbound_websocket_handler failed for device_ip={device_ip} "
+                f"due to lack of handshake request object.",
+                file=sys.stderr,
+            )
+            return
+
+        path = websocket.request.path
         if Config.auth_token and Config.auth_token not in path:
             ile_shared_tools.print_(
                 f"The shelly_gen2_outbound_websocket_handler failed for device_ip={device_ip} "
@@ -572,7 +622,7 @@ async def shelly_gen2_outbound_websocket_handler(websocket: WebSocketServerProto
             if payload["method"] == "NotifyFullStatus":
                 try:
                     # The websocket connection is still in progress. Device has active Wi-Fi.
-                    device_name = shelly_get_gen2_device_name(device_ip) if not Config.cloud_mode else None
+                    device_name = await shelly_get_gen2_device_name_async(device_ip) if not Config.cloud_mode else None
 
                 except Exception as exception:
                     ile_shared_tools.print_exception(exception)
@@ -692,13 +742,13 @@ def main() -> int:
             else:
                 websocket_ssl_context = None
 
-            ws_server = await websockets.legacy.server.serve(
+            ws_server = await websockets.serve(
                 shelly_gen2_outbound_websocket_handler,
                 Config.shelly_gen2_websocket_bind_address[0],
                 Config.shelly_gen2_websocket_bind_address[1],
                 ssl=websocket_ssl_context,
             )
-            await ws_server.server.serve_forever()
+            await ws_server.serve_forever()
 
         # Horrible. Works and is compatible with sigterm_threading_event.
         websocket_sever_thread = threading.Thread(

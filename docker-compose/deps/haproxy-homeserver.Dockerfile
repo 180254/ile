@@ -1,5 +1,5 @@
-# https://github.com/docker-library/haproxy/blob/master/3.1/Dockerfile
-FROM haproxy:3.1.1-bookworm
+# https://github.com/docker-library/haproxy/blob/master/3.2/Dockerfile
+FROM haproxy:3.2.6-trixie
 
 USER root
 
@@ -19,20 +19,23 @@ ARG ILE_IDH_GRAFANA_HOST="grafana"
 ARG ILE_IDH_QUESTDB_STATS_USERNAME="admin"
 ARG ILE_IDH_QUESTDB_STATS_PASSWORD="password"
 
-# http://docs.haproxy.org/2.8/configuration.html
-# tcplog  - http://docs.haproxy.org/2.8/configuration.html#8.2.2
-# httplog - http://docs.haproxy.org/2.8/configuration.html#8.2.3
+# http://docs.haproxy.org/3.2/configuration.html
+# tcplog  - http://docs.haproxy.org/3.2/configuration.html#8.2.2
+# httplog - http://docs.haproxy.org/3.2/configuration.html#8.2.3
 COPY <<EOF /usr/local/etc/haproxy/haproxy.cfg
 global
     maxconn 1000
     log stdout local0
 
-    # generated 2023-09-04, Mozilla Guideline v5.7, HAProxy 2.1, OpenSSL 1.1.1k, modern configuration, no HSTS, no OCSP
-    # https://ssl-config.mozilla.org/#server=haproxy&version=2.1&config=modern&openssl=1.1.1k&hsts=false&ocsp=false&guideline=5.7
+    # generated 2025-10-03, Mozilla Guideline v5.7, HAProxy 3.2, OpenSSL 3.4.0, modern config
+    # https://ssl-config.mozilla.org/#server=haproxy&version=3.2&config=modern&openssl=3.4.0&guideline=5.7
+    ssl-default-bind-curves X25519:prime256v1:secp384r1
     ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
-    ssl-default-bind-options prefer-client-ciphers no-sslv3 no-tlsv10 no-tlsv11 no-tlsv12 no-tls-tickets
+    ssl-default-bind-options prefer-client-ciphers ssl-min-ver TLSv1.3 no-tls-tickets
+
+    ssl-default-server-curves X25519:prime256v1:secp384r1
     ssl-default-server-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
-    ssl-default-server-options no-sslv3 no-tlsv10 no-tlsv11 no-tlsv12 no-tls-tickets
+    ssl-default-server-options ssl-min-ver TLSv1.3 no-tls-tickets
 
 defaults
     log global

@@ -9,7 +9,7 @@ pushd "${SCRIPT_DIR}" >/dev/null
 ILE_DIR=$(realpath "${SCRIPT_DIR}/../")
 
 if [ ! -f "${ILE_DIR}/venv/bin/python3" ]; then
-  echo "venv not found, run ${ILE_DIR}/venv.sh first."
+  echo "venv not found, run ${ILE_DIR}/extra-scripts/venv-create-or-upgrade.sh first."
   exit
 fi
 
@@ -24,7 +24,7 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
-if [ "$1" != "true" ] && [ "$1" != "false" ]; then
+if [ "$1" != "true" ] && [ "$1" != "false" ] && [ "$1" != "check" ]; then
   usage
   exit 1
 fi

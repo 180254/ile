@@ -1,2 +1,5 @@
 requests>=2,<3
-websockets>=14,<15
+# websockets>=15,<16
+# https://github.com/python-websockets/websockets/issues/1616
+git+https://github.com/python-websockets/websockets.git@3cf34527614cd051f4513344384f513dcc957092
+aiohttp[speedups]>=3,<4
