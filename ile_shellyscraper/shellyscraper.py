@@ -266,8 +266,20 @@ def shelly_get_gen1_device_info(device_ip: str) -> tuple[str, str, str]:
 
 
 def shelly_get_gen1_device_status_ilp(device_ip: str, device_type: str, device_id: str, device_name: str) -> str:
-    # https://shelly-api-docs.shelly.cloud/gen1/#shelly-plug-plugs-coiot
-    if device_type in ("SHPLG-1", "SHPLG-S", "SHPLG-U1", "HPLG2-1"):
+    # https://shelly-api-docs.shelly.cloud/gen1/#shelly-plug-plugs
+    if device_type in (
+        # Shelly Plug
+        # https://kb.shelly.cloud/knowledge-base/shelly-plug
+        "SHPLG-1",
+        # Shelly Plug S
+        # https://kb.shelly.cloud/knowledge-base/shelly-plug-s
+        "SHPLG-S",
+        # Shelly Plug US
+        # https://kb.shelly.cloud/knowledge-base/shelly-plug-us
+        "SHPLG-U1",
+        # Shelly Plug E
+        "SHPLG2-1",
+    ):
         # https://shelly-api-docs.shelly.cloud/gen1/#status
         # https://shelly-api-docs.shelly.cloud/gen1/#shelly-plug-plugs-status
         status = http_call(device_ip, "status", auth=Config.shelly_gen1_auth)
@@ -448,13 +460,29 @@ async def shelly_get_gen2_device_name_async(device_ip: str) -> str:
 
 
 def shelly_get_gen2_device_status_ilp(device_ip: str, device_type: str, device_name: str) -> str:
-    # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-it
-    # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-s
-    # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-s-v2
-    # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-uk
-    # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-us
-    # https://kb.shelly.cloud/knowledge-base/shelly-plug-s-mtr-gen3
-    if device_type in ("SNPL-00110IT", "SNPL-00112EU", "SNPL-10112EU", "SNPL-00112UK", "SNPL-00116US", "S3PL-00112EU"):
+    if device_type in (
+        # Shelly Plus Plug IT
+        # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-it
+        "SNPL-00110IT",
+        # Shelly Plus Plug S V1
+        # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-s
+        "SNPL-00112EU",
+        # Shelly Plus Plug S V2
+        # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-s-v2
+        "SNPL-10112EU",
+        # Shelly Plus Plug UK
+        # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-uk
+        "SNPL-00112UK",
+        # Shelly Plus Plug US
+        # https://kb.shelly.cloud/knowledge-base/shelly-plus-plug-us
+        "SNPL-00116US",
+        # Shelly Plug S MTR Gen3
+        # https://kb.shelly.cloud/knowledge-base/shelly-plug-s-mtr-gen3
+        "S3PL-00112EU",
+        # Shelly Outdoor Plug S Gen3
+        # https://kb.shelly.cloud/knowledge-base/outdoor-plug-s-gen3
+        "S3PL-20112EU",
+    ):
         # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch#status
         status = http_rpc_call(device_ip, "Switch.GetStatus", {"id": 0}, auth=Config.shelly_gen2_auth)
         return shelly_gen2_plug_status_to_ilp(device_name, status)
