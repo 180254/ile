@@ -1,10 +1,10 @@
-FROM python:3.13-trixie AS build-venv
+FROM python:3.14-trixie AS build-venv
 RUN python3 -m venv /venv
 RUN /venv/bin/pip3 install --upgrade pip setuptools wheel
 COPY ile_tcp_cache/requirements.txt /requirements.txt
 RUN /venv/bin/pip3 install --disable-pip-version-check -r /requirements.txt
 
-FROM python:3.13-slim-trixie
+FROM python:3.14-slim-trixie
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"

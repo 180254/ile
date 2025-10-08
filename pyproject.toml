@@ -3,7 +3,7 @@ name = "ile"
 version = "0.0.1"
 description = "one's home measurements"
 readme = "README.adoc"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 license = { file = "LICENSE" }
 keywords = [
     "Shelly",
@@ -26,11 +26,11 @@ maintainers = [
 
 [tool.black]
 line-length = 120
-target-version = ["py313"]
+target-version = ["py314"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -69,12 +69,12 @@ ignore = [
 convention = "google"
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 python_executable = "./venv/bin/python3"
 strict = true
 
 [tool.pyright]
 venvPath = "."
 venv = "venv"
-pythonVersion = "3.13"
+pythonVersion = "3.14"
 pythonPlatform = "Linux"

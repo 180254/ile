@@ -482,7 +482,7 @@ class DeliveryMan:
     def collect_from_warehouse_and_occasionally_deliver_to_target_tcp(self) -> Periodic.PeriodicResult:
         """Handle processing: [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP].
 
-        Does the [Warehouse: Redis stream] -> [Delivery man] processing..
+        Does the [Warehouse: Redis stream] -> [Delivery man] processing.
         Also, occasionally calls handling [Delivery man] -> [Destination location: target TCP].
         """
         xread = min(max(Config.delivery_man_capacity - len(self.backpack), 1), Config.redis_steam_read_count)

@@ -739,7 +739,7 @@ def main() -> int:
     # Handle Shelly H&T's action: "report sensor values".
     if Config.shelly_gen1_webhook_enabled:
         # noinspection PyTypeChecker
-        # (this is correct usage - https://docs.python.org/3.13/library/http.server.html#http.server.HTTPServer)
+        # (this is correct usage - https://docs.python.org/3.14/library/http.server.html#http.server.HTTPServer)
         shelly_ht_report_webhook = http.server.ThreadingHTTPServer(
             Config.shelly_gen1_webhook_bind_address, ShellyGen1HtReportSensorValuesHandler
         )
