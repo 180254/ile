@@ -11,6 +11,8 @@ networks:
 services:
   hello-world:
     image: hello-world:latest
+    container_name: ile-hello-world
+    restart: "no"
     networks:
       vnet:
         ipv4_address: 192.168.130.100

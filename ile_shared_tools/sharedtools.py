@@ -78,27 +78,31 @@ def json_dumps(data: dict[str, typing.Any]) -> str:
 
 
 def configure_sigterm_handler() -> threading.Event:
-    sigterm_cnt = [0]
     sigterm_threading_event = threading.Event()
 
-    def sigterm_handler(signal_number: int, _current_stack_frame: types.FrameType | None) -> None:
-        signal_name = signal.Signals(signal_number).name
+    class SigtermHandler:
+        def __init__(self) -> None:
+            self.sigterm_cnt = 0
 
-        sigterm_cnt[0] += 1
-        if sigterm_cnt[0] == 1:
-            print_(f"Program interrupted by the {signal_name}, graceful shutdown in progress.", file=sys.stderr)
-            sigterm_threading_event.set()
+        def __call__(self, signal_number: int, _current_stack_frame: types.FrameType | None) -> None:
+            signal_name = signal.Signals(signal_number).name
 
-            for thing in threading.enumerate():
-                if isinstance(thing, threading.Timer):
-                    print_(f"Canceling threading.Timer: {thing}")
-                    thing.cancel()
-        else:
-            print_(f"Program interrupted by the {signal_name} again, forced shutdown in progress.", file=sys.stderr)
-            sys.exit(-1)
+            self.sigterm_cnt += 1
+            if self.sigterm_cnt == 1:
+                print_(f"Program interrupted by the {signal_name}, graceful shutdown in progress.", file=sys.stderr)
+                sigterm_threading_event.set()
 
+                for thing in threading.enumerate():
+                    if isinstance(thing, threading.Timer):
+                        print_(f"Canceling threading.Timer: {thing}")
+                        thing.cancel()
+            else:
+                print_(f"Program interrupted by the {signal_name} again, forced shutdown in progress.", file=sys.stderr)
+                sys.exit(-1)
+
+    handler = SigtermHandler()
     for some_signal in [signal.SIGTERM, signal.SIGINT]:
-        signal.signal(some_signal, sigterm_handler)
+        signal.signal(some_signal, handler)
 
     return sigterm_threading_event
 
@@ -106,7 +110,7 @@ def configure_sigterm_handler() -> threading.Event:
 # ilp = InfluxDB line protocol
 # https://questdb.io/docs/reference/api/ilp/overview/
 def write_ilp_to_questdb(data: str) -> None:
-    if data is None or data == "":
+    if not data:
         return
 
     # Fix ilp data.
@@ -116,7 +120,7 @@ def write_ilp_to_questdb(data: str) -> None:
 
     print_(data, end="")
 
-    # Treat empty IOR_QUESTDB_HOST as print-only mode.
+    # Treat empty ILE_QUESTDB_HOST as print-only mode.
     if not Config.questdb_address[0]:
         return
 
@@ -143,4 +147,3 @@ def write_ilp_to_questdb(data: str) -> None:
         sock.sendall(b"\n")
 
         sock.shutdown(socket.SHUT_RDWR)
-        sock.close()

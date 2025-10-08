@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import collections
+import contextlib
 import datetime
 import enum
 import functools
@@ -78,7 +79,7 @@ class Env:
     ILE_ITC_SOCKET_TIMEOUT: str = getenv("ILE_ITC_SOCKET_TIMEOUT", "30s")
 
     ILE_ITC_MY_TCP_BIND_HOST: str = getenv("ILE_ITC_MY_TCP_BIND_HOST", "127.0.0.1")
-    ILE_C_MY_TCP_BIND_PORT: str = getenv("ILE_ITC_MY_TCP_BIND_PORT", "9009")
+    ILE_ITC_MY_TCP_BIND_PORT: str = getenv("ILE_ITC_MY_TCP_BIND_PORT", "9009")
     ILE_ITC_MY_TCP_SSL: str = getenv("ILE_ITC_MY_TCP_SSL", "false")
     ILE_ITC_MY_TCP_SSL_CERTFILE: str = getenv("ILE_ITC_MY_TCP_SSL_CERTFILE", "server.pem")
     ILE_ITC_MY_TCP_SSL_KEYFILE: str = getenv("ILE_ITC_MY_TCP_SSL_KEYFILE", "server.crt")
@@ -135,7 +136,7 @@ class Env:
     ILE_ITC_STATUS_INTERVAL: str = getenv("ILE_ITC_STATUS_INTERVAL", "60s")
 
     ILE_ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS: str = getenv(
-        "ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS", "1.1,1.5,2.0,5.0"
+        "ILE_ITC_PERIODIC_FAILURE_BACKOFF_MULTIPLIERS", "1.1,1.5,2.0,5.0"
     )
     ILE_ITC_PERIODIC_JITTER_MULTIPLIER: str = getenv("ILE_ITC_PERIODIC_JITTER_MULTIPLIER", "0.05")
     ILE_ITC_PERIODIC_DECELERATOR_DELAY: str = getenv("ILE_ITC_PERIODIC_DECELERATOR_DELAY", "500ms")
@@ -147,7 +148,7 @@ class Config:
     socket_connect_timeout: datetime.timedelta = duration(Env.ILE_ITC_SOCKET_CONNECT_TIMEOUT)
     socket_timeout: datetime.timedelta = duration(Env.ILE_ITC_SOCKET_TIMEOUT)
 
-    my_tcp_bind_address: tuple[str, int] = (Env.ILE_ITC_MY_TCP_BIND_HOST, int(Env.ILE_C_MY_TCP_BIND_PORT))
+    my_tcp_bind_address: tuple[str, int] = (Env.ILE_ITC_MY_TCP_BIND_HOST, int(Env.ILE_ITC_MY_TCP_BIND_PORT))
     my_tcp_ssl: bool = Env.ILE_ITC_MY_TCP_SSL.lower() == "true"
     my_tcp_ssl_certfile: str = Env.ILE_ITC_MY_TCP_SSL_CERTFILE
     my_tcp_ssl_keyfile: str = Env.ILE_ITC_MY_TCP_SSL_KEYFILE
@@ -179,15 +180,16 @@ class Config:
     parcel_collector_capacity: int = int(Env.ILE_ITC_PARCEL_COLLECTOR_CAPACITY)
     parcel_collector_flush_interval: datetime.timedelta = duration(Env.ILE_ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL)
 
-    redis_steam_read_count: int = int(Env.ILE_ITC_REDIS_STREAM_READ_COUNT)
+    redis_stream_read_count: int = int(Env.ILE_ITC_REDIS_STREAM_READ_COUNT)
     delivery_man_capacity: int = int(Env.ILE_ITC_DELIVERY_MAN_CAPACITY)
 
     delivery_man_enabled: bool = Env.ILE_ITC_DELIVERY_MAN_ENABLED.lower() == "true"
     delivery_man_collect_interval: datetime.timedelta = duration(Env.ILE_ITC_DELIVERY_MAN_COLLECT_INTERVAL)
     delivery_man_flush_interval: datetime.timedelta = duration(Env.ILE_ITC_DELIVERY_MAN_FLUSH_INTERVAL)
 
-    delivery_man_throttler_weight_limit: int = int(Env.ILE_ITC_DELIVERY_MAN_THROTTLER.split("/")[0])
-    delivery_man_throttler_time_window: datetime.timedelta = duration(Env.ILE_ITC_DELIVERY_MAN_THROTTLER.split("/")[1])
+    _throttler_parts = Env.ILE_ITC_DELIVERY_MAN_THROTTLER.split("/")
+    delivery_man_throttler_weight_limit: int = int(_throttler_parts[0])
+    delivery_man_throttler_time_window: datetime.timedelta = duration(_throttler_parts[1])
 
     counter_hits_on_target: str = Env.ILE_ITC_COUNTER_HITS_ON_TARGET
     counter_delivered_msgs: str = Env.ILE_ITC_COUNTER_DELIVERED_MSGS
@@ -270,8 +272,8 @@ class Throttler:
             return time.time()
 
     def cancel(self, permit: Throttler.Permit) -> None:
-        """Cancel permit, mark as unused."""
-        with self.rlock:
+        """Cancel permit, mark as unused; ignore if already expired."""
+        with self.rlock, contextlib.suppress(ValueError):
             self.issued_permits.remove(permit)
 
 
@@ -333,7 +335,10 @@ class Periodic:
             traceback.print_tb(e.__traceback__)
             result = Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
-        delay: float
+        if self.sigterm_threading_event.is_set():
+            return
+
+        delay: float = 0.0
         match result:
             case Periodic.PeriodicResult.REPEAT_ON_SCHEDULE:
                 self.backoff_idx = -1
@@ -485,7 +490,7 @@ class DeliveryMan:
         Does the [Warehouse: Redis stream] -> [Delivery man] processing.
         Also, occasionally calls handling [Delivery man] -> [Destination location: target TCP].
         """
-        xread = min(max(Config.delivery_man_capacity - len(self.backpack), 1), Config.redis_steam_read_count)
+        xread = min(max(Config.delivery_man_capacity - len(self.backpack), 1), Config.redis_stream_read_count)
         redis_exception = None
         try:
             messages = self._collect_from_warehouse(xread)
@@ -661,7 +666,7 @@ class DeliveryMan:
                 ile_shared_tools.print_exception(e)
                 delivered = False
 
-        # At this pont data was processed - delivered or dropped.
+        # At this point data was processed - delivered or dropped.
         try:
             self.r.xack(Config.redis_stream_name, Config.redis_stream_group_name, *message_ids)
             self.r.xdel(Config.redis_stream_name, *message_ids)
@@ -814,8 +819,8 @@ def main() -> int:
                 Config.my_tcp_ssl_certfile, Config.my_tcp_ssl_keyfile, Config.my_tcp_ssl_password
             )
             tcp_server.socket = ssl_context.wrap_socket(tcp_server.socket, server_side=True)
-        webhook_server_thread = VerboseThread(target=tcp_server.serve_forever, daemon=True)
-        webhook_server_thread.start()
+        tcp_server_thread = VerboseThread(target=tcp_server.serve_forever, daemon=True)
+        tcp_server_thread.start()
 
         # [Parcel collector] -> [Warehouse: Redis stream]
         parcel_collector_periodic_flush = Periodic(

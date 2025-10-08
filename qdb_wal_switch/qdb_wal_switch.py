@@ -16,7 +16,7 @@ min_arg_len = 2
 wal_cfg = sys.argv[wal_arg_index] if len(sys.argv) >= min_arg_len else os.environ.get("QDB_WAL", "true")
 
 if wal_cfg not in ("true", "false", "check"):
-    print("WAL must be 'true', 'false' or 'check'")
+    print("WAL must be 'true', 'false' or 'check'.")
     sys.exit(1)
 
 print("wal: " + str(wal_cfg))
@@ -31,8 +31,8 @@ with (
         wal_tables = cursor.fetchall()
 
         for entry in wal_tables:
-            entry_line = " | ".join(f"{k} {v}" for k, v in entry.items())
-            print(entry)
+            entry_line = " | ".join(f"{k}={v}" for k, v in entry.items())
+            print(entry_line)
 
     else:
         wal = wal_cfg == "true"
@@ -50,4 +50,4 @@ with (
             cursor.execute(stmt)
 
         print("-" * 40)
-        print("done, restart the database")
+        print("done, restart the database to apply WAL mode changes")

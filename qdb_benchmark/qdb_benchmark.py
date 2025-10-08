@@ -6,9 +6,9 @@ import time
 import psycopg.rows
 import psycopg.sql
 
-# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" venv/bin/python3 qdb_count_rows.py
+# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" venv/bin/python3 qdb_benchmark.py
 
-dsn = os.environ.get("QDB_DSN", "postgresql://admin:quest@localhost:8812/qdbb")
+dsn = os.environ.get("QDB_DSN", "postgresql://admin:quest@localhost:8812/qdb")
 
 max_reps = 10
 max_time_seconds = 10
@@ -39,7 +39,7 @@ with (
     for i, query in enumerate(queries2):
         reps = 0
         start_time = time.time()
-        results = []
+        results: list[float] = []
 
         while reps < max_reps and time.time() - start_time < max_time_seconds:
             query_start_time = time.time()
@@ -56,8 +56,9 @@ with (
         max_time = max(results)
         mean_time = statistics.mean(results)
         median_time = statistics.median(results)
-        stdev_time = statistics.stdev(results)
-        quartiles = statistics.quantiles(results, n=4)
+        stdev_time = statistics.stdev(results) if len(results) > 1 else 0.0
+        quartiles_n = 4
+        quartiles = statistics.quantiles(results, n=quartiles_n) if len(results) > quartiles_n - 1 else [0.0, 0.0, 0.0]
 
         print(
             f"{i:>{width}} | "

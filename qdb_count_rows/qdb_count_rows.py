@@ -35,7 +35,7 @@ with (
 
     prefixes = ["shelly_ht_", "shelly_plugs_", "telegraf_"]
     for prefix in prefixes:
-        count = sum([results[name] for name in results if name.startswith(prefix)])
+        count = sum(results[name] for name in results if name.startswith(prefix))
         print(f"{prefix}: {count} ({count / total:.2%})")
 
     print("-" * 40)

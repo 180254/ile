@@ -779,11 +779,11 @@ def main() -> int:
             await ws_server.serve_forever()
 
         # Horrible. Works and is compatible with sigterm_threading_event.
-        websocket_sever_thread = threading.Thread(
+        websocket_server_thread = threading.Thread(
             target=lambda: asyncio.run(shelly_gen2_outbound_websocket_server()),
             daemon=True,
         )
-        websocket_sever_thread.start()
+        websocket_server_thread.start()
 
     ile_shared_tools.print_("STARTED", file=sys.stderr)
     sigterm_threading_event.wait()
