@@ -4,9 +4,7 @@ RUN /venv/bin/pip3 install --upgrade pip setuptools wheel
 COPY ile_shellyscraper/requirements.txt /requirements.txt
 RUN /venv/bin/pip3 install --disable-pip-version-check -r /requirements.txt
 
-# FROM python:3.14-slim-trixie
-# https://github.com/docker-library/python/issues/1085
-FROM python:3.14-trixie
+FROM python:3.14-slim-trixie
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
