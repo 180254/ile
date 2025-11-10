@@ -113,6 +113,8 @@ services:
 
   # https://hub.docker.com/_/telegraf
   # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
+  # https://docs.docker.com/compose/how-tos/gpu-support/
+  # https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
   telegraf:
     build:
       context: ${PWD}
@@ -144,13 +146,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${ILE_DIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${ILE_DIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
-      - ${ILE_DIR}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
+      # - ${ILE_DIR}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
       - ${ILE_DIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
-      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
-      - /usr/lib/x86_64-linux-gnu/libnvidia-ml.so:/usr/lib/x86_64-linux-gnu/libnvidia-ml.so:ro
-    devices:
-      - /dev/nvidiactl:/dev/nvidiactl
-      - /dev/nvidia0:/dev/nvidia0
     security_opt:
       # https://github.com/influxdata/telegraf/issues/6574
       - apparmor:unconfined
@@ -178,4 +175,7 @@ services:
           cpus: '0.4'
         reservations:
           cpus: '0.3'
-
+#          devices:
+#            - driver: nvidia
+#              device_ids: ['0']
+#              capabilities: [gpu]
