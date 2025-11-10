@@ -1,5 +1,5 @@
 # https://github.com/redis/docker-library-redis/blob/release/8.2/debian/Dockerfile
-FROM redis:8.2.2-bookworm
+FROM redis:8.2.3-bookworm
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
