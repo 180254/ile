@@ -8,17 +8,37 @@ ILE_DIR=$(realpath "${SCRIPT_DIR}/../")
 
 pushd "${ILE_DIR}" >/dev/null
 
-python3 -m venv venv
-venv/bin/pip3 install --upgrade pip wheel setuptools
-venv/bin/pip3 install --disable-pip-version-check --upgrade -r requirements-dev.txt
+command -v uv &>/dev/null && TOOL=uv || TOOL=
+echo "Using tool: ${TOOL:-python3 -m venv}"
+
+echo "Creating or upgrading virtual environment in: ${ILE_DIR}/venv"
+if [[ "${TOOL}" == "uv" ]]; then
+  uv venv venv --seed --allow-existing
+  uv pip install --python venv/bin/python3 --upgrade pip wheel setuptools
+  uv pip install --python venv/bin/python3 --upgrade -r requirements-dev.txt
+else
+  python3 -m venv venv
+  venv/bin/pip3 install --upgrade pip wheel setuptools
+  venv/bin/pip3 install --disable-pip-version-check --upgrade -r requirements-dev.txt
+fi
 
 for subproject in ile_shellyscraper ile_tcp_cache qdb_count_rows qdb_wal_switch; do
   if [[ -f "$subproject/requirements.txt" ]]; then
-    venv/bin/pip3 install --disable-pip-version-check --upgrade -r $subproject/requirements.txt
+    echo "Installing requirements for subproject: $subproject"
+    if [[ "${TOOL}" == "uv" ]]; then
+      uv pip install --python venv/bin/python3 --upgrade -r $subproject/requirements.txt
+    else
+      venv/bin/pip3 install --disable-pip-version-check --upgrade -r $subproject/requirements.txt
+    fi
   fi
 
   if [[ -f "$subproject/requirements-dev.txt" ]]; then
-    venv/bin/pip3 install --disable-pip-version-check --upgrade -r $subproject/requirements-dev.txt
+    echo "Installing dev requirements for subproject: $subproject"
+    if [[ "${TOOL}" == "uv" ]]; then
+      uv pip install --python venv/bin/python3 --upgrade -r $subproject/requirements.txt
+    else
+      venv/bin/pip3 install --disable-pip-version-check --upgrade -r $subproject/requirements-dev.txt
+    fi
   fi
 done
 
