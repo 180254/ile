@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if ! command -v cfssl &>/dev/null; then
   echo >&2 "Error: cfssl is not installed (https://github.com/cloudflare/cfssl)"
