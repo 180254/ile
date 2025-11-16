@@ -57,7 +57,7 @@
             "steps": [
               {
                 "color": "#a07d41",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -89,7 +89,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.4.0",
+      "pluginVersion": "12.2.0-17142428006",
       "targets": [
         {
           "datasource": {
@@ -142,7 +142,7 @@
             "steps": [
               {
                 "color": "#6e7d96",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -174,7 +174,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.4.0",
+      "pluginVersion": "12.2.0-17142428006",
       "targets": [
         {
           "datasource": {
@@ -262,7 +262,7 @@
             "steps": [
               {
                 "color": "light-orange",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -285,11 +285,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.4.0",
+      "pluginVersion": "12.2.0-17142428006",
       "targets": [
         {
           "datasource": {
@@ -378,7 +379,7 @@
             "steps": [
               {
                 "color": "#6e7d96",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -401,11 +402,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "none"
         }
       },
-      "pluginVersion": "11.4.0",
+      "pluginVersion": "12.2.0-17142428006",
       "targets": [
         {
           "datasource": {
@@ -445,7 +447,7 @@
   ],
   "preload": false,
   "refresh": "",
-  "schemaVersion": 40,
+  "schemaVersion": 41,
   "tags": [],
   "templating": {
     "list": [
@@ -491,6 +493,5 @@
   "timezone": "browser",
   "title": "shellyht2",
   "uid": "shellyht2",
-  "version": 2,
-  "weekStart": ""
+  "version": 2
 }
