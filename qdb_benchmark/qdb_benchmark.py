@@ -10,15 +10,22 @@ import psycopg.sql
 
 dsn = os.environ.get("QDB_DSN", "postgresql://admin:quest@localhost:8812/qdb")
 
-max_reps = 10
-max_time_seconds = 10
+
+max_reps_per_query = 10
+max_time_per_query_seconds = 20
+
+statement_timeout_seconds = 120
 sleep_time_seconds = 0.1
 
 queries = ["tables()"]
 queries2 = [bytes(q, "utf-8") for q in queries]
 
 with (
-    psycopg.Connection.connect(conninfo=dsn, connect_timeout=3) as conn,
+    psycopg.Connection.connect(
+        conninfo=dsn,
+        connect_timeout=3,
+        options=f"-c statement_timeout={statement_timeout_seconds * 1000}",
+    ) as conn,
     conn.cursor(row_factory=psycopg.rows.dict_row) as cursor,
 ):
     width = 10
@@ -41,7 +48,7 @@ with (
         start_time = time.time()
         results: list[float] = []
 
-        while reps < max_reps and time.time() - start_time < max_time_seconds:
+        while reps < max_reps_per_query and time.time() - start_time < max_time_per_query_seconds:
             query_start_time = time.time()
 
             cursor.execute(query)
