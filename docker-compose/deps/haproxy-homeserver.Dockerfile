@@ -41,8 +41,7 @@ defaults
     log global
     timeout client 5s
     timeout connect 5s
-    timeout server 5s
-    timeout http-request 5s
+    timeout server 120s
 
 frontend health
     mode http
