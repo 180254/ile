@@ -1564,16 +1564,21 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "description": "sampled by \"consumption interval\"",
           "fieldConfig": {
             "defaults": {
               "color": {
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "axisSoftMin": 0,
                 "barAlignment": 0,
+                "barWidthFactor": 0.6,
                 "drawStyle": "line",
                 "fillOpacity": 0,
                 "gradientMode": "none",
@@ -1582,6 +1587,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
                 "pointSize": 5,
@@ -1603,7 +1609,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": 0
                   }
                 ]
               },
@@ -1665,9 +1672,9 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 21
+            "y": 28
           },
-          "id": 15,
+          "id": 30,
           "options": {
             "legend": {
               "calcs": [],
@@ -1676,21 +1683,24 @@
               "showLegend": true
             },
             "tooltip": {
+              "hideZeros": false,
               "mode": "single",
               "sort": "none"
             }
           },
+          "pluginVersion": "12.2.0-17142428006",
           "targets": [
             {
               "datasource": {
                 "type": "postgres",
                 "uid": "${datasource}"
               },
+              "editorMode": "code",
               "format": "time_series",
               "group": [],
               "metricColumn": "none",
               "rawQuery": true,
-              "rawSql": "with\n    shelly_plugs_meter1b as (\n        select timestamp, total\n        from shelly_plugs_meter1\n        where device_name = '$plugs_device_name' and idx = '$idx' and is_valid = true and $__timeFilter(timestamp)\n    ),\n    interval_s as (\n        select (case\n            when '$interval' like '%s' then cast(left('$interval', -1) as int)*1\n            when '$interval' like '%m' then cast(left('$interval', -1) as int)*60\n            when '$interval' like '%h' then cast(left('$interval', -1) as int)*3600\n            when '$interval' like '%d' then cast(left('$interval', -1) as int)*86400\n            when '$interval' like '%w' then cast(left('$interval', -1) as int)*604800\n            when '$interval' like '%M' then cast(left('$interval', -1) as int)*2678400\n            when '$interval' like '%y' then cast(left('$interval', -1) as int)*31536000\n            else 0 end\n        ) as value\n    ),\n    consumption_t as ( -- Watt-minute\n        select\n            t1.timestamp, \n            (case\n                when datediff('s', t1.timestamp, t2.timestamp) > interval_s.value then null\n                when t1.total >= t2.total then t1.total-t2.total\n                else null end) as consumption\n        from shelly_plugs_meter1b t1\n        lt join shelly_plugs_meter1b t2\n        cross join interval_s\n    ),\n    consumption_sampled_t as (\n        select\n            $__time(timestamp),\n            sum(consumption)*(1.0/60.0) as value -- Watt-hour\n        from consumption_t\n        sample by $interval fill(null)\n    ),\n    consumption_total_t as (\n        select sum(value) as total from consumption_sampled_t\n    ),\n    consumption_cumulative_t as (\n        select t1.time, sum(t2.value) as value\n        from consumption_sampled_t t1\n        inner join consumption_sampled_t t2 on t1.time >= t2.time\n    ),\n    dates_t as (\n        select\n            -- Timestamps for points 0 and max. Shifted by 1s it will definitely be displayed.\n            cast(($__unixEpochFrom()+1)*1000000L as timestamp) as timestamp_zero,\n            cast(($__unixEpochTo()-1)*1000000L   as timestamp) as timestamp_max,\n            \n            -- Default sample alignment is 'align to first observation', will be changed to 'to last observation'.\n            -- Timestamps shifted by $interval for 'where' conditions.\n            -- Additional shifted by 2s, so that the interval is definitely smaller than the above-mentioned 0 and max.\n            cast(($__unixEpochFrom()-interval_s.value+2)*1000000L as timestamp) as timestamp_from_shifted,\n            cast(($__unixEpochTo()-interval_s.value-2)*1000000L   as timestamp) as timestamp_to_shifted\n        from\n            interval_s\n    )\n\nselect \n    timestamp_zero as time,\n    0 as value,\n    0 as percent,\n    0 as passage_of_time\nfrom dates_t\n\nunion\n\nselect\n    -- default sample alignment is 'align to first observation', change to 'to last observation'\n    dateadd('s', interval_s.value, t1.time) as time,\n    t1.value,\n    t1.value/t2.total*100 as percent,\n    -- passage_of_time:\n    datediff('s',dates_t.timestamp_zero, dateadd('s', interval_s.value, t1.time))*1.0/ -- seconds elapsed\n    datediff('s', dates_t.timestamp_zero, dates_t.timestamp_max) -- total seconds\n    *100 as passage_of_time\nfrom consumption_cumulative_t t1\ncross join consumption_total_t t2\ncross join interval_s\ncross join dates_t\nwhere t1.time between dates_t.timestamp_from_shifted and dates_t.timestamp_to_shifted\n\nunion\n\nselect \n    dates_t.timestamp_max as time,\n    consumption_total_t.total as value,\n    100 as percent,\n    100 as passage_of_time\nfrom consumption_total_t\ncross join dates_t",
+              "rawSql": "WITH\n\ninterval_s AS (\n    SELECT (\n        CASE\n            WHEN '$interval' LIKE '%s' THEN CAST(left('$interval', -1) AS INT) * 1\n            WHEN '$interval' LIKE '%m' THEN CAST(left('$interval', -1) AS INT) * 60\n            WHEN '$interval' LIKE '%h' THEN CAST(left('$interval', -1) AS INT) * 3600\n            WHEN '$interval' LIKE '%d' THEN CAST(left('$interval', -1) AS INT) * 86400\n            WHEN '$interval' LIKE '%w' THEN CAST(left('$interval',-1) AS INT) * 604800\n            WHEN '$interval' LIKE '%M' THEN CAST(left('$interval', -1) AS INT) * 2678400\n            WHEN '$interval' LIKE '%y' THEN CAST(left('$interval',-1) AS INT) * 31536000\n            ELSE 0\n        END\n    ) AS interval_sec\n),\n\nraw AS (\n    SELECT timestamp, total\n    FROM shelly_plugs_meter1\n    WHERE device_name = '$plugs_device_name'\n      AND idx = '$idx'\n      AND is_valid = TRUE\n      AND $__timeFilter(timestamp)\n),\n\ndiff AS (\n    SELECT\n        t1.timestamp,\n        CASE\n            WHEN datediff('s', t1.timestamp, t2.timestamp) > i.interval_sec THEN NULL\n            WHEN t1.total >= t2.total THEN t1.total - t2.total\n            ELSE NULL\n        END AS delta\n    FROM raw t1\n    LT JOIN raw t2\n    CROSS JOIN interval_s i\n),\n\n-- Apply window functions to the raw 'diff' data *before* sampling.\nrunning_totals_raw AS (\n  SELECT\n    timestamp,\n    -- Running total of all deltas up to the current timestamp\n    sum(delta) OVER (ORDER BY timestamp) as running_total_delta,\n    -- Running total of deltas *within* each time bucket/interval\n    sum(delta) OVER (PARTITION BY timestamp_floor('$interval', timestamp) ORDER BY timestamp) as bucket_total\n  FROM diff\n  WHERE delta IS NOT NULL\n),\n\n-- Sample the running totals to get the final value for each bucket\nsampled_totals AS (\n  SELECT\n    timestamp,\n    -- The last running_total_delta in the bucket is the cumulative total at the *end* of the bucket\n    last(running_total_delta) as end_of_bucket_csum,\n    -- The last bucket_total is simply the sum of deltas within this bucket\n    last(bucket_total) as this_bucket_sum\n  FROM running_totals_raw\n  SAMPLE BY $interval FILL(null)\n),\n\n-- Final calculation for the cumulative sum at the BEGINNING of the time bucket\ncum AS (\n  SELECT\n    timestamp,\n    -- The sum at the start of the bucket is the total sum at the end of the bucket\n    -- minus the sum of everything in the bucket itself.\n    -- COALESCE handles the very first bucket.\n    COALESCE((end_of_bucket_csum - this_bucket_sum) * (1.0/60.0), 0) as cum_wh\n  FROM sampled_totals\n),\n\n-- Total calculation needs to be adjusted for the new logic\ntot AS (\n    SELECT SUM(delta) * (1.0/60.0) AS total_wh FROM diff\n),\n\nbounds AS (\n    SELECT\n        CAST((($__unixEpochFrom()) + 1) * 1000000L AS TIMESTAMP) AS t0,\n        CAST((($__unixEpochTo())   - 1) * 1000000L AS TIMESTAMP) AS t1\n)\n\nSELECT\n    $__time(b.t0),\n    0 AS value,\n    0 AS percent,\n    0 AS passage_of_time\nFROM bounds b\n\nUNION ALL\n\nSELECT\n     $__time(c.timestamp),\n     c.cum_wh AS value,\n     (CASE WHEN t.total_wh > 0 THEN (c.cum_wh / t.total_wh) * 100 ELSE 0 END) AS percent,\n     (datediff('s', b.t0, c.timestamp) * 100.0 / datediff('s', b.t0, b.t1)) AS passage_of_time\nFROM cum c\nCROSS JOIN tot t\nCROSS JOIN bounds b\n\nUNION ALL\n\nSELECT\n    $__time(b.t1),\n    t.total_wh AS value,\n    100 AS percent,\n    100 AS passage_of_time\nFROM tot t CROSS JOIN bounds b\n",
               "refId": "A",
               "select": [
                 [
@@ -1702,6 +1712,23 @@
                   }
                 ]
               ],
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
               "timeColumn": "time",
               "where": [
                 {
@@ -1845,5 +1872,5 @@
   "timezone": "browser",
   "title": "shellyplugs1",
   "uid": "shellyplugs1",
-  "version": 2
+  "version": 6
 }
