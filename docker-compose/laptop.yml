@@ -137,7 +137,6 @@ services:
       - HOST_VAR=/hostfs/var
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
-      # - LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libnvidia-ml.so
       - ILE_ITF_SOCKET_WRITER_ADDRESS=tcp://192.168.130.31:9152
       - ILE_ITF_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
       - ILE_ITF_AGENT_INTERVAL=${ILE_ITF_AGENT_INTERVAL:-20s}
@@ -146,7 +145,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${ILE_DIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${ILE_DIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
-      # - ${ILE_DIR}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf-nvidia.conf:/etc/telegraf/telegraf.d/telegraf-nvidia.conf:ro
       - ${ILE_DIR}/ile_telegraf/telegraf-noncloud.conf:/etc/telegraf/telegraf.d/telegraf-noncloud.conf:ro
       - ${ILE_DIR}/ile_telegraf/telegraf-power-supply.conf:/etc/telegraf/telegraf.d/telegraf-power-supply.conf:ro
       - ${ILE_DIR}/ile_telegraf/power_supply_info.sh:/scripts/power_supply_info.sh:ro
@@ -160,7 +159,7 @@ services:
         max-file: 1
     healthcheck:
       # https://github.com/influxdata/telegraf/blob/release-1.28/plugins/outputs/health/README.md
-      test: timeout -s 15 5 curl -f http://127.0.0.1:8652 || exit 1
+      test: (timeout -s 15 5 curl -f http://127.0.0.1:8652 && timeout -s 15 5 /usr/bin/nvidia-smi -q -x) || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s
@@ -178,7 +177,7 @@ services:
           cpus: '0.4'
         reservations:
           cpus: '0.3'
-#          devices:
-#            - driver: nvidia
-#              device_ids: ['0']
-#              capabilities: [gpu]
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
