@@ -1,5 +1,5 @@
 # https://github.com/docker-library/haproxy/blob/master/3.2/Dockerfile
-FROM haproxy:3.2.8-trixie
+FROM haproxy:3.2.9-trixie
 
 USER root
 
