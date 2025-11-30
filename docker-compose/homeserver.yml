@@ -91,6 +91,8 @@ services:
           cpus: '2.00'
         reservations:
           cpus: '1.00'
+    labels:
+      ile-autoheal: true
 
   grafana:
     build:
@@ -162,6 +164,9 @@ services:
         ' > /etc/grafana/provisioning/datasources/questdb.yaml && \
         /run.sh
       "
+    labels:
+      ile-autoheal: true
+
   shellyscraper:
     build:
       context: ${ILE_DIR}
@@ -243,6 +248,8 @@ services:
           cpus: '0.4'
         reservations:
           cpus: '0.3'
+    labels:
+      ile-autoheal: true
 
   # https://hub.docker.com/_/telegraf
   # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
@@ -308,6 +315,8 @@ services:
           cpus: '0.4'
         reservations:
           cpus: '0.3'
+    labels:
+      ile-autoheal: true
 
   tcp-cache:
     build:
@@ -370,6 +379,8 @@ services:
           cpus: '0.4'
         reservations:
           cpus: '0.3'
+    labels:
+      ile-autoheal: true
 
   haproxy-tls:
     build:
@@ -426,3 +437,23 @@ services:
           cpus: '0.4'
         reservations:
           cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  # https://github.com/willfarrell/docker-autoheal
+  autoheal:
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: ile-autoheal
+    image: willfarrell/autoheal:latest
+    network_mode: none
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
