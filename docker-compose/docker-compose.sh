@@ -36,8 +36,11 @@ COMMAND=("$@")
 
 if [[ "${#COMMAND[@]}" -eq 1 ]]; then
   case "${COMMAND[0]}" in
+  build)
+    COMMAND=("build" "--pull" "--parallel")
+    ;;
   up)
-    COMMAND=("up" "-d" "--build" "--pull" "always" "--remove-orphans")
+    COMMAND=("up" "-d" "--remove-orphans")
     ;;
   down)
     COMMAND=("down" "--remove-orphans")

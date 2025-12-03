@@ -66,16 +66,29 @@ for server in "${servers[@]}"; do
   roles="${server_info[roles]:-}"
 
   if [[ "${ip}" == "localhost" ]]; then
-    echo " > docker-compose on localhost"
+    echo " > syncing localhost"
+
+    echo " > docker-compose on localhost > build"
+    (cd "docker-compose" && ./docker-compose.sh prod "${roles},base" build)
+
+    echo " > docker-compose on localhost > down"
     (cd "docker-compose" && ./docker-compose.sh prod "${roles},base" down)
+
+    echo " > docker-compose on localhost > up"
     (cd "docker-compose" && ./docker-compose.sh prod "base,${roles}" up)
+
   else
-    echo " > syncing with ${ip}"
+    echo " > syncing ${ip}"
     scp -P "${port}" -i "${key}" -r "${tar_zstd}" "${user}@${ip}:${path}"
     ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path} && tar --use-compress-program zstd -xf ${tar_zstd} && rm ${tar_zstd}"
 
-    echo "  > docker-compose on ${ip}"
+    echo " > docker-compose on ${ip} > build"
+    ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path}/docker-compose && ./docker-compose.sh prod ${roles},base build"
+
+    echo " > docker-compose on ${ip} > down"
     ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path}/docker-compose && ./docker-compose.sh prod ${roles},base down"
+
+    echo " > docker-compose on ${ip} > up"
     ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path}/docker-compose && ./docker-compose.sh prod base,${roles} up"
   fi
 done
