@@ -104,7 +104,7 @@ frontend fe_grafana
     mode http
     option httplog
     bind :3000 ssl crt ${ILE_IDH_CRT_FILE} alpn h2,http/1.1
-    use be_grafana
+    use_backend be_grafana
 
 backend be_grafana
     mode http
