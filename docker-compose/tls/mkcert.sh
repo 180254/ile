@@ -24,23 +24,47 @@ fi
 
 PASSPHRASE=$(cat .passphrase)
 
-if [ ! -f ca.pem ]; then
+openssl_checkend() {
+  local file="$1"
+  local one_month_seconds=2592000
+  local enddate
+
+  if [ ! -f "$file" ]; then
+    echo "checkend: $file does not exist"
+    return 1
+  fi
+
+  enddate=$(openssl x509 -enddate -noout -in "$file")
+  if openssl x509 -checkend "$one_month_seconds" -noout -in "$file" >/dev/null; then
+    echo "checkend: $file is valid ($enddate)"
+    return 0
+  else
+    echo "checkend: $file is expiring soon ($enddate)"
+    return 1
+  fi
+}
+
+if ! openssl_checkend "ca.pem"; then
   if [ ! -f ca-csr.json ]; then
     echo "Error: no ca-csr.json file"
     exit 1
   fi
+
   cfssl genkey -initca "ca-csr.json" | cfssljson -bare "ca"
   openssl ec -in "ca-key.pem" -out "ca-key-enc.pem" -aes256 -passout "pass:$PASSPHRASE"
 fi
 
 for server in cloudserver homeserver; do
-  if [ ! -f "$server-csr.json" ]; then
-    echo "Error: no $server-csr.json file"
-    exit 1
+  if ! openssl_checkend "$server.pem"; then
+    if [ ! -f "$server-csr.json" ]; then
+      echo "Error: no $server-csr.json file"
+      exit 1
+    fi
+
+    cfssl gencert -profile www -ca ca.pem -ca-key ca-key.pem "$server-csr.json" | cfssljson -bare "$server"
+    openssl ec -in "$server-key.pem" -out "$server-key-enc.pem" -aes256 -passout "pass:$PASSPHRASE"
+    cat "$server.pem" "$server-key.pem" >"$server-full.pem"
   fi
-  cfssl gencert -profile www -ca ca.pem -ca-key ca-key.pem "$server-csr.json" | cfssljson -bare "$server"
-  openssl ec -in "$server-key.pem" -out "$server-key-enc.pem" -aes256 -passout "pass:$PASSPHRASE"
-  cat "$server.pem" "$server-key.pem" >"$server-full.pem"
 done
 
 echo "Passphrase: $PASSPHRASE"
