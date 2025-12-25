@@ -1,4 +1,4 @@
-#!venv/bin/python3
+#!.venv/bin/python3
 # https://github.com/python/typeshed/issues/7597#issuecomment-1117572695
 from __future__ import annotations
 

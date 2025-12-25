@@ -1,4 +1,4 @@
-#!venv/bin/python3
+#!.venv/bin/python3
 from __future__ import annotations
 
 import asyncio

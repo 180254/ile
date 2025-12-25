@@ -70,11 +70,11 @@ convention = "google"
 
 [tool.mypy]
 python_version = "3.14"
-python_executable = "./venv/bin/python3"
+python_executable = "./.venv/bin/python3"
 strict = true
 
 [tool.pyright]
 venvPath = "."
-venv = "venv"
+venv = ".venv"
 pythonVersion = "3.14"
 pythonPlatform = "Linux"
