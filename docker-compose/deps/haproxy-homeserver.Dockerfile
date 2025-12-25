@@ -1,5 +1,5 @@
 # https://github.com/docker-library/haproxy/blob/master/3.3/Dockerfile
-FROM haproxy:3.3.0-trixie
+FROM haproxy:3.3.1-trixie
 
 USER root
 
@@ -16,8 +16,8 @@ ARG ILE_IDH_QUESTDB_HOST="questdb"
 ARG ILE_IDH_QUESTDB_RESTAPI_USERNAME="admin"
 ARG ILE_IDH_QUESTDB_RESTAPI_PASSWORD="password"
 ARG ILE_IDH_GRAFANA_HOST="grafana"
-ARG ILE_IDH_QUESTDB_STATS_USERNAME="admin"
-ARG ILE_IDH_QUESTDB_STATS_PASSWORD="password"
+ARG ILE_IDH_HAPROXY_STATS_USERNAME="admin"
+ARG ILE_IDH_HAPROXY_STATS_PASSWORD="password"
 
 # http://docs.haproxy.org/3.2/configuration.html
 # tcplog  - http://docs.haproxy.org/3.2/configuration.html#8.2.2
@@ -53,7 +53,7 @@ frontend fe_stats
     bind *:4040 ssl crt ${ILE_IDH_CRT_FILE} alpn h2,http/1.1
     stats enable
     stats uri /
-    stats auth ${ILE_IDH_QUESTDB_STATS_USERNAME}:${ILE_IDH_QUESTDB_STATS_PASSWORD}
+    stats auth ${ILE_IDH_HAPROXY_STATS_USERNAME}:${ILE_IDH_HAPROXY_STATS_PASSWORD}
 
 userlist ul_questdb_rest_api_and_web_console
    user ${ILE_IDH_QUESTDB_RESTAPI_USERNAME} insecure-password ${ILE_IDH_QUESTDB_RESTAPI_PASSWORD}

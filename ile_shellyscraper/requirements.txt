@@ -1,5 +1,5 @@
 requests>=2,<3
 # websockets>=15,<16
 # https://github.com/python-websockets/websockets/issues/1616
-git+https://github.com/python-websockets/websockets.git@eba390f98d70914cf370bfb0b89a045fef9a2bf6 # Nov 9, 2025, 3:43 PM GMT+1
+websockets @ git+https://github.com/python-websockets/websockets.git@6da4b3e8867f8dca9ed43281009f225ef25df98a # Dec 15, 2025, 10:51 AM GMT+1
 aiohttp[speedups]>=3,<4
