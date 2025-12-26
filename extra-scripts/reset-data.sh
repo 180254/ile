@@ -15,18 +15,18 @@ fi
 
 rm -rf data_grafana/
 rm -rf data_questdb/
-rm -rf data_redis/
-rm -rf data_redis_laptop/
+rm -rf data_valkey_cloudserver/
+rm -rf data_valkey_laptop/
 
 mkdir data_grafana/
 mkdir data_questdb/
-mkdir data_redis/
-mkdir data_redis_laptop/
+mkdir data_valkey_cloudserver/
+mkdir data_valkey_laptop/
 
 touch data_grafana/.keep
 touch data_questdb/.keep
-touch data_redis/.keep
-touch data_redis_laptop/.keep
+touch data_valkey_cloudserver/.keep
+touch data_valkey_laptop/.keep
 
 popd >/dev/null
 

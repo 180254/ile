@@ -6,24 +6,24 @@ networks:
     external: true
 
 volumes:
-  redis_data:
+  valkey_data:
     driver: local
     driver_opts:
       o: bind
       type: none
-      device: ${ILE_DIR}/data_redis_laptop
+      device: ${ILE_DIR}/data_valkey_laptop
 
 services:
-  redis:
+  valkey:
     build:
       context: ${PWD}
-      dockerfile: deps/redis.Dockerfile
+      dockerfile: deps/valkey.Dockerfile
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
       no_cache: false
       pull: true
-    image: ile-laptop-redis:0.0.1
+    image: ile-laptop-valkey:0.0.1
     user: nonroot:nonroot
     restart: always
     networks:
@@ -31,19 +31,19 @@ services:
         ipv4_address: 192.168.130.30
     ports: [ ]
     environment:
-      - ILE_IDR_REDIS_PORT=6379
-      - ILE_IDR_REDIS_PASSWORD=${ILE_IDR_REDIS_PASSWORD}
+      - ILE_IDR_VALKEY_PORT=6379
+      - ILE_IDR_VALKEY_PASSWORD=${ILE_IDR_VALKEY_PASSWORD}
     volumes:
-      - redis_data:/data
-      - ${PWD}/config/redis/redis.conf.tmpl:/config/redis.conf.tmpl:ro
-      - ${PWD}/config/redis/include/persistence.conf.tmpl:/config/include/persistence.conf.tmpl:ro
-      - ${PWD}/config/redis/include/non-tls.conf.tmpl:/config/include/non-tls.conf.tmpl:ro
+      - valkey_data:/data
+      - ${PWD}/config/valkey/valkey.conf.tmpl:/config/valkey.conf.tmpl:ro
+      - ${PWD}/config/valkey/include/persistence.conf.tmpl:/config/include/persistence.conf.tmpl:ro
+      - ${PWD}/config/valkey/include/non-tls.conf.tmpl:/config/include/non-tls.conf.tmpl:ro
     logging:
       options:
         max-size: 10m
         max-file: 1
     healthcheck:
-      test: timeout -s 15 5 redis-cli -h localhost -p 6379 -a ${ILE_IDR_REDIS_PASSWORD} ping | grep -qaFi PONG || exit 1
+      test: timeout -s 15 5 valkey-cli -h localhost -p 6379 -a ${ILE_IDR_VALKEY_PASSWORD} ping | grep -qaFi PONG || exit 1
       interval: 30s
       timeout: 10s
       start_period: 20s
@@ -88,9 +88,9 @@ services:
         ILE_ITC_TARGET_TCP_HEALTH_HTTP_URLS=
         ${ILE_ITC_TARGET_TCP_HEALTH_HTTP_BASE_URL}/ping,
         ${ILE_ITC_TARGET_TCP_HEALTH_HTTP_BASE_URL}/exec?query=SELECT%20%2A%20FROM%20%22telegraf_cpu%22%20ORDER%20by%20%22timestamp%22%20DESC%20LIMIT%202
-      - ILE_ITC_REDIS_HOST=192.168.130.30
-      - ILE_ITC_REDIS_PORT=6379
-      - ILE_ITC_REDIS_PASSWORD=${ILE_IDR_REDIS_PASSWORD}
+      - ILE_ITC_VALKEY_HOST=192.168.130.30
+      - ILE_ITC_VALKEY_PORT=6379
+      - ILE_ITC_VALKEY_PASSWORD=${ILE_IDR_VALKEY_PASSWORD}
     volumes:
       - ${PWD}/tls/${ILE_ENV}/ca.pem:/tls/ca.pem:ro
     logging:
@@ -104,7 +104,7 @@ services:
       start_period: 20s
       retries: 3
     depends_on:
-      redis:
+      valkey:
         condition: service_started
         restart: true
     deploy:

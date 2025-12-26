@@ -54,13 +54,13 @@ function create_directories() {
   local type=$1
   case "$type" in
   cloudserver)
-    mkdir -p "${ILE_DIR}/data_redis"
+    mkdir -p "${ILE_DIR}/data_valkey_cloudserver"
     ;;
   homeserver)
     mkdir -p "${ILE_DIR}/data_questdb" "${ILE_DIR}/data_grafana"
     ;;
   laptop)
-    mkdir -p "${ILE_DIR}/data_redis_laptop"
+    mkdir -p "${ILE_DIR}/data_valkey_laptop"
     ;;
   esac
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -xeu
 
-envsubst < "/config/redis.conf.tmpl" > "/config/redis.conf"
+envsubst < "/config/valkey.conf.tmpl" > "/config/valkey.conf"
 
 for f in "/config/include/"*.tmpl; do
   [ -e "${f}" ] || break
@@ -9,4 +9,4 @@ for f in "/config/include/"*.tmpl; do
   envsubst < "${f}" > "${out}"
 done
 
-exec redis-server "/config/redis.conf"
+exec valkey-server "/config/valkey.conf"

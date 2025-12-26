@@ -7,6 +7,7 @@ import contextlib
 import datetime
 import enum
 import functools
+import inspect
 import os
 import random
 import re
@@ -24,21 +25,22 @@ import requests
 if typing.TYPE_CHECKING:
     from collections.abc import Callable
 
-import redis
+import valkey
+import valkey.exceptions
 
 import ile_shared_tools
 
 # ile-tcp-cache is useful when the target TCP server is unreachable from the data-producing device.
 
 # Use case example: telegraf on a laptop with access to the database (target TCP server) once a day.
-#                   Redis, collector, and delivery man components run on the laptop.
+#                   Valkey, collector, and delivery man components run on the laptop.
 
 # Use case example: smart-home device is on a different network than a database (target TCP server).
 #                   The smart home device writes the measurements to a cloud virtual machine.
-#                   Redis and the collector components run in the cloud.
+#                   Valkey and the collector components run in the cloud.
 #                   The delivery man component runs on the database host computer.
 
-#      [Pickup location: my TCP] -> [Parcel collector] -> [Warehouse: Redis stream]
+#      [Pickup location: my TCP] -> [Parcel collector] -> [Warehouse: Valkey stream]
 #              -> [Delivery man] -> [Destination location: target TCP]
 
 
@@ -68,6 +70,21 @@ def size_fmt(num: float, mode: typing.Literal["metric", "binary"] = "metric", su
     return f"{num:.1f}Y{i}{suffix}"
 
 
+T = typing.TypeVar("T")
+
+
+def v_cast(x: typing.Awaitable[T] | T) -> T:
+    """Cast away awaitable type for static type checkers.
+
+    https://github.com/valkey-io/valkey-py/issues/84
+    https://github.com/valkey-io/valkey-py/issues/164
+    """
+    if inspect.isawaitable(x):
+        msg = "v_cast() received an awaitable."
+        raise TypeError(msg)
+    return x
+
+
 getenv = os.environ.get
 
 
@@ -94,26 +111,26 @@ class Env:
         "ILE_ITC_TARGET_TCP_HEALTH_HTTP_URLS", "http://localhost:9000/ping"
     )
 
-    ILE_ITC_REDIS_HOST: str = getenv("ILE_ITC_REDIS_HOST", "127.0.0.1")
-    ILE_ITC_REDIS_PORT: str = getenv("ILE_ITC_REDIS_PORT", "6379")
-    ILE_ITC_REDIS_DB: str = getenv("ILE_ITC_REDIS_DB", "0")
-    ILE_ITC_REDIS_PASSWORD: str = getenv("ILE_ITC_REDIS_PASSWORD", "")
-    ILE_ITC_REDIS_SSL: str = getenv("ILE_ITC_REDIS_SSL", "false")
-    ILE_ITC_REDIS_SSL_CAFILE: str = getenv("ILE_ITC_REDIS_SSL_CAFILE", "")
-    ILE_ITC_REDIS_SSL_CHECKHOSTNAME: str = getenv("ILE_ITC_REDIS_SSL_CHECKHOSTNAME", "true")
+    ILE_ITC_VALKEY_HOST: str = getenv("ILE_ITC_VALKEY_HOST", "127.0.0.1")
+    ILE_ITC_VALKEY_PORT: str = getenv("ILE_ITC_VALKEY_PORT", "6379")
+    ILE_ITC_VALKEY_DB: str = getenv("ILE_ITC_VALKEY_DB", "0")
+    ILE_ITC_VALKEY_PASSWORD: str = getenv("ILE_ITC_VALKEY_PASSWORD", "")
+    ILE_ITC_VALKEY_SSL: str = getenv("ILE_ITC_VALKEY_SSL", "false")
+    ILE_ITC_VALKEY_SSL_CAFILE: str = getenv("ILE_ITC_VALKEY_SSL_CAFILE", "")
+    ILE_ITC_VALKEY_SSL_CHECKHOSTNAME: str = getenv("ILE_ITC_VALKEY_SSL_CHECKHOSTNAME", "true")
 
-    ILE_ITC_REDIS_STARTUP_TIMEOUT: str = getenv("ILE_ITC_REDIS_STARTUP_TIMEOUT", "30s")
-    ILE_ITC_REDIS_STARTUP_RETRY_INTERVAL: str = getenv("ILE_ITC_REDIS_STARTUP_RETRY_INTERVAL", "1s")
+    ILE_ITC_VALKEY_STARTUP_TIMEOUT: str = getenv("ILE_ITC_VALKEY_STARTUP_TIMEOUT", "30s")
+    ILE_ITC_VALKEY_STARTUP_RETRY_INTERVAL: str = getenv("ILE_ITC_VALKEY_STARTUP_RETRY_INTERVAL", "1s")
 
-    ILE_ITC_REDIS_STREAM_NAME: str = getenv("ILE_ITC_REDIS_STREAM_NAME", "itc")
-    ILE_ITC_REDIS_STREAM_GROUP_NAME: str = getenv("ILE_ITC_REDIS_STREAM_GROUP_NAME", "itc")
-    ILE_ITC_REDIS_STREAM_CONSUMER_NAME: str = getenv("ILE_ITC_REDIS_STREAM_CONSUMER_NAME", "itc")
+    ILE_ITC_VALKEY_STREAM_NAME: str = getenv("ILE_ITC_VALKEY_STREAM_NAME", "itc")
+    ILE_ITC_VALKEY_STREAM_GROUP_NAME: str = getenv("ILE_ITC_VALKEY_STREAM_GROUP_NAME", "itc")
+    ILE_ITC_VALKEY_STREAM_CONSUMER_NAME: str = getenv("ILE_ITC_VALKEY_STREAM_CONSUMER_NAME", "itc")
 
     ILE_ITC_PARCEL_COLLECTOR_ENABLED: str = getenv("ILE_ITC_PARCEL_COLLECTOR_ENABLED", "true")
     ILE_ITC_PARCEL_COLLECTOR_CAPACITY: str = getenv("ILE_ITC_PARCEL_COLLECTOR_CAPACITY", "1024")
     ILE_ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL: str = getenv("ILE_ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL", "60s")
 
-    ILE_ITC_REDIS_STREAM_READ_COUNT: str = getenv("ILE_ITC_REDIS_STREAM_READ_COUNT", "1024")
+    ILE_ITC_VALKEY_STREAM_READ_COUNT: str = getenv("ILE_ITC_VALKEY_STREAM_READ_COUNT", "1024")
     ILE_ITC_DELIVERY_MAN_CAPACITY: str = getenv("ILE_ITC_DELIVERY_MAN_CAPACITY", "1024")
 
     ILE_ITC_DELIVERY_MAN_ENABLED: str = getenv("ILE_ITC_DELIVERY_MAN_ENABLED", "true")
@@ -162,25 +179,25 @@ class Config:
         map(str.strip, filter(None, Env.ILE_ITC_TARGET_TCP_HEALTH_HTTP_URLS.split(",")))
     )
 
-    redis_address: tuple[str, int] = (Env.ILE_ITC_REDIS_HOST, int(Env.ILE_ITC_REDIS_PORT))
-    redis_db: int = int(Env.ILE_ITC_REDIS_DB)
-    redis_password: str | None = Env.ILE_ITC_REDIS_PASSWORD
-    redis_ssl: bool = Env.ILE_ITC_REDIS_SSL.lower() == "true"
-    redis_ssl_cafile: str | None = Env.ILE_ITC_REDIS_SSL_CAFILE or None
-    redis_ssl_checkhostname: bool = Env.ILE_ITC_REDIS_SSL_CHECKHOSTNAME.lower() == "true"
+    valkey_address: tuple[str, int] = (Env.ILE_ITC_VALKEY_HOST, int(Env.ILE_ITC_VALKEY_PORT))
+    valkey_db: int = int(Env.ILE_ITC_VALKEY_DB)
+    valkey_password: str | None = Env.ILE_ITC_VALKEY_PASSWORD
+    valkey_ssl: bool = Env.ILE_ITC_VALKEY_SSL.lower() == "true"
+    valkey_ssl_cafile: str | None = Env.ILE_ITC_VALKEY_SSL_CAFILE or None
+    valkey_ssl_checkhostname: bool = Env.ILE_ITC_VALKEY_SSL_CHECKHOSTNAME.lower() == "true"
 
-    redis_startup_timeout: datetime.timedelta = duration(Env.ILE_ITC_REDIS_STARTUP_TIMEOUT)
-    redis_startup_retry_interval: datetime.timedelta = duration(Env.ILE_ITC_REDIS_STARTUP_RETRY_INTERVAL)
+    valkey_startup_timeout: datetime.timedelta = duration(Env.ILE_ITC_VALKEY_STARTUP_TIMEOUT)
+    valkey_startup_retry_interval: datetime.timedelta = duration(Env.ILE_ITC_VALKEY_STARTUP_RETRY_INTERVAL)
 
-    redis_stream_name: str = Env.ILE_ITC_REDIS_STREAM_NAME
-    redis_stream_group_name: str = Env.ILE_ITC_REDIS_STREAM_GROUP_NAME
-    redis_stream_consumer_name: str = Env.ILE_ITC_REDIS_STREAM_CONSUMER_NAME
+    valkey_stream_name: str = Env.ILE_ITC_VALKEY_STREAM_NAME
+    valkey_stream_group_name: str = Env.ILE_ITC_VALKEY_STREAM_GROUP_NAME
+    valkey_stream_consumer_name: str = Env.ILE_ITC_VALKEY_STREAM_CONSUMER_NAME
 
     parcel_collector_enabled: bool = Env.ILE_ITC_PARCEL_COLLECTOR_ENABLED.lower() == "true"
     parcel_collector_capacity: int = int(Env.ILE_ITC_PARCEL_COLLECTOR_CAPACITY)
     parcel_collector_flush_interval: datetime.timedelta = duration(Env.ILE_ITC_PARCEL_COLLECTOR_FLUSH_INTERVAL)
 
-    redis_stream_read_count: int = int(Env.ILE_ITC_REDIS_STREAM_READ_COUNT)
+    valkey_stream_read_count: int = int(Env.ILE_ITC_VALKEY_STREAM_READ_COUNT)
     delivery_man_capacity: int = int(Env.ILE_ITC_DELIVERY_MAN_CAPACITY)
 
     delivery_man_enabled: bool = Env.ILE_ITC_DELIVERY_MAN_ENABLED.lower() == "true"
@@ -369,12 +386,12 @@ class Periodic:
 
 
 class TCPParcelCollector:
-    """Collects parcels from TCP and delivers them to the warehouse (Redis stream).
+    """Collects parcels from TCP and delivers them to the warehouse (Valkey stream).
 
-    Handle processing: [Pickup location: my TCP] -> [Parcel collector] -> [Warehouse: Redis stream].
+    Handle processing: [Pickup location: my TCP] -> [Parcel collector] -> [Warehouse: Valkey stream].
     """
 
-    def __init__(self, r: redis.Redis[str], sigterm_threading_event: threading.Event) -> None:
+    def __init__(self, r: valkey.Valkey, sigterm_threading_event: threading.Event) -> None:
         super().__init__()
         self.r = r
         self.sigterm_threading_event = sigterm_threading_event
@@ -426,7 +443,7 @@ class TCPParcelCollector:
         def _incr_overloaded_cnt(self) -> None:
             try:
                 self.outer.r.incr(Config.counter_parcel_collector_overloaded, 1)
-            except redis.exceptions.RedisError as e:
+            except valkey.exceptions.ValkeyError as e:
                 ile_shared_tools.print_exception(e)
 
     def handler_factory(
@@ -435,7 +452,7 @@ class TCPParcelCollector:
         return TCPParcelCollector.Handler(request, client_address, server, self)
 
     def deliver_to_warehouse(self) -> Periodic.PeriodicResult:
-        """Handle processing: [Parcel collector] -> [Warehouse: Redis stream]."""
+        """Handle processing: [Parcel collector] -> [Warehouse: Valkey stream]."""
         data = None
         try:
             flushed = 0
@@ -445,10 +462,10 @@ class TCPParcelCollector:
                 except IndexError:
                     break
 
-                self.r.xadd(name=Config.redis_stream_name, id="*", fields={"data": data})
+                self.r.xadd(name=Config.valkey_stream_name, id="*", fields={"data": data})
                 flushed += 1
 
-        except redis.exceptions.RedisError as e:
+        except valkey.exceptions.ValkeyError as e:
             ile_shared_tools.print_exception(e)
             if data:
                 self.backpack.appendleft(data)
@@ -459,9 +476,9 @@ class TCPParcelCollector:
 
 
 class DeliveryMan:
-    """Collects parcels from the warehouse (Redis stream) and delivers them to the target TCP.
+    """Collects parcels from the warehouse (Valkey stream) and delivers them to the target TCP.
 
-    Handle processing: [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP].
+    Handle processing: [Warehouse: Valkey stream] -> [Delivery man] -> [Destination location: target TCP].
     """
 
     class Message:
@@ -476,7 +493,7 @@ class DeliveryMan:
         OK_THROTTLED = enum.auto()
         FAIL_EXCEPTION = enum.auto()
 
-    def __init__(self, r: redis.Redis[str], throttler: Throttler) -> None:
+    def __init__(self, r: valkey.Valkey, throttler: Throttler) -> None:
         super().__init__()
         self.r = r
         self.throttler = throttler
@@ -485,21 +502,21 @@ class DeliveryMan:
         self.last_flush = time.time()
 
     def collect_from_warehouse_and_occasionally_deliver_to_target_tcp(self) -> Periodic.PeriodicResult:
-        """Handle processing: [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP].
+        """Handle processing: [Warehouse: Valkey stream] -> [Delivery man] -> [Destination location: target TCP].
 
-        Does the [Warehouse: Redis stream] -> [Delivery man] processing.
+        Does the [Warehouse: Valkey stream] -> [Delivery man] processing.
         Also, occasionally calls handling [Delivery man] -> [Destination location: target TCP].
         """
-        xread = min(max(Config.delivery_man_capacity - len(self.backpack), 1), Config.redis_stream_read_count)
-        redis_exception = None
+        xread = min(max(Config.delivery_man_capacity - len(self.backpack), 1), Config.valkey_stream_read_count)
+        valkey_exception = None
         try:
             messages = self._collect_from_warehouse(xread)
-        except redis.exceptions.RedisError as e:
+        except valkey.exceptions.ValkeyError as e:
             ile_shared_tools.print_exception(e)
             # Failed to collect new messages.
             # However, there might be something in the backpack.
             # Further processing is needed. Store the exception and continue.
-            redis_exception = e
+            valkey_exception = e
             messages = []
 
         with self.backpack_rlock:
@@ -527,7 +544,7 @@ class DeliveryMan:
                     msg = f"Unknown DeliveryResult: {delivery_result}"
                     raise NotImplementedError(msg)
 
-        if redis_exception is not None:
+        if valkey_exception is not None:
             return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
         if len(messages) >= xread:
@@ -536,31 +553,35 @@ class DeliveryMan:
         return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
 
     def _collect_from_warehouse(self, count: int) -> list[DeliveryMan.Message]:
-        """Collect messages from the warehouse (Redis stream).
+        """Collect messages from the warehouse (Valkey stream).
 
         :param count: maximum number of messages to collect.
         :return: list of DeliveryMan.Message.
-        :raises: redis.exceptions.RedisError.
+        :raises: valkey.exceptions.ValkeyError.
         """
         if count == 0:
             return []
 
-        # xreadgroup = [(stream_name, [(message_id, {field: value}), ...]), ...]
-        xreadgroup = self.r.xreadgroup(
-            groupname=Config.redis_stream_group_name,
-            consumername=Config.redis_stream_consumer_name,
-            streams={Config.redis_stream_name: ">"},
-            count=count,
-            noack=False,
+        # xreadgroup = {stream_name: [[message1, message2, ...], ...]}
+        # message = (message_id, {field: value, ...})
+        xreadgroup = v_cast(
+            self.r.xreadgroup(
+                groupname=Config.valkey_stream_group_name,
+                consumername=Config.valkey_stream_consumer_name,
+                streams={Config.valkey_stream_name: ">"},
+                count=count,
+                noack=False,
+            )
         )
 
-        if len(xreadgroup) > 0:
-            data = xreadgroup[0][1]
-            data = filter(lambda entry: bool(entry[1]), data)  # skip marked as deleted (entry[1] == {})
-            data = filter(lambda entry: "data" in entry[1], data)  # skip invalid entries
-            messages = [DeliveryMan.Message(entry) for entry in data]
-        else:
-            messages = []
+        messages: list[DeliveryMan.Message] = []
+        for data1 in xreadgroup.get(Config.valkey_stream_name, []):
+            for data2 in data1:
+                if not data2[1]:
+                    continue  # skip marked as deleted (data2[1] == {})
+                if "data" not in data2[1]:
+                    continue  # skip invalid entries
+                messages.append(DeliveryMan.Message(data2))
 
         return messages
 
@@ -668,8 +689,8 @@ class DeliveryMan:
 
         # At this point data was processed - delivered or dropped.
         try:
-            self.r.xack(Config.redis_stream_name, Config.redis_stream_group_name, *message_ids)
-            self.r.xdel(Config.redis_stream_name, *message_ids)
+            self.r.xack(Config.valkey_stream_name, Config.valkey_stream_group_name, *message_ids)
+            self.r.xdel(Config.valkey_stream_name, *message_ids)
             self.r.incr(Config.counter_hits_on_target, 1)
 
             if delivered:
@@ -679,7 +700,7 @@ class DeliveryMan:
                 self.r.incr(Config.counter_dropped_msgs, len(message_ids))
                 self.r.incr(Config.counter_dropped_bytes, len(data))
 
-        except redis.exceptions.RedisError as e:
+        except valkey.exceptions.ValkeyError as e:
             ile_shared_tools.print_exception(e)
 
         # Return true as the data was processed.
@@ -688,12 +709,12 @@ class DeliveryMan:
     def _incr_overloaded_cnt(self) -> None:
         try:
             self.r.incr(Config.counter_delivery_man_overloaded, 1)
-        except redis.exceptions.RedisError as e:
+        except valkey.exceptions.ValkeyError as e:
             ile_shared_tools.print_exception(e)
 
 
 def status(
-    parcel_collector: TCPParcelCollector | None, delivery_man: DeliveryMan | None, r: redis.Redis[str]
+    parcel_collector: TCPParcelCollector | None, delivery_man: DeliveryMan | None, r: valkey.Valkey
 ) -> Periodic.PeriodicResult:
     try:
         threading_active_count = threading.active_count()
@@ -701,19 +722,21 @@ def status(
         parcel_collector_backpack = len(parcel_collector.backpack) if parcel_collector else -1
         delivery_man_backpack = len(delivery_man.backpack) if delivery_man else -1
 
-        warehouse_xlen = r.xlen(name=Config.redis_stream_name)
-        warehouse_xpending = r.xpending(name=Config.redis_stream_name, groupname=Config.redis_stream_group_name)[
-            "pending"
-        ]
+        warehouse_xlen = r.xlen(name=Config.valkey_stream_name)
+        warehouse_xpending = v_cast(
+            r.xpending(name=Config.valkey_stream_name, groupname=Config.valkey_stream_group_name)
+        )["pending"]
 
-        counter_hits_on_target = size_fmt(int(r.get(Config.counter_hits_on_target) or -1))
-        counter_delivered_msgs = size_fmt(int(r.get(Config.counter_delivered_msgs) or -1))
-        counter_delivered_bytes = size_fmt(int(r.get(Config.counter_delivered_bytes) or -1), mode="binary", suffix="B")
-        counter_dropped_msgs = size_fmt(int(r.get(Config.counter_dropped_msgs) or -1))
-        counter_dropped_bytes = size_fmt(int(r.get(Config.counter_dropped_bytes) or -1), mode="binary", suffix="B")
+        def r_get_int(key: str) -> int:
+            return int(v_cast(r.get(key)) or -1)
 
-        counter_parcel_collector_overloaded = size_fmt(int(r.get(Config.counter_parcel_collector_overloaded) or -1))
-        counter_delivery_man_overloaded = size_fmt(int(r.get(Config.counter_delivery_man_overloaded) or -1))
+        counter_hits_on_target = size_fmt(r_get_int(Config.counter_hits_on_target))
+        counter_delivered_msgs = size_fmt(r_get_int(Config.counter_delivered_msgs))
+        counter_delivered_bytes = size_fmt(r_get_int(Config.counter_delivered_bytes), mode="binary", suffix="B")
+        counter_dropped_msgs = size_fmt(r_get_int(Config.counter_dropped_msgs))
+        counter_dropped_bytes = size_fmt(r_get_int(Config.counter_dropped_bytes), mode="binary", suffix="B")
+        counter_parcel_collector_overloaded = size_fmt(r_get_int(Config.counter_parcel_collector_overloaded))
+        counter_delivery_man_overloaded = size_fmt(r_get_int(Config.counter_delivery_man_overloaded))
 
         ile_shared_tools.print_(
             f"threading.active_count: {threading_active_count} | "
@@ -730,7 +753,7 @@ def status(
             f"counter.delivery_man_overloaded: {counter_delivery_man_overloaded}",
         )
 
-    except redis.exceptions.RedisError as e:
+    except valkey.exceptions.ValkeyError as e:
         ile_shared_tools.print_exception(e)
         return Periodic.PeriodicResult.REPEAT_WITH_BACKOFF
 
@@ -738,35 +761,35 @@ def status(
         return Periodic.PeriodicResult.REPEAT_ON_SCHEDULE
 
 
-def wait_for_redis(r: redis.Redis[str]) -> bool:
-    must_end = time.time() + Config.redis_startup_timeout.total_seconds()
+def wait_for_valkey(r: valkey.Valkey) -> bool:
+    must_end = time.time() + Config.valkey_startup_timeout.total_seconds()
 
     while True:
         try:
             r.ping()
 
-        except (redis.exceptions.ConnectionError, ConnectionError) as e:
+        except (valkey.exceptions.ConnectionError, ConnectionError) as e:
             ile_shared_tools.print_exception(e)
 
             if time.time() > must_end:
                 return False
 
-            time.sleep(Config.redis_startup_retry_interval.total_seconds())
+            time.sleep(Config.valkey_startup_retry_interval.total_seconds())
 
         else:
             return True
 
 
-def redis_init(r: redis.Redis[str]) -> bool:
+def valkey_init(r: valkey.Valkey) -> bool:
     try:
-        init_id = r.xadd(name=Config.redis_stream_name, id="*", fields={"init": "1"})
-        r.xdel(Config.redis_stream_name, init_id)
+        init_id = v_cast(r.xadd(name=Config.valkey_stream_name, id="*", fields={"init": "1"}))
+        r.xdel(Config.valkey_stream_name, init_id)
 
-        xinfo_groups = r.xinfo_groups(name=Config.redis_stream_name)
+        xinfo_groups = v_cast(r.xinfo_groups(name=Config.valkey_stream_name))
         for xgroup in xinfo_groups:
-            r.xgroup_destroy(name=Config.redis_stream_name, groupname=xgroup["name"])
+            r.xgroup_destroy(name=Config.valkey_stream_name, groupname=xgroup["name"])
 
-        r.xgroup_create(name=Config.redis_stream_name, groupname=Config.redis_stream_group_name, id="0")
+        r.xgroup_create(name=Config.valkey_stream_name, groupname=Config.valkey_stream_group_name, id="0")
 
         r.incr(Config.counter_hits_on_target, 0)
         r.incr(Config.counter_delivered_msgs, 0)
@@ -777,7 +800,7 @@ def redis_init(r: redis.Redis[str]) -> bool:
         r.incr(Config.counter_parcel_collector_overloaded, 0)
         r.incr(Config.counter_delivery_man_overloaded, 0)
 
-    except redis.exceptions.RedisError as e:
+    except valkey.exceptions.ValkeyError as e:
         ile_shared_tools.print_exception(e)
         return False
 
@@ -790,23 +813,24 @@ def main() -> int:
 
     sigterm_threading_event = ile_shared_tools.configure_sigterm_handler()
 
-    r = redis.Redis(
-        host=Config.redis_address[0],
-        port=Config.redis_address[1],
-        ssl=Config.redis_ssl,
-        ssl_ca_certs=Config.redis_ssl_cafile,
-        ssl_check_hostname=Config.redis_ssl_checkhostname,
-        db=Config.redis_db,
-        password=Config.redis_password,
+    r = valkey.Valkey(
+        host=Config.valkey_address[0],
+        port=Config.valkey_address[1],
+        ssl=Config.valkey_ssl,
+        ssl_ca_certs=Config.valkey_ssl_cafile,
+        ssl_check_hostname=Config.valkey_ssl_checkhostname,
+        db=Config.valkey_db,
+        password=Config.valkey_password,
         socket_timeout=Config.socket_timeout.total_seconds(),
         socket_connect_timeout=Config.socket_connect_timeout.total_seconds(),
         decode_responses=True,
+        protocol=3,
     )
 
-    if not wait_for_redis(r):
+    if not wait_for_valkey(r):
         return -1
 
-    if not redis_init(r):
+    if not valkey_init(r):
         return -1
 
     if Config.parcel_collector_enabled:
@@ -822,7 +846,7 @@ def main() -> int:
         tcp_server_thread = VerboseThread(target=tcp_server.serve_forever, daemon=True)
         tcp_server_thread.start()
 
-        # [Parcel collector] -> [Warehouse: Redis stream]
+        # [Parcel collector] -> [Warehouse: Valkey stream]
         parcel_collector_periodic_flush = Periodic(
             tcp_parcel_collector.deliver_to_warehouse,
             Config.parcel_collector_flush_interval,
@@ -833,7 +857,7 @@ def main() -> int:
         tcp_parcel_collector = None
 
     if Config.delivery_man_enabled:
-        # [Warehouse: Redis stream] -> [Delivery man] -> [Destination location: target TCP]
+        # [Warehouse: Valkey stream] -> [Delivery man] -> [Destination location: target TCP]
         delivery_throttler = Throttler(
             Config.delivery_man_throttler_weight_limit, Config.delivery_man_throttler_time_window
         )

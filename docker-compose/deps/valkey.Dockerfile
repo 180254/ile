@@ -1,5 +1,5 @@
-# https://github.com/redis/docker-library-redis/blob/release/8.4/debian/Dockerfile
-FROM redis:8.4.0-bookworm
+# https://github.com/valkey-io/valkey-container/blob/mainline/9.0/debian/Dockerfile
+FROM valkey/valkey:9.0.1-trixie
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
@@ -19,7 +19,7 @@ RUN set -eux \
   && chown -R nonroot:nonroot /config \
   && chown -R nonroot:nonroot /config/include
 
-COPY deps/redis-entrypoint.sh /entrypoint.sh
+COPY deps/valkey-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 USER nonroot

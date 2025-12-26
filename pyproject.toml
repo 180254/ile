@@ -62,7 +62,9 @@ ignore = [
     # https://docs.astral.sh/ruff/rules/p-print/
     "T203",
     # https://docs.astral.sh/ruff/rules/blind-except/
-    "BLE001"
+    "BLE001",
+    # https://docs.astral.sh/ruff/rules/runtime-cast-value/
+    "TC006"
 ]
 
 [tool.ruff.lint.pydocstyle]
