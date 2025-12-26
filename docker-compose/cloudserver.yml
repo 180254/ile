@@ -21,12 +21,6 @@ services:
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
-        ILE_IDR_REDIS_PORT: ${ILE_IDR_REDIS_PORT}
-        ILE_IDR_REDIS_PASSWORD: ${ILE_IDR_REDIS_PASSWORD}
-        ILE_IDR_REDIS_SSL: true
-        ILE_IDR_REDIS_SSL_CERTFILE: /tls/certfile.pem
-        ILE_IDR_REDIS_SSL_KEYFILE: /tls/keyfile.pem
-        ILE_IDR_REDIS_SSL_PASSWORD: ${ILE_TLS_PASSWORD}
       no_cache: false
       pull: true
     image: ile-cloudserver-redis:0.0.1
@@ -37,8 +31,17 @@ services:
         ipv4_address: 192.168.130.10
     ports:
       - "${ILE_IDR_REDIS_PORT}:${ILE_IDR_REDIS_PORT}"
+    environment:
+      - ILE_IDR_REDIS_PORT=${ILE_IDR_REDIS_PORT}
+      - ILE_IDR_REDIS_PASSWORD=${ILE_IDR_REDIS_PASSWORD}
+      - ILE_IDR_REDIS_SSL_CERTFILE=/tls/certfile.pem
+      - ILE_IDR_REDIS_SSL_KEYFILE=/tls/keyfile.pem
+      - ILE_IDR_REDIS_SSL_PASSWORD=${ILE_TLS_PASSWORD}
     volumes:
       - redis_data:/data
+      - ${PWD}/config/redis/redis.conf.tmpl:/config/redis.conf.tmpl:ro
+      - ${PWD}/config/redis/include/persistence.conf.tmpl:/config/include/persistence.conf.tmpl:ro
+      - ${PWD}/config/redis/include/tls.conf.tmpl:/config/include/tls.conf.tmpl:ro
       - ${PWD}/tls/${ILE_ENV}/cloudserver.pem:/tls/certfile.pem:ro
       - ${PWD}/tls/${ILE_ENV}/cloudserver-key-enc.pem:/tls/keyfile.pem:ro
     logging:

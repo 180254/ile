@@ -1,0 +1,8 @@
+misconfigurations:
+  - id: AVD-DS-0026 # (LOW): Add HEALTHCHECK instruction in your Dockerfile
+
+secrets:
+  - id: private-key
+    paths:
+      - docker-compose/tls/*/*.pem
+      - data_backups/**

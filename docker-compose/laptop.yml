@@ -21,8 +21,6 @@ services:
       args:
         ILE_NONROOT_UID: ${ILE_NONROOT_UID}
         ILE_NONROOT_GID: ${ILE_NONROOT_GID}
-        ILE_IDR_REDIS_PORT: 6379
-        ILE_IDR_REDIS_PASSWORD: ${ILE_IDR_REDIS_PASSWORD}
       no_cache: false
       pull: true
     image: ile-laptop-redis:0.0.1
@@ -32,8 +30,14 @@ services:
       vnet:
         ipv4_address: 192.168.130.30
     ports: [ ]
+    environment:
+      - ILE_IDR_REDIS_PORT=6379
+      - ILE_IDR_REDIS_PASSWORD=${ILE_IDR_REDIS_PASSWORD}
     volumes:
       - redis_data:/data
+      - ${PWD}/config/redis/redis.conf.tmpl:/config/redis.conf.tmpl:ro
+      - ${PWD}/config/redis/include/persistence.conf.tmpl:/config/include/persistence.conf.tmpl:ro
+      - ${PWD}/config/redis/include/non-tls.conf.tmpl:/config/include/non-tls.conf.tmpl:ro
     logging:
       options:
         max-size: 10m
