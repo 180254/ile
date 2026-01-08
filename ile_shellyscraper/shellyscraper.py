@@ -200,7 +200,7 @@ def http_rpc_call(
 async def http_call_async(
     device_ip: str,
     path_and_query: str,
-    auth: requests.auth.AuthBase | None = None,
+    r_auth: requests.auth.AuthBase | None = None,
 ) -> dict[str, typing.Any]:
     ssl_ = device_ip in Config.shelly_devices_ssl_ips
     proto = "https" if ssl_ else "http"
@@ -216,12 +216,19 @@ async def http_call_async(
     else:  # verify=True/verify=None
         connector = aiohttp.TCPConnector()
 
-    auth2 = None
-    if auth and isinstance(auth, requests.auth.HTTPBasicAuth):
-        auth2 = aiohttp.BasicAuth(str(auth.username), str(auth.password))
+    auth = None
+    middlewares = []
+    if r_auth:
+        if isinstance(r_auth, requests.auth.HTTPBasicAuth):
+            auth = aiohttp.BasicAuth(str(r_auth.username), str(r_auth.password))
+        elif isinstance(r_auth, requests.auth.HTTPDigestAuth):
+            middlewares = [aiohttp.DigestAuthMiddleware(str(r_auth.username), str(r_auth.password))]
+        else:
+            msg = "BUG: The http_call_async received an unsupported auth type."
+            ile_shared_tools.print_(msg, file=sys.stderr)
 
     async with (
-        aiohttp.ClientSession(timeout=timeout, connector=connector, auth=auth2) as session,
+        aiohttp.ClientSession(timeout=timeout, connector=connector, auth=auth, middlewares=middlewares) as session,
         session.get(f"{proto}://{device_ip}/{path_and_query}") as response,
     ):
         response.raise_for_status()
@@ -454,7 +461,7 @@ def shelly_get_gen2_device_name(device_ip: str) -> str:
 
 async def shelly_get_gen2_device_name_async(device_ip: str) -> str:
     # https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Sys#sysgetconfig
-    sysconfig = await http_call_async(device_ip, "rpc/Sys.GetConfig", auth=Config.shelly_gen2_auth)
+    sysconfig = await http_call_async(device_ip, "rpc/Sys.GetConfig", r_auth=Config.shelly_gen2_auth)
     device_name: str = sysconfig["device"]["name"]
     return device_name
 
