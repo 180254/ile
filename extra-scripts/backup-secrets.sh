@@ -11,7 +11,9 @@ pushd "${ILE_DIR}" >/dev/null
 TIMESTAMP=$(date --iso-8601=seconds)
 TIMESTAMP=${TIMESTAMP//:/}
 
-BACKUP_DIR="data_backups/$TIMESTAMP"
+BACKUPS_DIR="data_backups"
+BACKUP_NAME="secrets_${TIMESTAMP}"
+BACKUP_DIR="${BACKUPS_DIR}/${BACKUP_NAME}"
 mkdir -p "$BACKUP_DIR"
 
 function copy_directory() {
@@ -35,6 +37,10 @@ copy_directory "docker-compose/tls/" "$BACKUP_DIR"
 copy_file "extra-scripts/sync-servers.txt" "$BACKUP_DIR"
 copy_file notepad.txt "$BACKUP_DIR"
 
-echo "Backup created at $BACKUP_DIR"
+pushd "${BACKUPS_DIR}" >/dev/null
+tar --use-compress-program zstd -cf "${BACKUP_NAME}.tar.zst" "${BACKUP_NAME}/"
+popd >/dev/null # was BACKUPS_DIR
 
-popd >/dev/null
+echo "done. ${BACKUP_NAME}, compressed as ${BACKUP_NAME}.tar.zst"
+
+popd >/dev/null # was ILE_DIR
