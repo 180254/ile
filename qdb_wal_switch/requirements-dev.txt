@@ -1,1 +1,0 @@
-types-psycopg2>=2,<3

@@ -8,9 +8,7 @@ license = { file = "LICENSE" }
 keywords = [
     "Shelly",
     "Shelly Plug",
-    "Shelly Plus Plug",
     "Shelly H&T",
-    "Shelly Plus H&T",
     "QuestDB",
     "Grafana",
     "Telegraf",
@@ -46,6 +44,8 @@ ignore = [
     "D105",
     "D106",
     "D107",
+    "D212",
+    "D415",
     # https://docs.astral.sh/ruff/rules/commented-out-code/
     "ERA001",
     # https://docs.astral.sh/ruff/rules/missing-trailing-comma/

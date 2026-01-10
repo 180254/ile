@@ -48,6 +48,6 @@ for server in "${servers[@]}"; do
   fi
 
   while IFS='|' read -r name status; do
-    printf "%-16s | %-32s | %s\n" "${ip}" "${name}" "${status}"
+    printf "%-16s | %-48s | %s\n" "${ip}" "${name}" "${status}"
   done <<<"${docker_output}"
 done

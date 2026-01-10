@@ -11,14 +11,14 @@ pushd "${ILE_DIR}" >/dev/null
 TIMESTAMP=$(date --iso-8601=seconds)
 TIMESTAMP=${TIMESTAMP//:/}
 
-BACKUP_DIR="data_backups"
+BACKUP_DIR="volume_backups"
 
 if [[ "$(docker ps -q -f name=ile-)" ]]; then
   echo "ile is running, please stop it first"
   exit 1
 fi
 
-for dir in data_*; do
+for dir in volume_*; do
   if [[ ! -d "${dir}" ]]; then
     continue
   fi

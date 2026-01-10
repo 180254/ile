@@ -5,4 +5,4 @@ secrets:
   - id: private-key
     paths:
       - docker-compose/tls/*/*.pem
-      - data_backups/**
+      - volume_backups/**

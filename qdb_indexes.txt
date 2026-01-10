@@ -1,3 +1,15 @@
+ALTER TABLE shelly_gen2_devicepower ALTER COLUMN device_id ADD INDEX;
+ALTER TABLE shelly_gen2_devicepower ALTER COLUMN device_name ADD INDEX;
+ALTER TABLE shelly_gen2_devicepower ALTER COLUMN idx ADD INDEX;
+ALTER TABLE shelly_gen2_humidity ALTER COLUMN device_id ADD INDEX;
+ALTER TABLE shelly_gen2_humidity ALTER COLUMN device_name ADD INDEX;
+ALTER TABLE shelly_gen2_humidity ALTER COLUMN idx ADD INDEX;
+ALTER TABLE shelly_gen2_switch ALTER COLUMN device_id ADD INDEX;
+ALTER TABLE shelly_gen2_switch ALTER COLUMN device_name ADD INDEX;
+ALTER TABLE shelly_gen2_switch ALTER COLUMN idx ADD INDEX;
+ALTER TABLE shelly_gen2_temperature ALTER COLUMN device_id ADD INDEX;
+ALTER TABLE shelly_gen2_temperature ALTER COLUMN device_name ADD INDEX;
+ALTER TABLE shelly_gen2_temperature ALTER COLUMN idx ADD INDEX;
 ALTER TABLE shelly_ht_meter1 ALTER COLUMN device_id ADD INDEX;
 ALTER TABLE shelly_ht_meter1 ALTER COLUMN device_name ADD INDEX;
 ALTER TABLE shelly_ht_meter2 ALTER COLUMN device_id ADD INDEX;

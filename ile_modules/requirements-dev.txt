@@ -1,0 +1,2 @@
+types-requests>=2,<3
+msgpack-types>=0.5,<1

@@ -7,7 +7,7 @@ fi
 
 if [[ "$#" -lt 1 ]]; then
   echo >&2 "Usage: $0 environment"
-  echo >&2 "  environment: local, prod"
+  echo >&2 "  environment: demo, prod"
   exit 1
 fi
 
@@ -54,7 +54,7 @@ if ! openssl_checkend "ca.pem"; then
   openssl ec -in "ca-key.pem" -out "ca-key-enc.pem" -aes256 -passout "pass:$PASSPHRASE"
 fi
 
-for server in cloudserver homeserver; do
+for server in cloudserver homeserver laptop; do
   if ! openssl_checkend "$server.pem"; then
     if [ ! -f "$server-csr.json" ]; then
       echo "Error: no $server-csr.json file"

@@ -1,0 +1,816 @@
+name: ile-homeserver
+
+networks:
+  vnet:
+    name: ile-base_vnet
+    external: true
+
+volumes:
+  mosquitto_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${ILE_DIR}/volume_mosquitto_homeserver
+
+  valkey_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${ILE_DIR}/volume_valkey_homeserver
+
+  questdb_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${ILE_DIR}/volume_questdb_homeserver
+
+  grafana_data:
+    driver_opts:
+      o: bind
+      type: none
+      device: ${ILE_DIR}/volume_grafana_homeserver
+
+services:
+  mosquitto:
+    build:
+      context: ${ILE_DIR}/ile_mosquitto
+      dockerfile: mosquitto.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-mosquitto:0.0.1
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.10
+    ports:
+      - "8883:8883" # MQTT over TLS
+      - "9002:9002" # MQTT over WebSockets with TLS
+    environment:
+      - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
+      - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - ${ILE_DIR}/ile_mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/mosquitto/secrets/ca.crt:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver.pem:/mosquitto/secrets/server.crt:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver-key.pem:/mosquitto/secrets/server.key:ro
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5
+        mosquitto_sub
+        -h localhost
+        -p 8883
+        --cafile /mosquitto/secrets/ca.crt
+        --tls-version tlsv1.3
+        --insecure
+        -u "${ILE_MQTT_USERNAME}"
+        -P "${ILE_MQTT_PASSWORD}"
+        -t '$$SYS/broker/uptime'
+        -C 1
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on: [ ]
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  valkey:
+    build:
+      context: ${ILE_DIR}/ile_valkey
+      dockerfile: valkey.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-valkey:0.0.1
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.11
+    ports:
+      - "6379:6379"
+    environment:
+      - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
+    volumes:
+      - valkey_data:/valkey/data
+      - ${ILE_DIR}/ile_valkey/valkey.conf.tmpl:/valkey/config/valkey.conf.tmpl:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/valkey/secrets/ca.crt:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver.pem:/valkey/secrets/server.crt:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver-key.pem:/valkey/secrets/server.key:ro
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5
+        valkey-cli -h localhost -p 6379 -a "${ILE_VALKEY_PASSWORD}"
+        --tls --insecure ping | grep -qaFi PONG
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on: [ ]
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  mqtt-ingestor:
+    build:
+      context: ${ILE_DIR}/ile_modules
+      dockerfile: ile_modules.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-mqtt-ingestor:0.0.1
+    entrypoint: /bin/sh -c
+    command:
+      - /.venv/bin/python3 -m ile_modules.mqtt_ingestor
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.12
+    ports: [ ]
+    environment:
+      - ILE_DEBUG=${ILE_DEBUG}
+      - ILE_VALKEY_HOST=192.168.130.11
+      - ILE_VALKEY_PORT=6379
+      - ILE_VALKEY_SSL=true
+      - ILE_VALKEY_DB=0
+      - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
+      - ILE_MQTT_HOST=192.168.130.10
+      - ILE_MQTT_SSL=true
+      - ILE_MQTT_PORT=8883
+      - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
+      - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
+    volumes: [ ]
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5 true || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      mosquitto:
+        condition: service_started
+        restart: true
+      valkey:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  payload-normalizer:
+    build:
+      context: ${ILE_DIR}/ile_modules
+      dockerfile: ile_modules.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-payload-normalizer:0.0.1
+    entrypoint: /bin/sh -c
+    command:
+      - /.venv/bin/python3 -m ile_modules.payload_normalizer
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.13
+    ports: [ ]
+    environment:
+      - ILE_DEBUG=${ILE_DEBUG}
+      - ILE_VALKEY_HOST=192.168.130.11
+      - ILE_VALKEY_PORT=6379
+      - ILE_VALKEY_SSL=true
+      - ILE_VALKEY_DB=0
+      - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
+      - ILE_MQTT_HOST=192.168.130.10
+      - ILE_MQTT_SSL=true
+      - ILE_MQTT_PORT=8883
+      - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
+      - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
+    volumes: [ ]
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5 true || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      mosquitto:
+        condition: service_started
+        restart: true
+      valkey:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  report-printer:
+    build:
+      context: ${ILE_DIR}/ile_modules
+      dockerfile: ile_modules.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-report-printer:0.0.1
+    entrypoint: /bin/sh -c
+    command:
+      - /.venv/bin/python3 -m ile_modules.report_printer
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.14
+    ports: [ ]
+    environment:
+      - ILE_DEBUG=${ILE_DEBUG}
+      - ILE_VALKEY_HOST=192.168.130.11
+      - ILE_VALKEY_PORT=6379
+      - ILE_VALKEY_SSL=true
+      - ILE_VALKEY_DB=0
+      - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
+      - ILE_MQTT_HOST=192.168.130.10
+      - ILE_MQTT_SSL=true
+      - ILE_MQTT_PORT=8883
+      - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
+      - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
+    volumes: [ ]
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5 true || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      mosquitto:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  # https://hub.docker.com/_/telegraf
+  # https://www.influxdata.com/blog/docker-run-telegraf-as-non-root/
+  telegraf:
+    build:
+      context: ${ILE_DIR}/ile_telegraf
+      dockerfile: telegraf.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-telegraf:0.0.1
+    user: nonroot:${ILE_DOCKER_GID}
+    restart: always
+    network_mode: host
+    hostname: ${HOSTNAME}
+    ports: [ ]
+    environment:
+      - HOST_ETC=/hostfs/etc
+      - HOST_PROC=/hostfs/proc
+      - HOST_SYS=/hostfs/sys
+      - HOST_VAR=/hostfs/var
+      - HOST_RUN=/hostfs/run
+      - HOST_MOUNT_PREFIX=/hostfs
+      - ILE_TELEGRAF_AGENT_INTERVAL=${ILE_TELEGRAF_AGENT_INTERVAL}
+      - ILE_TELEGRAF_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
+      - ILE_TELEGRAF_MQTT_ADDRESS=mqtts://192.168.130.10:8883
+      - ILE_TELEGRAF_MQTT_USERNAME=${ILE_MQTT_USERNAME}
+      - ILE_TELEGRAF_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
+    volumes:
+      - /:/hostfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
+      - ${PWD}/tls/${ILE_ENV}/ca.pem:/etc/telegraf/ca.crt:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver.pem:/etc/telegraf/server.crt:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver-key.pem:/etc/telegraf/server.key:ro
+    security_opt:
+      # https://github.com/influxdata/telegraf/issues/6574
+      - apparmor:unconfined
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://github.com/influxdata/telegraf/blob/release-1.28/plugins/outputs/health/README.md
+      test: >
+        timeout -s 15 5
+        curl -f "http://127.0.0.1:8652"
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      mosquitto:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  questdb:
+    build:
+      context: ${ILE_DIR}/ile_questdb
+      dockerfile: questdb.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-questdb:0.0.1
+    user: nonroot:nonroot
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.15
+    # https://questdb.com/docs/quick-start/#enjoy-questdb
+    # 9000 - REST API and Web Console
+    # 9000 - InfluxDB Line Protocol (ILP)
+    # 8812 - Postgres Wire Protocol (PGWire)
+    # 9003 - Min health server
+    ports: [ ]
+    environment:
+      - QUESTDB_UID=${ILE_NONROOT_UID}
+      - QUESTDB_GID=${ILE_NONROOT_GID}
+      # https://questdb.io/docs/reference/configuration/
+      # https://github.com/questdb/questdb/blob/9.1.0/core/src/main/java/io/questdb/PropertyKey.java
+      # https://github.com/questdb/questdb/blob/9.1.0/core/src/main/java/io/questdb/PropServerConfiguration.java
+      - QDB_PG_USER=${QDB_PG_USER}
+      - QDB_PG_PASSWORD=${QDB_PG_PASSWORD}
+      - QDB_PG_READONLY_USER_ENABLED=${QDB_PG_READONLY_USER_ENABLED}
+      - QDB_PG_READONLY_USER=${QDB_PG_READONLY_USER}
+      - QDB_PG_READONLY_PASSWORD=${QDB_PG_READONLY_PASSWORD}
+      - QDB_HTTP_USER=${QDB_HTTP_USER}
+      - QDB_HTTP_PASSWORD=${QDB_HTTP_PASSWORD}
+      # https://github.com/questdb/questdb/issues/3512#issuecomment-1609046049
+      - QDB_HTTP_MIN_WORKER_SLEEP_THRESHOLD=100
+      - QDB_HTTP_WORKER_SLEEP_THRESHOLD=100
+      - QDB_LINE_TCP_WRITER_WORKER_SLEEP_THRESHOLD=100
+      - QDB_LINE_TCP_IO_WORKER_SLEEP_THRESHOLD=100
+      - QDB_PG_WORKER_SLEEP_THRESHOLD=100
+      - QDB_SHARED_WORKER_SLEEP_THRESHOLD=100
+      - QDB_WAL_APPLY_WORKER_SLEEP_THRESHOLD=100
+      - QDV_MAT_VIEW_REFRESH_WORKER_SLEEP_THRESHOLD=100
+      # https://github.com/questdb/questdb/issues/3531
+      # https://github.com/questdb/questdb/issues/4829
+      - QDB_CAIRO_COMMIT_MODE=sync
+    volumes:
+      - questdb_data:/var/lib/questdb
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://questdb.io/doc-s/operations/health-monitoring/
+      test: >
+        timeout -s 15 5
+        curl -f -u "${QDB_HTTP_USER}:${QDB_HTTP_PASSWORD}" --basic "http://127.0.0.1:9003"
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on: []
+    # https://questdb.io/docs/deployment/capacity-planning/
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '2.50'
+        reservations:
+          cpus: '1.00'
+    labels:
+      ile-autoheal: true
+
+  grafana:
+    build:
+      context: ${ILE_DIR}/ile_grafana
+      dockerfile: grafana-oss.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-grafana:0.0.1
+    user: nonroot:nonroot
+    # https://github.com/grafana/grafana/blob/v12.2.0/Dockerfile
+    # https://grafana.com/docs/grafana/latest/datasources/postgres/configure/
+    entrypoint: >
+      sh -c "
+        mkdir -p /etc/grafana/provisioning/datasources && \
+        echo '
+        apiVersion: 1
+        datasources:
+          - uid: questdb
+            name: questdb
+            type: postgres
+            url: 192.168.130.15:8812
+            user: ${QDB_PG_READONLY_USER}
+            secureJsonData:
+              password: ${QDB_PG_READONLY_PASSWORD}
+            jsonData:
+              database: qdb
+              sslmode: 'disable'
+              maxOpenConns: 100
+              maxIdleConns: 100
+              maxIdleConnsAuto: true
+              connMaxLifetime: 14400
+              postgresVersion: 1500
+              timescaledb: false
+            isDefault: true
+        ' > /etc/grafana/provisioning/datasources/questdb.yaml && \
+        /run.sh
+      "
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.16
+    ports: [ ]
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      # https://grafana.com/docs/grafana/latest/developers/http_api/other/#returns-health-information-about-grafana
+      # https://github.com/grafana/grafana/pull/27536
+      test: >
+        timeout -s 15 5
+        curl -f "http://127.0.0.1:3000/api/health"
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on: []
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  haproxy-tls:
+    build:
+      context: ${ILE_DIR}/ile_haproxy
+      dockerfile: haproxy.Dockerfile
+      no_cache: false
+      pull: true
+    image: ile-homeserver-haproxy-tls:0.0.1
+    user: haproxy:haproxy
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.17
+    ports:
+      - "4040:4040" # haproxy - stats
+      - "8812:8812" # questdb - Postgres wire protocol
+      - "9000:9000" # questdb - REST API and Web Console
+      - "9003:9003" # questdb - Min health server and Prometheus metrics
+      - "9009:9009" # questdb - InfluxDB line protocol
+      - "3000:3000" # grafana
+    environment:
+      - ILE_HAPROXY_CRT_FILE=/tls/full.pem
+      - ILE_HAPROXY_QUESTDB_HOST=192.168.130.15
+      - ILE_HAPROXY_QUESTDB_RESTAPI_USERNAME=${ILE_HAPROXY_QUESTDB_RESTAPI_USERNAME}
+      - ILE_HAPROXY_QUESTDB_RESTAPI_PASSWORD=${ILE_HAPROXY_QUESTDB_RESTAPI_PASSWORD}
+      - ILE_HAPROXY_GRAFANA_HOST=192.168.130.16
+      - ILE_HAPROXY_STATS_USERNAME=${ILE_HAPROXY_STATS_USERNAME}
+      - ILE_HAPROXY_STATS_PASSWORD=${ILE_HAPROXY_STATS_PASSWORD}
+    volumes:
+      - ${ILE_DIR}/ile_haproxy/haproxy.cfg.tmpl:/config/haproxy.cfg.tmpl:ro
+      - ${PWD}/tls/${ILE_ENV}/homeserver-full.pem:/tls/full.pem:ro
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5
+        curl -f "http://127.0.0.1:80"
+        || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on: []
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  questdb-writer-homeserver:
+    build:
+      context: ${ILE_DIR}/ile_modules
+      dockerfile: ile_modules.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-questdb-writer-homeserver:0.0.1
+    user: nonroot:nonroot
+    entrypoint: /bin/sh -c
+    command:
+      - /.venv/bin/python3 -m ile_modules.questdb_writer
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.18
+    ports: [ ]
+    environment:
+      - ILE_DEBUG=${ILE_DEBUG}
+      - ILE_VALKEY_HOST=192.168.130.11
+      - ILE_VALKEY_PORT=6379
+      - ILE_VALKEY_SSL=true
+      - ILE_VALKEY_DB=0
+      - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
+      - ILE_IQW_QUESTDB_HOST=192.168.130.15
+      - ILE_IQW_QUESTDB_PORT=9000
+      - ILE_IQW_QUESTDB_SSL=false
+      - ILE_IQW_QUESTDB_USERNAME=${QDB_HTTP_USER}
+      - ILE_IQW_QUESTDB_PASSWORD=${QDB_HTTP_PASSWORD}
+      - ILE_IQW_VALKEY_UNAVAILABLE_WAIT_S=5.0
+    volumes: [ ]
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5 true || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      questdb:
+        condition: service_started
+        restart: true
+      valkey:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  questdb-writer-cloudserver:
+    build:
+      context: ${ILE_DIR}/ile_modules
+      dockerfile: ile_modules.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-questdb-writer-cloudserver:0.0.1
+    user: nonroot:nonroot
+    entrypoint: /bin/sh -c
+    command:
+      - /.venv/bin/python3 -m ile_modules.questdb_writer
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.19
+    ports: [ ]
+    environment:
+      - ILE_DEBUG=${ILE_DEBUG}
+      - ILE_VALKEY_HOST=${ILE_VALKEY_CLOUDSERVER_HOST}
+      - ILE_VALKEY_PORT=${ILE_VALKEY_CLOUDSERVER_PORT}
+      - ILE_VALKEY_SSL=true
+      - ILE_VALKEY_DB=0
+      - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
+      - ILE_IQW_QUESTDB_HOST=192.168.130.15
+      - ILE_IQW_QUESTDB_PORT=9000
+      - ILE_IQW_QUESTDB_SSL=false
+      - ILE_IQW_QUESTDB_USERNAME=${QDB_HTTP_USER}
+      - ILE_IQW_QUESTDB_PASSWORD=${QDB_HTTP_PASSWORD}
+      - ILE_IQW_VALKEY_UNAVAILABLE_WAIT_S=60.0
+    volumes: [ ]
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5 true || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      questdb:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  questdb-writer-laptop:
+    build:
+      context: ${ILE_DIR}/ile_modules
+      dockerfile: ile_modules.Dockerfile
+      args:
+        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
+        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
+      no_cache: false
+      pull: true
+    image: ile-homeserver-questdb-writer-laptop:0.0.1
+    user: nonroot:nonroot
+    entrypoint: /bin/sh -c
+    command:
+      - /.venv/bin/python3 -m ile_modules.questdb_writer
+    restart: always
+    networks:
+      vnet:
+        ipv4_address: 192.168.130.20
+    ports: [ ]
+    environment:
+      - ILE_DEBUG=${ILE_DEBUG}
+      - ILE_VALKEY_HOST=${ILE_VALKEY_LAPTOP_HOST}
+      - ILE_VALKEY_PORT=${ILE_VALKEY_LAPTOP_PORT}
+      - ILE_VALKEY_SSL=true
+      - ILE_VALKEY_DB=0
+      - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
+      - ILE_IQW_QUESTDB_HOST=192.168.130.15
+      - ILE_IQW_QUESTDB_PORT=9000
+      - ILE_IQW_QUESTDB_SSL=false
+      - ILE_IQW_QUESTDB_USERNAME=${QDB_HTTP_USER}
+      - ILE_IQW_QUESTDB_PASSWORD=${QDB_HTTP_PASSWORD}
+      - ILE_IQW_VALKEY_UNAVAILABLE_WAIT_S=300.0
+    volumes: [ ]
+    logging:
+      options:
+        max-size: 10m
+        max-file: 1
+    healthcheck:
+      test: >
+        timeout -s 15 5 true || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      questdb:
+        condition: service_started
+        restart: true
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    labels:
+      ile-autoheal: true
+
+  # https://github.com/willfarrell/docker-autoheal
+  autoheal:
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.4'
+        reservations:
+          cpus: '0.3'
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: ile-autoheal
+    image: willfarrell/autoheal:latest
+    network_mode: none
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock

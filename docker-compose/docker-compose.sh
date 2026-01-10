@@ -9,7 +9,7 @@ pushd "${SCRIPT_DIR}" >/dev/null
 function usage() {
   cat >&2 <<EOF
 Usage: $0 environment machine-types [OPTIONS] COMMAND
-  environment: local, prod
+  environment: test, prod
   machine-types: $(find ./*.yml -printf "%f " | sed 's/\.yml//g')
   command: up, down, ...
 
@@ -20,8 +20,8 @@ Examples:
   ./docker-compose.sh prod cloudserver,base down
   ./docker-compose.sh prod base,homeserver up
   ./docker-compose.sh prod homeserver,base down
-  ./docker-compose.sh local base,cloudserver,homeserver up
-  ./docker-compose.sh local cloudserver,homeserver,base down
+  ./docker-compose.sh test base,cloudserver,homeserver up
+  ./docker-compose.sh test cloudserver,homeserver,base down
 EOF
 }
 if [[ "$#" -lt 2 ]]; then
@@ -54,13 +54,18 @@ function create_directories() {
   local type=$1
   case "$type" in
   cloudserver)
-    mkdir -p "${ILE_DIR}/data_valkey_cloudserver"
+    mkdir -p "${ILE_DIR}/volume_mosquitto_cloudserver"
+    mkdir -p "${ILE_DIR}/volume_valkey_cloudserver"
     ;;
   homeserver)
-    mkdir -p "${ILE_DIR}/data_questdb" "${ILE_DIR}/data_grafana"
+    mkdir -p "${ILE_DIR}/volume_mosquitto_homeserver"
+    mkdir -p "${ILE_DIR}/volume_valkey_homeserver"
+    mkdir -p "${ILE_DIR}/volume_questdb_homeserver"
+    mkdir -p "${ILE_DIR}/volume_grafana_homeserver"
     ;;
   laptop)
-    mkdir -p "${ILE_DIR}/data_valkey_laptop"
+    mkdir -p "${ILE_DIR}/volume_mosquitto_laptop"
+    mkdir -p "${ILE_DIR}/volume_valkey_laptop"
     ;;
   esac
 }
@@ -77,7 +82,7 @@ for MACHINE_TYPE in "${TYPES[@]}"; do
   HOSTNAME="$(hostname)" \
   ILE_NONROOT_UID="$(id -u)" \
   ILE_NONROOT_GID="$(id -g)" \
-    docker compose -f "${MACHINE_TYPE}.yml" --env-file="envs/${ENVIRONMENT}/${MACHINE_TYPE}.env" "${COMMAND[@]}"
+    docker compose -f "yamls/${MACHINE_TYPE}.yml" --env-file="envs/${ENVIRONMENT}/${MACHINE_TYPE}.env" "${COMMAND[@]}"
 done
 
 popd >/dev/null

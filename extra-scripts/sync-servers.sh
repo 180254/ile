@@ -8,6 +8,8 @@ ILE_DIR=$(realpath "${SCRIPT_DIR}/../")
 
 pushd "${SCRIPT_DIR}" >/dev/null
 
+SOFTSYNC="${SOFTSYNC:-false}"
+
 servers=(
   "ip=srv1.example.com port=22 user=ubuntu key=~/.ssh/my.key path=/home/ubuntu/ile roles=homeserver"
   "ip=srv2.example.com port=10392 user=ubuntu key=~/.ssh/my.key path=/home/ubuntu/ile roles=cloudserver"
@@ -27,14 +29,16 @@ pushd "${ILE_DIR}" >/dev/null
 
 paths=(
   "docker-compose"
-  "ile_shared_tools"
-  "ile_shellyscraper"
-  "ile_tcp_cache"
-  "ile_telegraf"
-  "qdb_benchmark"
-  "qdb_count_rows"
-  "qdb_wal_switch"
   "extra-scripts"
+  "ile_grafana"
+  "ile_haproxy"
+  "ile_modules"
+  "ile_modules_tests"
+  "ile_mosquitto"
+  "ile_questdb"
+  "ile_telegraf"
+  "ile_valkey"
+  "qdb_scripts"
   "requirements-dev.txt"
 )
 
@@ -68,6 +72,11 @@ for server in "${servers[@]}"; do
   if [[ "${ip}" == "localhost" ]]; then
     echo " > syncing localhost"
 
+    if [ "${SOFTSYNC}" != "false" ]; then
+      echo "  SOFTSYNC SYNC enabled, skipping localhost sync"
+      continue
+    fi
+
     echo " > docker-compose on localhost > build"
     (cd "docker-compose" && ./docker-compose.sh prod "${roles},base" build)
 
@@ -81,6 +90,11 @@ for server in "${servers[@]}"; do
     echo " > syncing ${ip}"
     scp -P "${port}" -i "${key}" -r "${tar_zstd}" "${user}@${ip}:${path}"
     ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path} && tar --use-compress-program zstd -xf ${tar_zstd} && rm ${tar_zstd}"
+
+   if [ "${SOFTSYNC}" != "false" ]; then
+      echo "  SOFTSYNC enabled, skipping remote docker-compose commands on ${ip}"
+      continue
+    fi
 
     echo " > docker-compose on ${ip} > build"
     ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path}/docker-compose && ./docker-compose.sh prod ${roles},base build"

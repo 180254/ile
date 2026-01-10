@@ -1,0 +1,12 @@
+# trivy config . --ignorefile ./.trivyignore.yaml
+# trivy filesystem . --ignorefile ./.trivyignore.yaml
+# trivy repository . --ignorefile ./.trivyignore.yaml
+
+scan:
+  skip-dirs:
+    - .git
+    - .idea
+    - .venv
+    - volume_*
+    - .ruff_cache
+    - .mypy_cache

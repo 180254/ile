@@ -11,7 +11,7 @@ pushd "${ILE_DIR}" >/dev/null
 TIMESTAMP=$(date --iso-8601=seconds)
 TIMESTAMP=${TIMESTAMP//:/}
 
-BACKUPS_DIR="data_backups"
+BACKUPS_DIR="volume_backups"
 BACKUP_NAME="secrets_${TIMESTAMP}"
 BACKUP_DIR="${BACKUPS_DIR}/${BACKUP_NAME}"
 mkdir -p "$BACKUP_DIR"

@@ -1,0 +1,14 @@
+bind * -::*
+dir /valkey/data
+requirepass ${ILE_VALKEY_PASSWORD}
+# include /valkey/config/include/*.conf
+
+save 3600 1 300 100 60 10000
+appendonly yes
+
+port 0
+tls-port 6379
+tls-ca-cert-file /valkey/secrets/ca.crt
+tls-cert-file /valkey/secrets/server.crt
+tls-key-file /valkey/secrets/server.key
+tls-auth-clients no
