@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 1,
+  "id": 9,
   "links": [
     {
       "asDropdown": true,
@@ -109,11 +109,12 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    max(tmp_tc) as tmp_tc,\n    cast(0 as timestamp) as time\nfrom (\n    select last(tmp_tc) as tmp_tc, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and tmp_is_valid = true and $__timeFilter(timestamp)\n)\n",
+          "rawSql": "select\n    max(tC) as tC,\n    cast(0 as timestamp) as time\nfrom (\n    select last(tC) as tC, device_name\n    from shelly_gen2_temperature\n    where device_name in ($ht_device_name) and idx = '$idx' and $__timeFilter(timestamp)\n)",
           "refId": "A",
           "select": [
             [
@@ -125,6 +126,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -175,7 +193,7 @@
               "type": "linear"
             },
             "showPoints": "always",
-            "spanNulls": false,
+            "spanNulls": 21600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -225,12 +243,13 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(tmp_tc) as tmp_tc,\n    device_name as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_name in ($ht_device_name)\n    and is_valid = true\n    and tmp_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(tC) as tC,\n    device_name as metric\nfrom\n    shelly_gen2_temperature\nwhere\n    device_name in ($ht_device_name)\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -242,6 +261,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -254,97 +290,6 @@
       ],
       "title": "temperature measurements",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "percentage of (is_valid=false or tmp_is_valid=false)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "orange",
-                "value": 0.00001
-              },
-              {
-                "color": "red",
-                "value": 0.01
-              }
-            ]
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 6
-      },
-      "id": 9,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": false,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "with\n    shelly_ht_meter1b as (\n        select timestamp, is_valid, tmp_is_valid\n        from shelly_ht_meter1\n        where device_name in ($ht_device_name) and $__timeFilter(timestamp)\n    ),\n    count_all as (\n        select count() as value\n        from shelly_ht_meter1b\n    ),\n    count_not_valid as (\n        select count() as value\n        from shelly_ht_meter1b\n        where is_valid = false or tmp_is_valid = false\n    )\nselect \n    cast(0 as timestamp) time,\n    ((1.0*count_not_valid.value)/count_all.value) as value\nfrom count_all\ncross join count_not_valid",
-          "refId": "value",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "temperature measurement failure rate",
-      "type": "gauge"
     },
     {
       "collapsed": false,
@@ -415,11 +360,12 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    max(hum_value),\n    cast(0 as timestamp) as time\nfrom (\n    select last(hum_value) as hum_value, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and hum_is_valid = true and $__timeFilter(timestamp)\n)",
+          "rawSql": "select\n    max(rh),\n    cast(0 as timestamp) as time\nfrom (\n    select last(rh) as rh, device_name\n    from shelly_gen2_humidity\n    where device_name in ($ht_device_name) and idx = '$idx' and $__timeFilter(timestamp)\n)",
           "refId": "A",
           "select": [
             [
@@ -431,6 +377,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -481,7 +444,7 @@
               "type": "linear"
             },
             "showPoints": "always",
-            "spanNulls": false,
+            "spanNulls": 21600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -531,12 +494,13 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(hum_value) as hum_value,\n    device_name as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_name in ($ht_device_name)\n    and is_valid = true\n    and hum_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(rh) as rh,\n    device_name as metric\nfrom\n    shelly_gen2_humidity\nwhere\n    device_name in ($ht_device_name)\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -548,6 +512,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -560,97 +541,6 @@
       ],
       "title": "humidity measurements",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "percentage of (is_valid=false or tmp_is_valid=false)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "orange",
-                "value": 0.00001
-              },
-              {
-                "color": "red",
-                "value": 0.01
-              }
-            ]
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 16
-      },
-      "id": 19,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": false,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "with\n    shelly_ht_meter1b as (\n        select timestamp, is_valid, hum_is_valid\n        from 'shelly_ht_meter1'\n        where device_name in ($ht_device_name) and $__timeFilter(timestamp)\n    ),\n    count_all as (\n        select count() as value\n        from shelly_ht_meter1b\n    ),\n    count_not_valid as (\n        select count() as value\n        from shelly_ht_meter1b\n        where is_valid = false or hum_is_valid = false\n    )\nselect \n    cast(0 as timestamp) time,\n    ((1.0*count_not_valid.value)/count_all.value) as value\nfrom count_all\ncross join count_not_valid",
-          "refId": "value",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "humidity measurement failure rate",
-      "type": "gauge"
     },
     {
       "collapsed": false,
@@ -722,11 +612,12 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select min(bat_value), cast(0 as timestamp) as time\nfrom (\n    select last(bat_value) as bat_value, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
+          "rawSql": "select min(battery_percent), cast(0 as timestamp) as time\nfrom (\n    select last(battery_percent) as battery_percent, device_name\n    from shelly_gen2_devicepower\n    where device_name in ($ht_device_name) and idx = '$idx' and $__timeFilter(timestamp)\n)",
           "refId": "A",
           "select": [
             [
@@ -738,6 +629,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -788,7 +696,7 @@
               "type": "linear"
             },
             "showPoints": "always",
-            "spanNulls": false,
+            "spanNulls": 21600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -810,26 +718,6 @@
           "unit": "percent"
         },
         "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "bat_voltage_.*"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "volt"
-              },
-              {
-                "id": "custom.axisSoftMin",
-                "value": 2
-              },
-              {
-                "id": "custom.axisSoftMax",
-                "value": 6
-              }
-            ]
-          },
           {
             "matcher": {
               "id": "byRegexp",
@@ -857,27 +745,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "bat_voltage_shellyht-.*"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "volt"
-              },
-              {
-                "id": "custom.axisSoftMin",
-                "value": 2
-              },
-              {
-                "id": "custom.axisSoftMax",
-                "value": 3
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "bat_voltage_shellyplusht-.*"
+              "options": "bat_voltage_.*"
             },
             "properties": [
               {
@@ -923,12 +791,13 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(bat_value) as bat_value,\n    concat('bat_value_', ${bat_metric:raw}) as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_ht_meter1\n        where\n            device_name in ($ht_device_name)\n            and device_id is not null\n            and is_valid = true\n            and $__timeFilter(timestamp)\n    )\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(battery_percent) as battery_percent,\n    concat('bat_value_', ${bat_metric:raw}) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_gen2_humidity\n        where\n            device_name in ($ht_device_name)\n            and idx = '$idx'\n            and $__timeFilter(timestamp)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "bat_value",
           "select": [
             [
@@ -940,6 +809,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -954,12 +840,13 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(bat_voltage) as bat_voltage,\n    concat('bat_voltage_', ${bat_metric:raw}) as metric\nfrom\n    shelly_ht_meter1\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_ht_meter1\n        where\n            device_name in ($ht_device_name)\n            and device_id is not null\n            and is_valid = true\n            and $__timeFilter(timestamp)\n    )\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    timestamp as time,\n    avg(battery_V) as battery_V,\n    concat('bat_voltage_', ${bat_metric:raw}) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_gen2_devicepower\n        where\n            device_name in ($ht_device_name)\n            and $__timeFilter(timestamp)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "bat_voltage",
           "select": [
             [
@@ -971,6 +858,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -983,92 +887,6 @@
       ],
       "title": "battery value/voltage measurements",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "last measurement",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "#919191",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "super-light-blue",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 16,
-        "y": 21
-      },
-      "id": 27,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "select\n    sum(sensor_error) as sensor_error,\n    cast(0 as timestamp) as time\nfrom (\n    select last(sensor_error) as sensor_error, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
-          "refId": "A",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "current sensor_error",
-      "type": "stat"
     },
     {
       "datasource": {
@@ -1127,11 +945,12 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select min(bat_voltage), cast(0 as timestamp) time\nfrom (\n    select last(bat_voltage) as bat_voltage, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
+          "rawSql": "select min(battery_V), cast(0 as timestamp) time\nfrom (\n    select last(battery_V) as battery_V, device_name\n    from shelly_gen2_devicepower\n    where device_name in ($ht_device_name) and idx = '$idx' and $__timeFilter(timestamp)\n)",
           "refId": "A",
           "select": [
             [
@@ -1143,6 +962,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -1154,92 +990,6 @@
         }
       ],
       "title": "current battery voltage",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "last measurement",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "#919191",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "super-light-blue",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
-        "y": 26
-      },
-      "id": 26,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "select\n    sum(connect_retries) as connect_retries,\n    cast(0 as timestamp) as time\nfrom\n(\n    select last(connect_retries) as connect_retries, device_name\n    from shelly_ht_meter1\n    where device_name in ($ht_device_name) and is_valid = true and $__timeFilter(timestamp)\n)",
-          "refId": "A",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "current connect_retries",
       "type": "stat"
     }
   ],
@@ -1264,7 +1014,9 @@
       },
       {
         "current": {
-          "text": "All",
+          "text": [
+            "All"
+          ],
           "value": [
             "$__all"
           ]
@@ -1273,15 +1025,28 @@
           "type": "postgres",
           "uid": "${datasource}"
         },
-        "definition": "select distinct device_name from shelly_ht_meter1 where $__timeFilter(timestamp) and device_name is not null\n",
+        "definition": "select distinct device_name from shelly_gen2_temperature where $__timeFilter(timestamp)",
         "includeAll": true,
         "multi": true,
         "name": "ht_device_name",
         "options": [],
-        "query": "select distinct device_name from shelly_ht_meter1 where $__timeFilter(timestamp) and device_name is not null\n",
+        "query": "select distinct device_name from shelly_gen2_temperature where $__timeFilter(timestamp)",
         "refresh": 2,
         "regex": "",
         "sort": 5,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "0",
+          "value": "0"
+        },
+        "definition": "select distinct idx from shelly_gen2_temperature where device_name in ($ht_device_name) and $__timeFilter(timestamp)",
+        "name": "idx",
+        "options": [],
+        "query": "select distinct idx from shelly_gen2_temperature where device_name in ($ht_device_name) and $__timeFilter(timestamp)",
+        "refresh": 1,
+        "regex": "",
         "type": "query"
       },
       {
@@ -1314,7 +1079,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "shellyht1",
-  "uid": "shellyht1",
-  "version": 2
+  "title": "shelly_gen2_temperature",
+  "uid": "shelly_gen2_temperature",
+  "version": 1
 }

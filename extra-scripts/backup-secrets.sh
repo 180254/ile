@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Backup ILE secrets and configuration files.
+# Creates timestamped .tar.zst archive of envs, TLS certs, and config files.
 
 set -Eeuo pipefail
 trap 'echo "ERROR: ${BASH_SOURCE:-$BASH_COMMAND in $0}: ${FUNCNAME[0]:-line} at line: $LINENO, arguments: $*" 1>&2; exit 1' ERR

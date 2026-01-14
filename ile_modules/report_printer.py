@@ -1,4 +1,15 @@
 #!.venv/bin/python3
+"""
+ILE Report Printer - Reports the state of data in Valkey.
+
+Periodically prints:
+- Valkey server info (version, uptime, memory usage)
+- ILE status counters (messages, rows, bytes processed)
+- Stream lengths and consumer group status
+
+Sets sigterm_event on Valkey errors.
+"""
+
 from __future__ import annotations
 
 import os
@@ -12,20 +23,14 @@ from ile_modules import ile_tools
 
 getenv = os.environ.get
 
-"""
-ILE Report Printer - Reports the state of data in Valkey.
-
-Periodically prints:
-- Valkey server info
-- ILE status counters (messages, rows, bytes)
-- Stream lengths and consumer group status
-
-Sets sigterm_event on Valkey errors.
-"""
-
 
 class Env:
-    """Environment variables for Report Writer configuration. IRW = ILE REPORT PRINTER."""
+    """
+    Environment variables for Report Printer configuration.
+
+    Prefix: ILE_IRP (ILE Report Printer).
+    References stream/counter names from other modules.
+    """
 
     # Stream names
     ILE_IMI_VALKEY_STREAM_NAME: str = getenv("ILE_IMI_VALKEY_STREAM_NAME", "mqtt-ingestor-stream")
@@ -34,6 +39,9 @@ class Env:
     # Counter keys from mqtt_ingestor
     ILE_IMI_VALKEY_MESSAGES_CNT_KEY: str = getenv("ILE_IMI_VALKEY_MESSAGES_CNT_KEY", "mqtt-ingestor-messages")
     ILE_IMI_VALKEY_BYTES_CNT_KEY: str = getenv("ILE_IMI_VALKEY_BYTES_CNT_KEY", "mqtt-ingestor-bytes")
+    ILE_IMI_VALKEY_SKIPPED_CNT_KEY: str = getenv("ILE_IMI_VALKEY_SKIPPED_CNT_KEY", "mqtt-ingestor-skipped")
+    ILE_IMI_VALKEY_THROTTLED_CNT_KEY: str = getenv("ILE_IMI_VALKEY_THROTTLED_CNT_KEY", "mqtt-ingestor-throttled")
+    ILE_IMI_VALKEY_BATCHED_CNT_KEY: str = getenv("ILE_IMI_VALKEY_BATCHED_CNT_KEY", "mqtt-ingestor-batched")
 
     # Counter keys from payload_normalizer
     ILE_IPN_VALKEY_MESSAGES_CNT_KEY: str = getenv("ILE_IPN_VALKEY_MESSAGES_CNT_KEY", "payload-normalizer-messages")
@@ -54,6 +62,9 @@ class Config:
     counters: typing.Sequence[str] = [
         Env.ILE_IMI_VALKEY_MESSAGES_CNT_KEY,
         Env.ILE_IMI_VALKEY_BYTES_CNT_KEY,
+        Env.ILE_IMI_VALKEY_SKIPPED_CNT_KEY,
+        Env.ILE_IMI_VALKEY_THROTTLED_CNT_KEY,
+        Env.ILE_IMI_VALKEY_BATCHED_CNT_KEY,
         Env.ILE_IPN_VALKEY_MESSAGES_CNT_KEY,
         Env.ILE_IPN_VALKEY_ROWS_CNT_KEY,
         Env.ILE_IPN_VALKEY_BYTES_CNT_KEY,
@@ -70,14 +81,17 @@ class Config:
 
 
 def _log(label: str, value: object, width: int = 36, indent: int = 2) -> None:
+    """Log a formatted key-value pair with consistent alignment."""
     ile_tools.log_result(f"{' ' * indent}{label.ljust(width)}{value}")
 
 
 def _log_size(label: str, size: int, width: int = 36, indent: int = 2) -> None:
+    """Log a formatted size value with human-readable bytes suffix."""
     _log(label, ile_tools.size_fmt(size, "binary", "B"), width, indent)
 
 
 def print_server_info(r: valkey.Valkey) -> None:
+    """Print Valkey server information including version, uptime, and memory usage."""
     info = ile_tools.v_cast(r.info())
     _log("redis_version", info.get("redis_version", "N/A"))
     _log("uptime_in_seconds", f"{info.get('uptime_in_seconds', 0)}s", indent=4)
@@ -92,9 +106,11 @@ def print_server_info(r: valkey.Valkey) -> None:
 
 
 def print_counters(r: valkey.Valkey) -> None:
+    """Print ILE status counters (messages, rows, bytes processed by each module)."""
     _log("ile_counters", "")
-    for key in Config.counters:
-        value = int(ile_tools.v_cast(r.get(key)) or 0)
+    values = ile_tools.v_cast(r.mget(*Config.counters))
+    for key, raw_value in zip(Config.counters, values, strict=True):
+        value = int(raw_value) if raw_value else 0
         if "bytes" in key:
             _log(key, f"{value} ({ile_tools.size_fmt(value, 'binary', 'B')})", indent=4)
         else:
@@ -102,6 +118,7 @@ def print_counters(r: valkey.Valkey) -> None:
 
 
 def print_stream_info(r: valkey.Valkey) -> None:
+    """Print stream lengths, consumer groups, and consumer status."""
     for stream_name in Config.streams:
         stream_length = int(ile_tools.v_cast(r.xlen(stream_name)))
         _log(f"stream={stream_name}", f"xlen={stream_length}")
@@ -123,11 +140,11 @@ def print_stream_info(r: valkey.Valkey) -> None:
                     idle_ms = consumer.get("idle", 0)
                     _log("consumer", f"name={name} pending={pending} idle={idle_ms}ms", indent=6)
         except valkey.exceptions.ValkeyError:
-            ile_tools.print_debug(lambda stream_name2=stream_name: f"valkey: xinfo_groups failed stream={stream_name2}")
+            ile_tools.log_diagnostic(f"valkey: xinfo_groups failed stream={stream_name}")
 
 
 def main() -> int:
-    """Entry point. Returns 0 on success, 1 on fatal error."""
+    """Entry point for report printer. Returns 0 on success, 1 on error."""
     ile_tools.log_diagnostic("main: starting report_printer")
     ile_tools.print_vars(Config)
 
@@ -135,7 +152,6 @@ def main() -> int:
 
     try:
         # noinspection PyTypeChecker
-        # Expected type 'contextlib.AbstractContextManager', got 'Generator[Any, None, None]' instead
         with ile_tools.create_valkey_client() as r:
             while not sigterm_event.is_set():
                 try:
@@ -144,7 +160,7 @@ def main() -> int:
                     print_stream_info(r)
                     ile_tools.log_result("---")
                 except valkey.exceptions.ValkeyError as e:
-                    ile_tools.print_exception(e, "main: valkey error")
+                    ile_tools.print_exception(e, "main: report failed")
                     sigterm_event.set()
                     break
 

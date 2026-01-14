@@ -1,4 +1,16 @@
 #!.venv/bin/python3
+"""
+ILE Tools - Shared utilities for ILE modules.
+
+Provides common utilities for all ILE modules:
+- Logging with timestamps (ISO 8601 format, UTC)
+- Signal handling for graceful shutdown (SIGTERM, SIGINT)
+- MQTT client management (MQTTv5, TLS support)
+- Valkey client management (retry logic, TLS support)
+- Common type definitions (MqttMessage, QuestDBRow)
+- Topic pattern matching for supported device types
+"""
+
 from __future__ import annotations
 
 import abc
@@ -7,7 +19,9 @@ import contextlib
 import datetime
 import inspect
 import json
+import logging
 import os
+import re
 import signal
 import ssl
 import sys
@@ -31,21 +45,18 @@ if typing.TYPE_CHECKING:
 getenv = os.environ.get
 T = typing.TypeVar("T")
 
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-"""
-ILE Tools - Shared utilities for ILE modules.
-
-Provides common utilities for all ILE modules:
-- Logging with timestamps
-- Signal handling for graceful shutdown
-- MQTT client management
-- Valkey client management
-- Common type definitions
-"""
+logger = logging.getLogger(__name__)
 
 
 class Env:
-    """Environment variables for ILE tools configuration."""
+    """
+    Environment variables for ILE tools configuration.
+
+    All values are strings read from environment with defaults.
+    Parsed values are available in the Config class.
+    """
 
     ILE_DEBUG: str = getenv("ILE_DEBUG", "false")
 
@@ -72,7 +83,12 @@ class Env:
 
 
 class Config:
-    """Parsed configuration from environment variables."""
+    """
+    Parsed configuration from environment variables.
+
+    Class-level attributes are initialized at module load time.
+    Boolean values are parsed from "1" or "true" (case-insensitive).
+    """
 
     debug: bool = Env.ILE_DEBUG.lower() in ("1", "true")
 
@@ -98,61 +114,33 @@ class Config:
     sigterm_wait_s: float = float(Env.ILE_SIGTERM_WAIT_S)
 
 
-def print_(*args: str, **kwargs: typing.Any) -> None:  # noqa: ANN401
-    """
-    Print message with ISO timestamp prefix.
-
-    Does not throw exceptions.
-    """
+def print_(msg: str, file: typing.TextIO = sys.stdout) -> None:
+    """Print message with ISO timestamp prefix (UTC)."""
     timestamp = datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat()
-    new_args = (timestamp, *args)
-    print(*new_args, **kwargs)
-
-
-def print_debug(msg_supplier: typing.Callable[[], str], **kwargs: typing.Any) -> None:  # noqa: ANN401
-    """
-    Print debug message with timestamp prefix if debug mode is enabled.
-
-    Uses lazy evaluation via supplier function to avoid string formatting overhead.
-    Does not throw exceptions.
-    """
-    if Config.debug:
-        print_(msg_supplier(), **kwargs)
+    new_msg = f"{timestamp} {msg}"
+    logger.info(new_msg)
+    # print(new_msg, file=file)
 
 
 def log_result(msg: str) -> None:
-    """
-    Log result message with timestamp to stdout.
-
-    Use for operational results, metrics, and status updates.
-    Does not throw exceptions.
-    """
+    """Log result message to stdout with timestamp. Use for operational results and metrics."""
     print_(msg)
 
 
 def log_diagnostic(msg: str) -> None:
-    """
-    Log diagnostic message with timestamp to stderr.
-
-    Use for startup/shutdown info, connection status, and operational events.
-    Does not throw exceptions.
-    """
+    """Log diagnostic message to stderr with timestamp. Use for startup, shutdown, and events."""
     print_(msg, file=sys.stderr)
 
 
-def log_diagnostic_debug(msg_supplier: typing.Callable[[], str]) -> None:
-    """
-    Log debug diagnostic message with timestamp to stderr if debug mode is enabled.
-
-    Uses lazy evaluation via supplier function to avoid string formatting overhead.
-    Does not throw exceptions.
-    """
-    if Config.debug:
-        print_(msg_supplier(), file=sys.stderr)
-
-
 def print_vars(obj: object) -> None:
-    """Print all public attributes of an object or class to stderr."""
+    """
+    Print all public attributes of an object or class to stderr.
+
+    Useful for logging configuration at startup. Excludes private attributes.
+
+    Args:
+        obj: Object instance or class to inspect.
+    """
     if isinstance(obj, type):
         class_name = obj.__name__
         attrs = vars(obj).items()
@@ -178,13 +166,35 @@ def print_exception(exception: BaseException, message: str = "") -> None:
 
 
 def json_dumps(data: dict[str, typing.Any]) -> str:
-    """Serialize dict to compact JSON string. Raises TypeError/ValueError for invalid input."""
+    """
+    Serialize dict to compact JSON string without whitespace.
+
+    Args:
+        data: Dictionary to serialize.
+
+    Returns:
+        Compact JSON string.
+
+    Raises:
+        TypeError: If data contains non-serializable types.
+        ValueError: If data contains circular references.
+    """
     return json.dumps(data, separators=(",", ":"))
 
 
 # https://stackoverflow.com/a/1094933/8574922
 def size_fmt(num: float, mode: typing.Literal["metric", "binary"] = "metric", suffix: str = "") -> str:
-    """Convert number to human-readable size string. Examples: 12.3K, 1.2Gi, 2.3GiB."""
+    """
+    Convert number to human-readable size string.
+
+    Args:
+        num: The number to format.
+        mode: "metric" uses base-1000 (K, M, G), "binary" uses base-1024 (Ki, Mi, Gi).
+        suffix: Optional suffix to append (e.g., "B" for bytes).
+
+    Returns:
+        Formatted string like "12.3K", "1.2GiB", "2.3M".
+    """
     base = 1024.0 if mode == "binary" else 1000.0
     i = "i" if mode == "binary" and num >= base else ""
     for unit in ("", "K", "M", "G", "T", "P", "E", "Z"):
@@ -198,11 +208,11 @@ def v_cast(x: typing.Awaitable[T] | T) -> T:
     """
     Cast away awaitable type for static type checkers.
 
-    Used as workaround for valkey-py typing issues.
-    https://github.com/valkey-io/valkey-py/issues/84
-    https://github.com/valkey-io/valkey-py/issues/164
+    Workaround for valkey-py typing issues where methods return Awaitable[T] | T.
+    See: https://github.com/valkey-io/valkey-py/issues/84
 
-    Raises: TypeError if an awaitable is actually passed.
+    Raises:
+        TypeError: If an awaitable is passed (async client not supported).
     """
     if inspect.isawaitable(x):
         msg = "v_cast() received an awaitable."
@@ -211,13 +221,8 @@ def v_cast(x: typing.Awaitable[T] | T) -> T:
 
 
 def shutdown_with_timeout(pool: concurrent.futures.Executor, timeout: float) -> bool:
-    """
-    Shutdown executor pool with timeout.
-
-    Returns True if shutdown completed within timeout, False otherwise.
-    Does not throw exceptions.
-    """
-    log_diagnostic(f"executor: shutting down timeout={timeout}s ...")
+    """Shutdown executor pool with timeout. Returns True if shutdown completed within timeout."""
+    log_diagnostic(f"executor: shutting down, timeout={timeout}s")
     shutdown_complete = threading.Event()
 
     def do_shutdown() -> None:
@@ -237,13 +242,12 @@ def shutdown_with_timeout(pool: concurrent.futures.Executor, timeout: float) -> 
 
 def configure_sigterm_handler() -> threading.Event:
     """
-    Configure signal handlers for graceful shutdown.
+    Configure SIGTERM/SIGINT handlers for graceful shutdown.
 
-    Handles SIGTERM and SIGINT signals. First signal sets the event
-    for graceful shutdown, second signal forces immediate exit.
-    Does not throw exceptions.
+    First signal sets the returned event, second signal forces immediate exit.
 
-    Returns: threading.Event that is set when shutdown is requested.
+    Returns:
+        Event that is set when shutdown is requested.
     """
     sigterm_threading_event = threading.Event()
 
@@ -271,26 +275,21 @@ def configure_sigterm_handler() -> threading.Event:
 
 
 def future_exception_callback[T](future: concurrent.futures.Future[T]) -> None:
-    """
-    Callback for futures to log exceptions.
-
-    future.add_done_callback(ile_tools.future_exception_callback)
-    Does not throw exceptions.
-    """
+    """Callback for futures to log exceptions. Use with future.add_done_callback()."""
     if exc := future.exception():
         print_exception(exc)
 
 
 def flatten_dict(data: dict[str, typing.Any], recursive_key: str = "", sep: str = "_") -> dict[str, typing.Any]:
     """
-    Flatten nested dictionary into a single-level dictionary with concatenated keys.
+    Flatten nested dictionary into single-level with concatenated keys.
 
-    Keys from nested dictionaries are concatenated using the specified separator.
-    Lists are flattened by index (e.g., key_0, key_1, ...).
+    Lists are flattened by index (key_0, key_1, ...).
+    Special case: "errors" list values are joined as comma-separated string.
 
-    Special case:
-    If a key is "errors" and its value is a list, it is converted to a comma-separated string.
-    Useful for Shelly Gen2 status transforming: https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch/#status
+    Example:
+        >>> flatten_dict({"a": {"b": 1, "c": 2}})
+        {"a_b": 1, "a_c": 2}
     """
     flat: dict[str, typing.Any] = {}
     _flatten_dict_into(data, flat, recursive_key, sep)
@@ -303,11 +302,7 @@ def _flatten_dict_into(
     recursive_key: str,
     sep: str,
 ) -> None:
-    """
-    Internal helper: flattens data into the provided flat dict (in-place mutation).
-
-    Avoids creating intermediate dicts for better performance.
-    """
+    """Internal helper: flattens data into flat dict in-place."""
     for key, value in data.items():
         new_key = f"{recursive_key}{sep}{key}" if recursive_key else key
 
@@ -332,17 +327,20 @@ def _flatten_dict_into(
             flat[new_key] = value
 
 
-class MqttMessage(typing.TypedDict):
-    """
-    MQTT message structure for internal processing.
+def dict_int_to_float(data: dict[str, typing.Any]) -> dict[str, typing.Any]:
+    """Convert all integer values in a dictionary to floats. Other types unchanged."""
+    return {key: float(value) if isinstance(value, int) else value for key, value in data.items()}
 
-    Attributes:
-        timestamp: Unix timestamp (seconds since epoch) when message was received.
-        topic: MQTT topic string.
-        payload: Message payload as string.
-        qos: Quality of Service level (0, 1, or 2).
-        retain: Whether the message is a retained message.
-    """
+
+TIMESTAMP_NS_MULTIPLIER: int = 1_000_000_000
+
+
+def timestamp_s_to_ns(timestamp_s: float) -> int:
+    return int(timestamp_s * TIMESTAMP_NS_MULTIPLIER)
+
+
+class MqttMessage(typing.TypedDict):
+    """MQTT message structure: timestamp, topic, payload, qos, retain."""
 
     timestamp: float
     topic: str
@@ -352,23 +350,23 @@ class MqttMessage(typing.TypedDict):
 
 
 class QuestDBRow(typing.TypedDict):
-    """QuestDB row structure for ILP ingestion."""
+    """QuestDB ILP row structure: table, symbols, columns, timestamp_ns."""
 
-    table: str  # Target table name
-    symbols: dict[str, typing.Any]  # Symbol columns (indexed strings)
-    columns: dict[str, typing.Any]  # Value columns
-    timestamp_ns: int  # Timestamp in nanoseconds since epoch
+    table: str
+    symbols: dict[str, typing.Any]
+    columns: dict[str, typing.Any]
+    timestamp_ns: int
 
 
 @contextlib.contextmanager
 def create_valkey_client() -> typing.Generator[valkey.Valkey]:
     """
-    Create a Valkey client with standard configuration.
+    Create Valkey client context manager with retry logic and SSL support.
 
-    Uses retry logic and SSL settings from common configuration.
-    Raises valkey.exceptions.ValkeyError if connection verification fails.
+    Raises:
+        valkey.exceptions.ValkeyError: If connection verification fails.
     """
-    log_diagnostic(f"valkey: connecting server={Config.valkey_host}:{Config.valkey_port} ssl={Config.valkey_ssl} ...")
+    log_diagnostic(f"valkey: connecting server={Config.valkey_host}:{Config.valkey_port} ssl={Config.valkey_ssl}")
     r: valkey.Valkey | None = None
     try:
         r = valkey.Valkey(
@@ -400,7 +398,7 @@ def create_valkey_client() -> typing.Generator[valkey.Valkey]:
         )
 
         try:
-            log_diagnostic("valkey: client created, verifying connection  ...")
+            log_diagnostic("valkey: client created, verifying connection")
             r.incr("ile-init", 1)
         except valkey.exceptions.ValkeyError as e:
             print_exception(e, "valkey: connect failed")
@@ -413,7 +411,7 @@ def create_valkey_client() -> typing.Generator[valkey.Valkey]:
     finally:
         if r:
             try:
-                log_diagnostic("valkey: closing client ...")
+                log_diagnostic("valkey: closing client")
                 r.close()
             except Exception as e:
                 print_exception(e, "valkey: client close failed")
@@ -427,21 +425,13 @@ def ensure_consumer_group(
     consumer_group: str,
 ) -> bool:
     """
-    Ensure Valkey consumer group exists for the stream.
-
-    Creates the consumer group if it doesn't exist, using ID "0" to read
-    all messages from the beginning. Also creates the stream if it doesn't exist.
-
-    Args:
-        r: Valkey client instance.
-        stream_name: Name of the stream.
-        consumer_group: Name of the consumer group to create.
+    Ensure Valkey consumer group exists, creating it if needed.
 
     Returns:
         True if consumer group exists or was created, False on error.
     """
     try:
-        log_diagnostic(f"valkey: creating consumer group={consumer_group} stream={stream_name} ...")
+        log_diagnostic(f"valkey: creating consumer group={consumer_group} stream={stream_name}")
         r.xgroup_create(
             name=stream_name,
             groupname=consumer_group,
@@ -468,7 +458,7 @@ class MqttBaseHandler(abc.ABC):
     """
     Base class for MQTT message handling.
 
-    Provides default callbacks for connection, subscription, and disconnection.
+    Provides default connect/subscribe/disconnect callbacks.
     Subclasses must implement on_message(). Sets sigterm_event on connection failure.
     """
 
@@ -476,12 +466,7 @@ class MqttBaseHandler(abc.ABC):
         self,
         sigterm_event: threading.Event,
     ) -> None:
-        """
-        Initialize the MQTT handler.
-
-        Args:
-            sigterm_event: Event to signal shutdown on connection errors.
-        """
+        """Initialize with sigterm_event for shutdown signaling on errors."""
         self.sigterm_event: threading.Event = sigterm_event
 
     def on_connect(
@@ -492,7 +477,7 @@ class MqttBaseHandler(abc.ABC):
         reason_code: paho.mqtt.reasoncodes.ReasonCode,
         properties: paho.mqtt.properties.Properties | None,  # noqa: ARG002
     ) -> None:
-        """Handle MQTT connection established callback. Subscribes to all topics on success."""
+        """Handle connect callback. Sets sigterm_event on failure."""
         if reason_code.is_failure:
             log_diagnostic(f"mqtt: connect failed code={reason_code}")
             self.sigterm_event.set()
@@ -507,7 +492,7 @@ class MqttBaseHandler(abc.ABC):
         reason_code_list: list[paho.mqtt.reasoncodes.ReasonCode],
         properties: paho.mqtt.properties.Properties | None,  # noqa: ARG002
     ) -> None:
-        """Handle MQTT subscription confirmation callback."""
+        """Handle subscribe callback. Sets sigterm_event on failure."""
         is_failure = any(rc.is_failure for rc in reason_code_list)
         if is_failure:
             log_diagnostic(f"mqtt: subscribe failed mid={mid} codes={reason_code_list}")
@@ -523,7 +508,7 @@ class MqttBaseHandler(abc.ABC):
         reason_code: paho.mqtt.reasoncodes.ReasonCode,
         properties: paho.mqtt.properties.Properties | None,  # noqa: ARG002
     ) -> None:
-        """Handle MQTT disconnection callback. Triggers shutdown on unexpected disconnect."""
+        """Handle disconnect callback. Sets sigterm_event on unexpected disconnect."""
         if reason_code.is_failure:
             log_diagnostic(f"mqtt: disconnected unexpectedly code={reason_code}")
             self.sigterm_event.set()
@@ -537,17 +522,19 @@ class MqttBaseHandler(abc.ABC):
         userdata: typing.Any,  # noqa: ANN401
         message: paho.mqtt.client.MQTTMessage,
     ) -> None:
-        """Handle incoming MQTT message. Must be implemented by subclasses."""
+        """Handle incoming MQTT message. Subclasses must implement."""
         ...
 
 
 @contextlib.contextmanager
 def create_mqtt_client(handler: MqttBaseHandler, client_id: str) -> typing.Generator[paho.mqtt.client.Client]:
     """
-    Create and manage MQTT client connection as context manager.
+    Create MQTT client context manager with MQTTv5 and optional SSL/TLS.
 
-    Supports SSL/TLS and MQTTv5. Starts network loop on entry, stops on exit.
-    Raises Exception if connection fails.
+    Starts network loop on entry, stops on exit.
+
+    Raises:
+        Exception: If initial connection fails.
     """
     mqtt_client: paho.mqtt.client.Client | None = None
     try:
@@ -600,3 +587,74 @@ def create_mqtt_client(handler: MqttBaseHandler, client_id: str) -> typing.Gener
             log_diagnostic(f"mqtt: client loop stopped, result={ret}")
             ret = mqtt_client.disconnect()
             log_diagnostic(f"mqtt: disconnected, result={ret}")
+
+
+def stream_trim_thread(
+    r: valkey.Valkey,
+    sigterm_event: threading.Event,
+    input_stream: str,
+    batch_size: int,
+    interval_s: float,
+) -> None:
+    """
+    Background thread: periodically trims the input stream to manage memory.
+
+    Calculates entries to keep as: (pending + lag + batch_size) * 10.
+    Runs every stream_trim_interval_s seconds.
+    """
+    while not sigterm_event.is_set():
+        try:
+            groups_info = v_cast(r.xinfo_groups(input_stream))
+            pending = 0
+            lag = 0
+
+            for group in groups_info:
+                pending = max(pending, group.get("pending", 0) or 0)
+                lag = max(pending, group.get("lag", 0) or 0)
+
+            min_entries = (pending + lag + batch_size) * 10
+            trimmed = r.xtrim(input_stream, maxlen=min_entries, approximate=True, limit=0)
+
+            log_diagnostic(
+                f"stream_trim: stream={input_stream} "
+                f"trimmed={trimmed} pending={pending} lag={lag} min_entries={min_entries}"
+            )
+
+        except valkey.exceptions.ValkeyError as e:
+            print_exception(e, "stream_trim: failed to trim stream")
+            # Don't set sigterm_event - this is a non-fatal error, will retry next interval
+
+        if sigterm_event.wait(interval_s):
+            break
+
+
+# Pre-compiled regex patterns for topic matching (shared between mqtt_ingestor and payload_normalizer)
+SHELLY_GEN2_STATUS_PATTERN: re.Pattern[str] = re.compile(r"^(shelly[a-zA-Z0-9-]+)/status/([a-zA-Z0-9-]+):([0-9]+)$")
+SHELLY_GEN2_ANNOUNCE_PATTERN: re.Pattern[str] = re.compile(r"^shelly[a-zA-Z0-9-]+/announce$")
+TELEGRAF_TOPIC_PATTERN: re.Pattern[str] = re.compile(r"^telegraf/[^/]+/[^/]+$")
+ZIGBEE2MQTT_BRIDGE_DEVICES_PATTERN: re.Pattern[str] = re.compile(r"^zigbee2mqtt/bridge/devices$")
+ZIGBEE2MQTT_DEVICE_PATTERN: re.Pattern[str] = re.compile(r"^zigbee2mqtt/([^/]+)$")
+
+
+def is_supported_topic(topic: str) -> bool:
+    """Check if topic matches a supported pattern.
+
+    Supported topic patterns:
+        - Shelly Gen2 status: <device_id>/status/<component>:<idx>
+        - Shelly Gen2 announce: <device_id>/announce
+        - Telegraf metrics: telegraf/<host>/<input_name>
+        - Zigbee2mqtt bridge devices: zigbee2mqtt/bridge/devices
+        - Zigbee2mqtt device messages: zigbee2mqtt/<friendly_name>
+    """
+    if topic.startswith("telegraf/"):
+        return TELEGRAF_TOPIC_PATTERN.match(topic) is not None
+    if topic.startswith("zigbee2mqtt/"):
+        return (
+            ZIGBEE2MQTT_BRIDGE_DEVICES_PATTERN.match(topic) is not None
+            or ZIGBEE2MQTT_DEVICE_PATTERN.match(topic) is not None
+        )
+    if topic.startswith("shelly"):
+        return (
+            SHELLY_GEN2_STATUS_PATTERN.match(topic) is not None or SHELLY_GEN2_ANNOUNCE_PATTERN.match(topic) is not None
+        )
+    return False

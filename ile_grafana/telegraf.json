@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 4,
+  "id": 13,
   "links": [
     {
       "asDropdown": true,
@@ -1147,7 +1147,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 122
+            "y": 136
           },
           "id": 8,
           "options": {
@@ -1268,7 +1268,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 122
+            "y": 136
           },
           "id": 13,
           "options": {
@@ -1398,7 +1398,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 130
+            "y": 144
           },
           "id": 17,
           "options": {
@@ -1513,7 +1513,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 130
+            "y": 144
           },
           "id": 19,
           "options": {
@@ -1660,7 +1660,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 130
+            "y": 144
           },
           "id": 18,
           "options": {
@@ -1828,7 +1828,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 138
+            "y": 152
           },
           "id": 23,
           "options": {
@@ -1944,7 +1944,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 138
+            "y": 152
           },
           "id": 24,
           "options": {
@@ -2102,7 +2102,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 138
+            "y": 152
           },
           "id": 25,
           "options": {
@@ -2237,7 +2237,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 146
+            "y": 160
           },
           "id": 34,
           "options": {
@@ -2352,7 +2352,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 146
+            "y": 160
           },
           "id": 33,
           "options": {
@@ -2467,7 +2467,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 146
+            "y": 160
           },
           "id": 32,
           "options": {
@@ -2622,7 +2622,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 56
+            "y": 28
           },
           "id": 38,
           "options": {
@@ -2766,10 +2766,10 @@
             "overrides": []
           },
           "gridPos": {
-            "h": 7,
+            "h": 4,
             "w": 8,
             "x": 8,
-            "y": 56
+            "y": 28
           },
           "id": 42,
           "options": {
@@ -2796,7 +2796,7 @@
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "WITH ordered AS (\n    SELECT\n        timestamp AS ts,\n        c_percentage AS pct,\n        lag(timestamp)     OVER (PARTITION BY name ORDER BY timestamp) AS prev_ts,\n        lag(c_percentage)  OVER (PARTITION BY name ORDER BY timestamp) AS prev_pct\n    FROM telegraf_power_supply\n    WHERE\n        host = '$host'\n        and type = 'Battery'\n        and status = 'Discharging'\n        and $__timeFilter(timestamp)\n),\nvalid AS (\n    SELECT\n        (ts - prev_ts) / 1000000L AS delta_s,  -- seconds (micros)\n        (prev_pct - pct) AS pct_drop\n    FROM ordered\n    WHERE prev_ts IS NOT NULL\n      AND (ts - prev_ts) < 60000000L          -- only intervals < 60s (micros)\n)\nSELECT\n    --sum(delta_s) AS total_seconds,\n    --sum(pct_drop) AS total_pct_drop,\n    (sum(pct_drop) / NULLIF(sum(delta_s), 0)) * 3600 AS avg_pct_drop_per_hour,\n    (100 * sum(delta_s) / NULLIF(sum(pct_drop), 0)) / 3600 as est_operating_time_hours\nFROM valid",
+              "rawSql": "WITH ordered AS (\n    SELECT\n        timestamp AS ts,\n        c_percentage AS pct,\n        lag(timestamp)     OVER (PARTITION BY name ORDER BY timestamp) AS prev_ts,\n        lag(c_percentage)  OVER (PARTITION BY name ORDER BY timestamp) AS prev_pct\n    FROM telegraf_power_supply\n    WHERE\n        host = '$host'\n        and type = 'Battery'\n        and status = 'Discharging'\n        and $__timeFilter(timestamp)\n),\nvalid AS (\n    SELECT\n        (ts - prev_ts) / 1000000L AS delta_s,  -- seconds (micros)\n        (prev_pct - pct) AS pct_drop\n    FROM ordered\n    WHERE prev_ts IS NOT NULL\n      AND (ts - prev_ts) < 65000000L          -- only intervals < 65s (micros)\n)\nSELECT\n    --sum(delta_s) AS total_seconds,\n    --sum(pct_drop) AS total_pct_drop,\n    (sum(pct_drop) / NULLIF(sum(delta_s), 0)) * 3600 AS avg_pct_drop_per_hour,\n    (100 * sum(delta_s) / NULLIF(sum(pct_drop), 0)) / 3600 as est_operating_time_hours\nFROM valid",
               "refId": "A",
               "sql": {
                 "columns": [
@@ -2818,6 +2818,85 @@
             }
           ],
           "title": "Discharging",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "questdb"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 1,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 8,
+            "x": 8,
+            "y": 32
+          },
+          "id": 43,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "12.2.0-17142428006",
+          "targets": [
+            {
+              "dataset": "qdb",
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "WITH ordered AS (\n    SELECT\n        timestamp AS ts,\n        c_percentage AS pct,\n        lag(timestamp)     OVER (PARTITION BY name ORDER BY timestamp) AS prev_ts,\n        lag(c_percentage)  OVER (PARTITION BY name ORDER BY timestamp) AS prev_pct\n    FROM telegraf_power_supply\n    WHERE\n        host = '$host'\n        and type = 'Battery'\n        and status = 'Charging'\n        and $__timeFilter(timestamp)\n),\nvalid AS (\n    SELECT\n        (ts - prev_ts) / 1000000L AS delta_s,  -- seconds (micros)\n        (pct - prev_pct) AS pct_incr\n    FROM ordered\n    WHERE prev_ts IS NOT NULL\n      AND (ts - prev_ts) < 65000000L          -- only intervals < 65s (micros)\n)\nSELECT\n    --sum(delta_s) AS total_seconds,\n    --sum(pct_incr) AS total_incr_incr,\n    (sum(pct_incr) / NULLIF(sum(delta_s), 0)) * 3600 AS avg_pct_incr_per_hour,\n    (100 * sum(delta_s) / NULLIF(sum(pct_incr), 0)) / 3600 as est_charging_time_hours\nFROM valid",
+              "refId": "A",
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              }
+            }
+          ],
+          "title": "Charging",
           "type": "stat"
         },
         {
@@ -2883,7 +2962,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 63
+            "y": 35
           },
           "id": 39,
           "options": {
@@ -3030,7 +3109,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 63
+            "y": 36
           },
           "id": 40,
           "options": {
@@ -3299,5 +3378,5 @@
   "timezone": "browser",
   "title": "telegraf",
   "uid": "telegraf",
-  "version": 20
+  "version": 1
 }

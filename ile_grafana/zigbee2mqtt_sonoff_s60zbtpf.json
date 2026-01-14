@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 3,
+  "id": 16,
   "links": [
     {
       "asDropdown": true,
@@ -89,8 +89,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 4,
+        "h": 6,
+        "w": 6,
         "x": 0,
         "y": 1
       },
@@ -117,11 +117,12 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select $__time(0), last(power) as power\nfrom shelly_plugs_meter1\nwhere device_name = '$plugs_device_name' and idx = '$idx' and is_valid = true and $__timeFilter(timestamp)",
+          "rawSql": "select $__time(0), last(power) as power\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere friendly_name = '$plugs_device_name' and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -133,6 +134,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -172,9 +190,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 4,
+        "h": 6,
+        "w": 6,
+        "x": 6,
         "y": 1
       },
       "id": 6,
@@ -202,11 +220,12 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "with\n    shelly_plugs_meter1b as (\n        select timestamp, total\n        from shelly_plugs_meter1\n        where device_name = '$plugs_device_name' and idx = '$idx' and is_valid = true and $__timeFilter(timestamp)\n    ),\n    consumption_t as ( -- Watt-minute\n        select (case when t1.total >= t2.total then t1.total-t2.total else null end) as consumption\n        from shelly_plugs_meter1b t1\n        lt join shelly_plugs_meter1b t2\n    )\nselect\n    $__time(0),\n    sum(consumption)*(1.0/60.0) as value -- Watt-hour\nfrom consumption_t",
+          "rawSql": "with\n    zigbee2mqtt_sonoff_s60zbtpf_b as (\n        select timestamp, energy\n        from zigbee2mqtt_sonoff_s60zbtpf\n        where friendly_name = '$plugs_device_name' and $__timeFilter(timestamp)\n    ),\n    consumption_t as (\n        select (case when t1.energy >= t2.energy then t1.energy-t2.energy else null end) as consumption\n        from zigbee2mqtt_sonoff_s60zbtpf_b t1\n        lt join zigbee2mqtt_sonoff_s60zbtpf_b t2\n    )\nselect\n    $__time(0),\n    sum(consumption) as value\nfrom consumption_t",
           "refId": "value",
           "select": [
             [
@@ -218,6 +237,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -230,97 +266,6 @@
       ],
       "title": "total power consumption",
       "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "percentage of is_valid=false",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "orange",
-                "value": 0.00001
-              },
-              {
-                "color": "red",
-                "value": 0.01
-              }
-            ]
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 8,
-        "y": 1
-      },
-      "id": 9,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": false,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "with\n    shelly_plugs_meter1b as (\n        select timestamp, is_valid\n        from shelly_plugs_meter1\n        where device_name = '$plugs_device_name' and idx = '$idx' and $__timeFilter(timestamp)\n    ),\n    count_all as (\n        select count() as value\n        from shelly_plugs_meter1b\n    ),\n    count_not_valid as (\n        select count() as value\n        from shelly_plugs_meter1b\n        where is_valid = false\n    )\nselect \n    $__time(0),\n    ((1.0*count_not_valid.value)/count_all.value) as value\nfrom count_all\ncross join count_not_valid",
-          "refId": "value",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "power measurement failure rate",
-      "type": "gauge"
     },
     {
       "datasource": {
@@ -398,7 +343,7 @@
         ]
       },
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
         "x": 12,
         "y": 1
@@ -424,11 +369,12 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "with\n    shelly_plugs_meter1b as (\n        select timestamp, total\n        from shelly_plugs_meter1\n        where device_name = '$plugs_device_name' and idx = '$idx' and is_valid = true and $__timeFilter(timestamp)\n    ),\n    interval_s as (\n        select (case\n            when '$interval' like '%s' then cast(left('$interval', -1) as int)*1\n            when '$interval' like '%m' then cast(left('$interval', -1) as int)*60\n            when '$interval' like '%h' then cast(left('$interval', -1) as int)*3600\n            when '$interval' like '%d' then cast(left('$interval', -1) as int)*86400\n            when '$interval' like '%w' then cast(left('$interval', -1) as int)*604800\n            when '$interval' like '%M' then cast(left('$interval', -1) as int)*2678400\n            when '$interval' like '%y' then cast(left('$interval', -1) as int)*31536000\n            else 0 end\n        ) as value\n    ),\n    consumption_t as ( -- Watt-minute\n        select\n            t1.timestamp, \n            (case\n                when datediff('s', t1.timestamp, t2.timestamp) > interval_s.value then null\n                when t1.total >= t2.total then t1.total-t2.total\n                else null end) as consumption\n        from shelly_plugs_meter1b t1\n        lt join shelly_plugs_meter1b t2\n        cross join interval_s\n    )\nselect\n    $__time(timestamp),\n    sum(consumption)*(1.0/60.0) as value -- Watt-hour\nfrom consumption_t\nsample by $interval fill(null) align to calendar",
+          "rawSql": "with\n    zigbee2mqtt_sonoff_s60zbtpf_b as (\n        select timestamp, energy\n        from zigbee2mqtt_sonoff_s60zbtpf\n        where friendly_name = '$plugs_device_name' and $__timeFilter(timestamp)\n    ),\n    interval_s as (\n        select (case\n            when '$interval' like '%s' then cast(left('$interval', -1) as int)*1\n            when '$interval' like '%m' then cast(left('$interval', -1) as int)*60\n            when '$interval' like '%h' then cast(left('$interval', -1) as int)*3600\n            when '$interval' like '%d' then cast(left('$interval', -1) as int)*86400\n            when '$interval' like '%w' then cast(left('$interval', -1) as int)*604800\n            when '$interval' like '%M' then cast(left('$interval', -1) as int)*2678400\n            when '$interval' like '%y' then cast(left('$interval', -1) as int)*31536000\n            else 0 end\n        ) as value\n    ),\n    consumption_t as (\n        select\n            t1.timestamp, \n            (case\n                when datediff('s', t1.timestamp, t2.timestamp) > interval_s.value then null\n                when t1.energy >= t2.energy then t1.energy-t2.energy\n                else null end) as consumption\n        from zigbee2mqtt_sonoff_s60zbtpf_b t1\n        lt join zigbee2mqtt_sonoff_s60zbtpf_b t2\n        cross join interval_s\n    )\nselect\n    $__time(timestamp),\n    sum(consumption) as value\nfrom consumption_t\nsample by $interval fill(null) align to calendar",
           "refId": "value",
           "select": [
             [
@@ -440,6 +386,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -452,188 +415,6 @@
       ],
       "title": "power consumption ",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "percentage of is_valid=false",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "orange",
-                "value": 0.00001
-              },
-              {
-                "color": "red",
-                "value": 0.01
-              }
-            ]
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 6
-      },
-      "id": 10,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": false,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "with\n    shelly_plugs_temperature1b as (\n        select timestamp, tmp_is_valid\n        from shelly_plugs_temperature1\n        where device_name = '$plugs_device_name' and $__timeFilter(timestamp)\n    ),\n    count_all as (\n        select count() as value\n        from shelly_plugs_temperature1b\n    ),\n    count_not_valid as (\n        select count() as value\n        from shelly_plugs_temperature1b\n        where tmp_is_valid = false\n      )\nselect \n    $__time(0),\n    ((1.0*count_not_valid.value)/count_all.value) as value\nfrom count_all\ncross join count_not_valid",
-          "refId": "value",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "device temp measurement failure rate",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "percentage of overtemperature=false",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "orange",
-                "value": 0.00001
-              },
-              {
-                "color": "red",
-                "value": 0.01
-              }
-            ]
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 6
-      },
-      "id": 11,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": false,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "with\n    shelly_plugs_temperature1b as (\n        select timestamp, overtemperature\n        from shelly_plugs_temperature1\n        where device_name = '$plugs_device_name' and tmp_is_valid = true and $__timeFilter(timestamp)\n    ),\n    count_all as (\n        select count() as value\n        from shelly_plugs_temperature1b\n    ),\n    count_overtemperature as (\n        select count() as value\n        from shelly_plugs_temperature1b\n        where overtemperature = true\n    )\nselect \n    $__time(0),\n    ((1.0*count_overtemperature.value)/count_all.value) as value\nfrom count_all\ncross join count_overtemperature",
-          "refId": "value",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "device temp overtemperature rate",
-      "type": "gauge"
     },
     {
       "datasource": {
@@ -715,14 +496,26 @@
             ]
           },
           {
+            "__systemRef": "hideSeriesFrom",
             "matcher": {
-              "id": "byName",
-              "options": "errors"
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "power"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "bool"
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": true
+                }
               }
             ]
           }
@@ -732,7 +525,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 7
       },
       "id": 2,
       "options": {
@@ -755,12 +548,13 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(power) as power\nfrom shelly_plugs_meter1\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(power) as power\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    friendly_name = '$plugs_device_name'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "power",
           "select": [
             [
@@ -772,6 +566,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -786,12 +597,13 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "with\n    shelly_plugs_meter1b as (\n        select timestamp, total\n        from shelly_plugs_meter1\n        where device_name = '$plugs_device_name' and idx = '$idx' and is_valid = true and $__timeFilter(timestamp)\n    ),\n    far_dates_t as (\n        select \n          cast($__unixEpochFrom()*1000000L as timestamp) as timestamp_from,\n          cast($__unixEpochTo()*1000000L as timestamp) as timestamp_to\n    ),\n    consumption_t as ( -- Watt-minute\n        select\n            $__time(0),\n            sum(consumption) as value\n        from (\n            select (case when t1.total >= t2.total then t1.total-t2.total else null end) as consumption\n            from shelly_plugs_meter1b t1\n            lt join shelly_plugs_meter1b t2\n        )\n    ),\n    average_t as (\n        select\n            $__time(0),\n            (value*1.0/datediff('m', timestamp_from, timestamp_to)) as value\n        from consumption_t\n        cross join far_dates_t\n    )\nselect\n    $__time(timestamp),\n    first(average_t.value) as average\nfrom shelly_plugs_meter1b\ncross join average_t\nsample by $__interval fill(null)",
+          "rawSql": "with\n    zigbee2mqtt_sonoff_s60zbtpf_b as (\n        select timestamp, energy\n        from zigbee2mqtt_sonoff_s60zbtpf\n        where friendly_name = '$plugs_device_name' and $__timeFilter(timestamp)\n    ),\n    far_dates_t as (\n        select \n          cast($__unixEpochFrom()*1000000L as timestamp) as timestamp_from,\n          cast($__unixEpochTo()*1000000L as timestamp) as timestamp_to\n    ),\n    consumption_t as (\n        select\n            $__time(0),\n            sum(consumption) as value\n        from (\n            select (case when t1.energy >= t2.energy then t1.energy-t2.energy else null end) as consumption\n            from zigbee2mqtt_sonoff_s60zbtpf_b t1\n            lt join zigbee2mqtt_sonoff_s60zbtpf_b t2\n        )\n    ),\n    average_t as (\n        select\n            $__time(0),\n            (value*1.0/datediff('m', timestamp_from, timestamp_to)) as value\n        from consumption_t\n        cross join far_dates_t\n    )\nselect\n    $__time(timestamp),\n    first(average_t.value) as average\nfrom zigbee2mqtt_sonoff_s60zbtpf_b\ncross join average_t\nsample by $__interval fill(null)",
           "refId": "average",
           "select": [
             [
@@ -803,37 +615,23 @@
               }
             ]
           ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        },
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "hide": false,
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "select\n    $__time(timestamp),\n    coalesce(is_valid, is_overpower, is_overvoltage, is_undervoltage, is_overcurrent, 0) as errors\nfrom (\n  select \n      timestamp,\n      nullif(min(1-cast(is_valid as INT)), 0) as is_valid,\n      nullif(min(cast(is_overpower as INT)), 0) as is_overpower,\n      nullif(min(cast(is_overvoltage as INT)), 0) as is_overvoltage,\n      nullif(min(cast(is_undervoltage as INT)), 0) as is_undervoltage,\n      nullif(min(cast(is_overcurrent as INT)), 0) as is_overcurrent\n  from shelly_plugs_meter1\n  where\n      device_name = '$plugs_device_name'\n      and $__timeFilter(timestamp)\n  sample by $__interval fill(null)\n)",
-          "refId": "errors",
-          "select": [
-            [
+          "sql": {
+            "columns": [
               {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
+                "parameters": [],
+                "type": "function"
               }
-            ]
-          ],
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -863,8 +661,8 @@
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
-            "axisSoftMax": 50,
-            "axisSoftMin": 20,
+            "axisSoftMax": 255,
+            "axisSoftMin": 0,
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
@@ -902,50 +700,17 @@
               }
             ]
           },
-          "unit": "celsius"
+          "unit": "none"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "overtemperature"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bool"
-              },
-              {
-                "id": "decimals",
-                "value": 0
-              },
-              {
-                "id": "min",
-                "value": 0
-              },
-              {
-                "id": "max",
-                "value": 1
-              },
-              {
-                "id": "custom.axisSoftMin",
-                "value": 0
-              },
-              {
-                "id": "custom.axisSoftMax",
-                "value": 1
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 7,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 9
       },
-      "id": 4,
+      "id": 31,
       "options": {
         "legend": {
           "calcs": [],
@@ -966,12 +731,14 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
+          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(tmp_tc) as tmp_tc,\n    min(cast(overtemperature as INT)) as overtemperature\nfrom shelly_plugs_temperature1\nwhere\n    device_name = '$plugs_device_name'\n    and tmp_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
-          "refId": "value",
+          "rawSql": "select \n    timestamp as time,\n    avg(linkquality) as linkquality,\n    ieee_address as metric,\nfrom\n    zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    ieee_address in (\n        select \n            distinct ieee_address\n        from\n            zigbee2mqtt_sonoff_s60zbtpf\n        where\n            friendly_name = '$plugs_device_name'\n            and $__timeFilter(timestamp)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "A",
           "select": [
             [
               {
@@ -982,6 +749,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -992,7 +776,7 @@
           ]
         }
       ],
-      "title": "device temperature",
+      "title": "linkquality",
       "type": "timeseries"
     },
     {
@@ -1001,7 +785,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 16
       },
       "id": 27,
       "panels": [],
@@ -1086,7 +870,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 17
       },
       "id": 21,
       "options": {
@@ -1109,11 +893,12 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(current) as current\nfrom shelly_plugs_meter1\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(current) as current\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    friendly_name = '$plugs_device_name'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -1125,6 +910,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -1229,7 +1031,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 20
+        "y": 17
       },
       "id": 23,
       "options": {
@@ -1257,7 +1059,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(voltage) as voltage\nfrom shelly_plugs_meter1\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and is_valid = true\n    and $__timeFilter(timestamp)\n    and voltage > 0\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(voltage) as voltage\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    friendly_name = '$plugs_device_name'\n    and $__timeFilter(timestamp)\n    and voltage > 0\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -1386,7 +1188,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "power"
+              "options": "apower"
             },
             "properties": [
               {
@@ -1435,7 +1237,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 17
       },
       "id": 25,
       "options": {
@@ -1458,12 +1260,13 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(power) as power\nfrom shelly_plugs_meter1\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(power) as apower\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    friendly_name = '$plugs_device_name'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "power",
           "select": [
             [
@@ -1475,6 +1278,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -1489,11 +1309,12 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(voltage)*avg(current) as apparent_power\nfrom shelly_plugs_meter1\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(voltage)*avg(current) as apparent_power\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    friendly_name = '$plugs_device_name'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "apparent_power",
           "select": [
             [
@@ -1505,6 +1326,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -1519,12 +1357,13 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "format": "time_series",
           "group": [],
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(power)/(avg(voltage)*avg(current)) as pf\nfrom shelly_plugs_meter1\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(power)/(avg(voltage)*avg(current)) as pf\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    friendly_name = '$plugs_device_name'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "pf",
           "select": [
             [
@@ -1536,6 +1375,23 @@
               }
             ]
           ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
           "timeColumn": "time",
           "where": [
             {
@@ -1555,7 +1411,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 24
       },
       "id": 19,
       "panels": [
@@ -1672,7 +1528,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 28
+            "y": 25
           },
           "id": 30,
           "options": {
@@ -1700,7 +1556,7 @@
               "group": [],
               "metricColumn": "none",
               "rawQuery": true,
-              "rawSql": "WITH\n\ninterval_s AS (\n    SELECT (\n        CASE\n            WHEN '$interval' LIKE '%s' THEN CAST(left('$interval', -1) AS INT) * 1\n            WHEN '$interval' LIKE '%m' THEN CAST(left('$interval', -1) AS INT) * 60\n            WHEN '$interval' LIKE '%h' THEN CAST(left('$interval', -1) AS INT) * 3600\n            WHEN '$interval' LIKE '%d' THEN CAST(left('$interval', -1) AS INT) * 86400\n            WHEN '$interval' LIKE '%w' THEN CAST(left('$interval',-1) AS INT) * 604800\n            WHEN '$interval' LIKE '%M' THEN CAST(left('$interval', -1) AS INT) * 2678400\n            WHEN '$interval' LIKE '%y' THEN CAST(left('$interval',-1) AS INT) * 31536000\n            ELSE 0\n        END\n    ) AS interval_sec\n),\n\nraw AS (\n    SELECT timestamp, total\n    FROM shelly_plugs_meter1\n    WHERE device_name = '$plugs_device_name'\n      AND idx = '$idx'\n      AND is_valid = TRUE\n      AND $__timeFilter(timestamp)\n),\n\ndiff AS (\n    SELECT\n        t1.timestamp,\n        CASE\n            WHEN datediff('s', t1.timestamp, t2.timestamp) > i.interval_sec THEN NULL\n            WHEN t1.total >= t2.total THEN t1.total - t2.total\n            ELSE NULL\n        END AS delta\n    FROM raw t1\n    LT JOIN raw t2\n    CROSS JOIN interval_s i\n),\n\n-- Apply window functions to the raw 'diff' data *before* sampling.\nrunning_totals_raw AS (\n  SELECT\n    timestamp,\n    -- Running total of all deltas up to the current timestamp\n    sum(delta) OVER (ORDER BY timestamp) as running_total_delta,\n    -- Running total of deltas *within* each time bucket/interval\n    sum(delta) OVER (PARTITION BY timestamp_floor('$interval', timestamp) ORDER BY timestamp) as bucket_total\n  FROM diff\n  WHERE delta IS NOT NULL\n),\n\n-- Sample the running totals to get the final value for each bucket\nsampled_totals AS (\n  SELECT\n    timestamp,\n    -- The last running_total_delta in the bucket is the cumulative total at the *end* of the bucket\n    last(running_total_delta) as end_of_bucket_csum,\n    -- The last bucket_total is simply the sum of deltas within this bucket\n    last(bucket_total) as this_bucket_sum\n  FROM running_totals_raw\n  SAMPLE BY $interval FILL(null)\n),\n\n-- Final calculation for the cumulative sum at the BEGINNING of the time bucket\ncum AS (\n  SELECT\n    timestamp,\n    -- The sum at the start of the bucket is the total sum at the end of the bucket\n    -- minus the sum of everything in the bucket itself.\n    -- COALESCE handles the very first bucket.\n    COALESCE((end_of_bucket_csum - this_bucket_sum) * (1.0/60.0), 0) as cum_wh\n  FROM sampled_totals\n),\n\n-- Total calculation needs to be adjusted for the new logic\ntot AS (\n    SELECT SUM(delta) * (1.0/60.0) AS total_wh FROM diff\n),\n\nbounds AS (\n    SELECT\n        CAST((($__unixEpochFrom()) + 1) * 1000000L AS TIMESTAMP) AS t0,\n        CAST((($__unixEpochTo())   - 1) * 1000000L AS TIMESTAMP) AS t1\n)\n\nSELECT\n    $__time(b.t0),\n    0 AS value,\n    0 AS percent,\n    0 AS passage_of_time\nFROM bounds b\n\nUNION ALL\n\nSELECT\n     $__time(c.timestamp),\n     c.cum_wh AS value,\n     (CASE WHEN t.total_wh > 0 THEN (c.cum_wh / t.total_wh) * 100 ELSE 0 END) AS percent,\n     (datediff('s', b.t0, c.timestamp) * 100.0 / datediff('s', b.t0, b.t1)) AS passage_of_time\nFROM cum c\nCROSS JOIN tot t\nCROSS JOIN bounds b\n\nUNION ALL\n\nSELECT\n    $__time(b.t1),\n    t.total_wh AS value,\n    100 AS percent,\n    100 AS passage_of_time\nFROM tot t CROSS JOIN bounds b\n",
+              "rawSql": "WITH\n\ninterval_s AS (\n    SELECT (\n        CASE\n            WHEN '$interval' LIKE '%s' THEN CAST(left('$interval', -1) AS INT) * 1\n            WHEN '$interval' LIKE '%m' THEN CAST(left('$interval', -1) AS INT) * 60\n            WHEN '$interval' LIKE '%h' THEN CAST(left('$interval', -1) AS INT) * 3600\n            WHEN '$interval' LIKE '%d' THEN CAST(left('$interval', -1) AS INT) * 86400\n            WHEN '$interval' LIKE '%w' THEN CAST(left('$interval',-1) AS INT) * 604800\n            WHEN '$interval' LIKE '%M' THEN CAST(left('$interval', -1) AS INT) * 2678400\n            WHEN '$interval' LIKE '%y' THEN CAST(left('$interval',-1) AS INT) * 31536000\n            ELSE 0\n        END\n    ) AS interval_sec\n),\n\nraw AS (\n    SELECT timestamp, energy as aenergy_total\n    FROM zigbee2mqtt_sonoff_s60zbtpf\n    WHERE friendly_name = '$plugs_device_name'\n      AND $__timeFilter(timestamp)\n),\n\ndiff AS (\n    SELECT\n        t1.timestamp,\n        CASE\n            WHEN datediff('s', t1.timestamp, t2.timestamp) > i.interval_sec THEN NULL\n            WHEN t1.aenergy_total >= t2.aenergy_total THEN t1.aenergy_total - t2.aenergy_total\n            ELSE NULL\n        END AS delta\n    FROM raw t1\n    LT JOIN raw t2\n    CROSS JOIN interval_s i\n),\n\n-- Apply window functions to the raw 'diff' data *before* sampling.\nrunning_totals_raw AS (\n  SELECT\n    timestamp,\n    -- Running total of all deltas up to the current timestamp\n    sum(delta) OVER (ORDER BY timestamp) as running_total_delta,\n    -- Running total of deltas *within* each time bucket/interval\n    sum(delta) OVER (PARTITION BY timestamp_floor('$interval', timestamp) ORDER BY timestamp) as bucket_total\n  FROM diff\n  WHERE delta IS NOT NULL\n),\n\n-- Sample the running totals to get the final value for each bucket\nsampled_totals AS (\n  SELECT\n    timestamp,\n    -- The last running_total_delta in the bucket is the cumulative total at the *end* of the bucket\n    last(running_total_delta) as end_of_bucket_csum,\n    -- The last bucket_total is simply the sum of deltas within this bucket\n    last(bucket_total) as this_bucket_sum\n  FROM running_totals_raw\n  SAMPLE BY $interval FILL(null)\n),\n\n-- Final calculation for the cumulative sum at the BEGINNING of the time bucket\ncum AS (\n  SELECT\n    timestamp,\n    -- The sum at the start of the bucket is the total sum at the end of the bucket\n    -- minus the sum of everything in the bucket itself.\n    -- COALESCE handles the very first bucket.\n    COALESCE((end_of_bucket_csum - this_bucket_sum), 0) as cum_wh\n  FROM sampled_totals\n),\n\n-- Total calculation needs to be adjusted for the new logic\ntot AS (\n    SELECT SUM(delta) AS total_wh FROM diff\n),\n\nbounds AS (\n    SELECT\n        CAST((($__unixEpochFrom()) + 1) * 1000000L AS TIMESTAMP) AS t0,\n        CAST((($__unixEpochTo())   - 1) * 1000000L AS TIMESTAMP) AS t1\n)\n\nSELECT\n    $__time(b.t0),\n    0 AS value,\n    0 AS percent,\n    0 AS passage_of_time\nFROM bounds b\n\nUNION ALL\n\nSELECT\n     $__time(c.timestamp),\n     c.cum_wh AS value,\n     (CASE WHEN t.total_wh > 0 THEN (c.cum_wh / t.total_wh) * 100 ELSE 0 END) AS percent,\n     (datediff('s', b.t0, c.timestamp) * 100.0 / datediff('s', b.t0, b.t1)) AS passage_of_time\nFROM cum c\nCROSS JOIN tot t\nCROSS JOIN bounds b\n\nUNION ALL\n\nSELECT\n    $__time(b.t1),\n    t.total_wh AS value,\n    100 AS percent,\n    100 AS passage_of_time\nFROM tot t CROSS JOIN bounds b\n",
               "refId": "A",
               "select": [
                 [
@@ -1768,41 +1624,21 @@
       },
       {
         "current": {
-          "text": "shelly-plugs-0-livingroom",
-          "value": "shelly-plugs-0-livingroom"
+          "text": "zigbee-plugs-3-livingroom",
+          "value": "zigbee-plugs-3-livingroom"
         },
         "datasource": {
           "type": "postgres",
           "uid": "${datasource}"
         },
-        "definition": "select distinct device_name from shelly_plugs_meter1 where $__timeFilter(timestamp)\n",
+        "definition": "select distinct friendly_name from zigbee2mqtt_sonoff_s60zbtpf where $__timeFilter(timestamp)\n",
         "includeAll": false,
         "name": "plugs_device_name",
         "options": [],
-        "query": "select distinct device_name from shelly_plugs_meter1 where $__timeFilter(timestamp)\n",
+        "query": "select distinct friendly_name from zigbee2mqtt_sonoff_s60zbtpf where $__timeFilter(timestamp)\n",
         "refresh": 2,
         "regex": "",
         "sort": 5,
-        "type": "query"
-      },
-      {
-        "current": {
-          "text": "0",
-          "value": "0"
-        },
-        "datasource": {
-          "type": "postgres",
-          "uid": "${datasource}"
-        },
-        "definition": "select distinct idx from shelly_plugs_meter1 where device_name = '$plugs_device_name' and $__timeFilter(timestamp)",
-        "description": "",
-        "includeAll": false,
-        "name": "idx",
-        "options": [],
-        "query": "select distinct idx from shelly_plugs_meter1 where device_name = '$plugs_device_name' and $__timeFilter(timestamp)",
-        "refresh": 2,
-        "regex": "",
-        "sort": 3,
         "type": "query"
       },
       {
@@ -1870,7 +1706,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "shellyplugs1",
-  "uid": "shellyplugs1",
-  "version": 6
+  "title": "zigbee2mqtt_sonoff_s60zbtpf",
+  "uid": "zigbee2mqtt_sonoff_s60zbtpf",
+  "version": 9
 }

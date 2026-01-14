@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Collects power supply information from /sys/class/power_supply.
+# Outputs data in logfmt format for Telegraf exec input plugin.
 
 set -Eeuo pipefail
 trap 'echo "ERROR: ${BASH_SOURCE:-$BASH_COMMAND in $0}: ${FUNCNAME[0]:-line} at line: $LINENO, arguments: $*" 1>&2; exit 1' ERR

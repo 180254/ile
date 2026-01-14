@@ -39,9 +39,11 @@ services:
     ports:
       - "${ILE_MQTT_EXTERNAL_PORT}:8883" # MQTT over TLS
     environment:
+      - TZ=${ILE_TZ}
       - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - mosquitto_data:/mosquitto/data
       - ${ILE_DIR}/ile_mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - ${PWD}/tls/${ILE_ENV}/ca.pem:/mosquitto/secrets/ca.crt:ro
@@ -100,8 +102,10 @@ services:
     ports:
       - "${ILE_VALKEY_EXTERNAL_PORT}:6379"
     environment:
+      - TZ=${ILE_TZ}
       - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - valkey_data:/valkey/data
       - ${ILE_DIR}/ile_valkey/valkey.conf.tmpl:/valkey/config/valkey.conf.tmpl:ro
       - ${PWD}/tls/${ILE_ENV}/ca.pem:/valkey/secrets/ca.crt:ro
@@ -147,13 +151,14 @@ services:
     user: nonroot:nonroot
     entrypoint: /bin/sh -c
     command:
-    - /.venv/bin/python3 -m ile_modules.mqtt_ingestor
+      - /.venv/bin/python3 -m ile_modules.mqtt_ingestor
     restart: always
     networks:
       vnet:
         ipv4_address: 192.168.130.12
     ports: [ ]
     environment:
+      - TZ=${ILE_TZ}
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_VALKEY_HOST=192.168.130.11
       - ILE_VALKEY_PORT=6379
@@ -165,7 +170,8 @@ services:
       - ILE_MQTT_PORT=8883
       - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
-    volumes: [ ]
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     logging:
       options:
         max-size: 10m
@@ -216,6 +222,7 @@ services:
         ipv4_address: 192.168.130.13
     ports: [ ]
     environment:
+      - TZ=${ILE_TZ}
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_VALKEY_HOST=192.168.130.11
       - ILE_VALKEY_PORT=6379
@@ -227,7 +234,8 @@ services:
       - ILE_MQTT_PORT=8883
       - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
-    volumes: [ ]
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     logging:
       options:
         max-size: 10m
@@ -278,6 +286,7 @@ services:
         ipv4_address: 192.168.130.14
     ports: [ ]
     environment:
+      - TZ=${ILE_TZ}
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_VALKEY_HOST=192.168.130.11
       - ILE_VALKEY_PORT=6379
@@ -289,7 +298,8 @@ services:
       - ILE_MQTT_PORT=8883
       - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
-    volumes: [ ]
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     logging:
       options:
         max-size: 10m
@@ -335,6 +345,7 @@ services:
     hostname: ${HOSTNAME}
     ports: [ ]
     environment:
+      - TZ=${ILE_TZ}
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc
       - HOST_SYS=/hostfs/sys
@@ -349,6 +360,7 @@ services:
     volumes:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
       - ${ILE_DIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${ILE_DIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
       - ${PWD}/tls/${ILE_ENV}/ca.pem:/etc/telegraf/ca.crt:ro
@@ -397,7 +409,8 @@ services:
         reservations:
           cpus: '0.3'
     environment:
-      AUTOHEAL_CONTAINER_LABEL: ile-autoheal
+      - TZ=${ILE_TZ}
+      - AUTOHEAL_CONTAINER_LABEL=ile-autoheal
     image: willfarrell/autoheal:latest
     network_mode: none
     restart: always

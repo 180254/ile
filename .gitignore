@@ -4,6 +4,7 @@
 notepad.txt
 .mypy_cache/
 .ruff_cache/
+.on_air
 volume_*/*
 docker-compose/envs/prod/*
 docker-compose/tls/prod/*

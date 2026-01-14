@@ -1,4 +1,13 @@
 #!.venv/bin/python3
+"""
+QuestDB Benchmark - Measures query execution time statistics.
+
+Runs queries repeatedly and reports min, max, mean, median, stdev, and quartiles.
+Configure the 'queries' list below to test different SQL statements.
+
+Usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" .venv/bin/python3 qdb_benchmark.py
+"""
+
 import os
 import statistics
 import time
@@ -6,17 +15,16 @@ import time
 import psycopg.rows
 import psycopg.sql
 
-# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" .venv/bin/python3 qdb_benchmark.py
-
 dsn = os.environ.get("QDB_DSN", "postgresql://admin:quest@localhost:8812/qdb")
 
-
+# Benchmark configuration
 max_reps_per_query = 10
 max_time_per_query_seconds = 20
 
 statement_timeout_seconds = 120
 sleep_time_seconds = 0.1
 
+# List of queries to benchmark - modify this list to test different statements
 queries = ["tables()"]
 queries2 = [bytes(q, "utf-8") for q in queries]
 

@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 2,
+  "id": 11,
   "links": [
     {
       "asDropdown": true,
@@ -491,7 +491,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "shellyht2",
-  "uid": "shellyht2",
-  "version": 2
+  "title": "shelly_ht_meter2",
+  "uid": "shelly_ht_meter2",
+  "version": 1
 }

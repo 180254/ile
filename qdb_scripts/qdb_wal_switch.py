@@ -1,14 +1,20 @@
 #!.venv/bin/python3
+"""
+QuestDB WAL Switch - Switches WAL mode for all tables.
+
+Enables, disables, or checks WAL (Write-Ahead Logging) mode for all tables.
+See: https://github.com/questdb/questdb/issues/3531
+
+Usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" .venv/bin/python3 qdb_wal_switch.py [true|false|check]
+"""
+
 import os
 import sys
 
 import psycopg.rows
 import psycopg.sql
 
-# https://github.com/questdb/questdb/issues/3531
-# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" .venv/bin/python3 qdb_wal_switch.py true
-
-dsn = os.environ.get("QDB_DSN", "postgresql://useradmin:quest@localhost:8812/qdb")
+dsn = os.environ.get("QDB_DSN", "postgresql://admin:quest@localhost:8812/qdb")
 
 wal_arg_index = 1
 min_arg_len = 2
@@ -50,4 +56,4 @@ with (
             cursor.execute(stmt)
 
         print("-" * 40)
-        print("done, restart the database to apply WAL mode changes")
+        print("Done. Restart QuestDB to apply WAL mode changes.")

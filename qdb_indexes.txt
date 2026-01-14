@@ -60,3 +60,7 @@ ALTER TABLE telegraf_sensors ALTER COLUMN feature ADD INDEX;
 ALTER TABLE telegraf_sensors ALTER COLUMN host ADD INDEX;
 ALTER TABLE telegraf_swap ALTER COLUMN host ADD INDEX;
 ALTER TABLE telegraf_system ALTER COLUMN host ADD INDEX;
+ALTER TABLE zigbee2mqtt_sonoff_s60zbtpf ALTER COLUMN friendly_name ADD INDEX;
+ALTER TABLE zigbee2mqtt_sonoff_s60zbtpf ALTER COLUMN ieee_address ADD INDEX;
+ALTER TABLE zigbee2mqtt_sonoff_snzb02wd ALTER COLUMN friendly_name ADD INDEX;
+ALTER TABLE zigbee2mqtt_sonoff_snzb02wd ALTER COLUMN ieee_address ADD INDEX;

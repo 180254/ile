@@ -18,6 +18,7 @@ RUN set -eux \
 USER nonroot
 
 COPY --from=build-venv /.venv /.venv
+COPY __init__.py /app/ile_modules/__init__.py
 COPY ile_tools.py /app/ile_modules/ile_tools.py
 COPY mqtt_ingestor.py /app/ile_modules/mqtt_ingestor.py
 COPY payload_normalizer.py /app/ile_modules/payload_normalizer.py

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# ILE Docker Compose wrapper script.
+# Creates required directories and runs docker compose with proper environment.
 
 set -Eeuo pipefail
 trap 'echo "ERROR: ${BASH_SOURCE:-$BASH_COMMAND in $0}: ${FUNCNAME[0]:-line} at line: $LINENO, arguments: $*" 1>&2; exit 1' ERR
@@ -62,6 +64,8 @@ function create_directories() {
     mkdir -p "${ILE_DIR}/volume_valkey_homeserver"
     mkdir -p "${ILE_DIR}/volume_questdb_homeserver"
     mkdir -p "${ILE_DIR}/volume_grafana_homeserver"
+    mkdir -p "${ILE_DIR}/volume_zigbee2mqtt_homeserver"
+    mkdir -p "${ILE_DIR}/volume_homeassistant_homeserver"
     ;;
   laptop)
     mkdir -p "${ILE_DIR}/volume_mosquitto_laptop"

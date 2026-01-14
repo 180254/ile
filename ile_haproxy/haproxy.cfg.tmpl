@@ -58,14 +58,14 @@ backend be_questdb_influxdb_line_protocol
     mode tcp
     server server1 ${ILE_HAPROXY_QUESTDB_HOST}:9009
 
-frontend fe_questdb_prostgres_wire_protocol
+frontend fe_questdb_postgres_wire_protocol
     mode tcp
     option tcplog
     #bind :8812 ssl crt ${ILE_HAPROXY_CRT_FILE}
     bind :8812
-    use_backend be_questdb_prostgres_wire_protocol
+    use_backend be_questdb_postgres_wire_protocol
 
-backend be_questdb_prostgres_wire_protocol
+backend be_questdb_postgres_wire_protocol
     mode tcp
     server server1 ${ILE_HAPROXY_QUESTDB_HOST}:8812
 

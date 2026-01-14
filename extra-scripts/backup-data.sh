@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Backup ILE data volumes to compressed archives.
+# Creates timestamped .tar.zst backups of all volume_* directories.
+# Requires ILE containers to be stopped before running.
 
 set -Eeuo pipefail
 trap 'echo "ERROR: ${BASH_SOURCE:-$BASH_COMMAND in $0}: ${FUNCNAME[0]:-line} at line: $LINENO, arguments: $*" 1>&2; exit 1' ERR

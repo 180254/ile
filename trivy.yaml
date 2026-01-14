@@ -10,3 +10,4 @@ scan:
     - volume_*
     - .ruff_cache
     - .mypy_cache
+    - .on_air

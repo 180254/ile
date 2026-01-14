@@ -1,4 +1,6 @@
 #!/usr/bin/env sh
+# Mosquitto container entrypoint.
+# Creates password file from environment variables and starts Mosquitto.
 
 set -xeu
 

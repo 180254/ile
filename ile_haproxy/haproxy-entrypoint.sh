@@ -1,4 +1,6 @@
 #!/usr/bin/env sh
+# HAProxy container entrypoint.
+# Substitutes environment variables in config template and starts HAProxy.
 
 set -xeu
 

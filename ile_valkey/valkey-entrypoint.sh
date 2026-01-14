@@ -1,4 +1,7 @@
 #!/usr/bin/env sh
+# Valkey container entrypoint.
+# Substitutes environment variables in config templates and starts Valkey.
+
 set -xeu
 
 envsubst < "/valkey/config/valkey.conf.tmpl" > "/valkey/config/valkey.conf"

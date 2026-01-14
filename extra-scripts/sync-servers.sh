@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Sync ILE codebase to remote servers and deploy containers.
+# Reads server list from sync-servers.txt or uses defaults.
+# Set SOFTSYNC=true to skip docker-compose commands.
 
 set -Eeuo pipefail
 trap 'echo "ERROR: ${BASH_SOURCE:-$BASH_COMMAND in $0}: ${FUNCNAME[0]:-line} at line: $LINENO, arguments: $*" 1>&2; exit 1' ERR
@@ -14,7 +17,7 @@ servers=(
   "ip=srv1.example.com port=22 user=ubuntu key=~/.ssh/my.key path=/home/ubuntu/ile roles=homeserver"
   "ip=srv2.example.com port=10392 user=ubuntu key=~/.ssh/my.key path=/home/ubuntu/ile roles=cloudserver"
   "#ip=10.10.10.20 port=22 user=ubuntu key=~/.ssh/my.key path=/home/ubuntu/ile roles=laptop"
-  "ip=localhost roles=laptop"
+  "ip=localhost roles=laptop path=/home/ubuntu/ile/.on_air"
 )
 
 if [ -f sync-servers.txt ]; then
@@ -31,6 +34,7 @@ paths=(
   "docker-compose"
   "extra-scripts"
   "ile_grafana"
+  "ile_homeassistant"
   "ile_haproxy"
   "ile_modules"
   "ile_modules_tests"
@@ -38,6 +42,7 @@ paths=(
   "ile_questdb"
   "ile_telegraf"
   "ile_valkey"
+  "ile_zigbee2mqtt"
   "qdb_scripts"
   "requirements-dev.txt"
 )
@@ -47,7 +52,7 @@ rm -f "${tar_zstd}" || true
 tar --use-compress-program zstd -cf "${tar_zstd}" "${paths[@]}" >/dev/null
 
 for server in "${servers[@]}"; do
-  if [[ -z "${server// }" ]]; then
+  if [[ -z "${server// /}" ]]; then
     continue
   fi
 
@@ -77,6 +82,12 @@ for server in "${servers[@]}"; do
       continue
     fi
 
+    echo " > syncing localhost"
+    mkdir -p "${path}"
+    cp "${tar_zstd}" "${path}"
+    pushd "${path}" >/dev/null
+    tar --use-compress-program zstd -xf "${tar_zstd}"
+
     echo " > docker-compose on localhost > build"
     (cd "docker-compose" && ./docker-compose.sh prod "${roles},base" build)
 
@@ -86,12 +97,14 @@ for server in "${servers[@]}"; do
     echo " > docker-compose on localhost > up"
     (cd "docker-compose" && ./docker-compose.sh prod "base,${roles}" up)
 
+    popd >/dev/null
+
   else
     echo " > syncing ${ip}"
     scp -P "${port}" -i "${key}" -r "${tar_zstd}" "${user}@${ip}:${path}"
     ssh -i "${key}" "${user}@${ip}" -p "${port}" "cd ${path} && tar --use-compress-program zstd -xf ${tar_zstd} && rm ${tar_zstd}"
 
-   if [ "${SOFTSYNC}" != "false" ]; then
+    if [ "${SOFTSYNC}" != "false" ]; then
       echo "  SOFTSYNC enabled, skipping remote docker-compose commands on ${ip}"
       continue
     fi

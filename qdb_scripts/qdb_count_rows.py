@@ -1,4 +1,11 @@
 #!.venv/bin/python3
+"""
+QuestDB Row Counter - Counts rows in all tables and shows distribution.
+
+Reports per-table counts, percentage of total, and aggregated counts by table prefix.
+Usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" .venv/bin/python3 qdb_count_rows.py
+"""
+
 import datetime
 import os
 
@@ -7,16 +14,18 @@ import psycopg.rows
 import psycopg.sql
 import psycopg.types.datetime
 
-# usage: QDB_DSN="postgresql://admin:quest@localhost:8812/qdb" .venv/bin/python3 qdb_count_rows.py
-
 dsn = os.environ.get("QDB_DSN", "postgresql://admin:quest@localhost:8812/qdb")
 
 
-# cursor.execute("tables()"):
-#   File "psycopg_binary/_psycopg/transform.pyx", line 465, in psycopg_binary._psycopg.Transformer.load_rows
-#   File "psycopg_binary/types/datetime.pyx", line 628, in psycopg_binary._psycopg.TimestampLoader.cload
-#   psycopg.DataError: timestamp too large (after year 10K): '58006-03-31 01:53:20.000000'
 class TimestampLoader2(psycopg.types.datetime.TimestampLoader):
+    """
+    Workaround for psycopg timestamp overflow error.
+
+    QuestDB tables() function returns timestamps that may exceed Python's datetime range.
+    This loader returns current time instead of failing on overflow.
+    Error: psycopg.DataError: timestamp too large (after year 10K): '58006-03-31 01:53:20.000000'
+    """
+
     def load(self, data: psycopg.abc.Buffer) -> datetime.datetime:  # noqa: ARG002
         return datetime.datetime.now(tz=datetime.UTC)
 
@@ -50,10 +59,12 @@ with (
 
     print("-" * 40)
 
+    # Aggregate counts by table name prefixes for summary view
     prefixes = ["shelly_plugs_", "shelly_ht_", "shelly_gen2_", "telegraf_", "telegraf_internal_"]
     for prefix in prefixes:
         count = sum(results[name] for name in results if name.startswith(prefix))
-        print(f"{prefix}: {count} ({count / total:.2%})")
+        percent = count / total if total > 0 else 0
+        print(f"{prefix}: {count} ({percent:.2%})")
 
     print("-" * 40)
 
