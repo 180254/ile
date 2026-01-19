@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import re
 import sys
 import threading
@@ -32,6 +33,7 @@ import paho.mqtt.enums
 import paho.mqtt.reasoncodes
 import valkey
 import valkey.exceptions
+import yaml
 
 from ile_modules import ile_tools
 from ile_modules.ile_tools import MqttMessage, QuestDBRow
@@ -62,15 +64,10 @@ class Env:
     ILE_IPN_VALKEY_STREAM_TRIM_INTERVAL_S: str = getenv("ILE_IPN_VALKEY_STREAM_TRIM_INTERVAL_S", "21600")  # 6h
 
     ILE_IPN_MQTT_CLIENT_ID: str = getenv("ILE_IPN_MQTT_CLIENT_ID", "payload-normalizer-client")
-
-    ILE_IPN_SHELLY_GEN2_DEVICE_NAME_FRESHNESS_S: str = getenv(
-        "ILE_IPN_SHELLY_GEN2_DEVICE_NAME_FRESHNESS_S",
-        "21600",  # 6h
-    )
-    ILE_IPN_SHELLY_GEN2_ANNOUNCE_INTERVAL_S: str = getenv(
-        "ILE_IPN_SHELLY_GEN2_ANNOUNCE_INTERVAL_S",
-        "300",  # 5m
-    )
+    ILE_IPN_MQTT_CRONJOB_INIT_DELAY_S: str = getenv("ILE_IPN_MQTT_CRONJOB_INIT_DELAY_S", "60.0")
+    ILE_IPN_MQTT_CRONJOB_INTERVAL_S: str = getenv("ILE_IPN_MQTT_CRONJOB_INTERVAL_S", "5.0")
+    ILE_IPN_MQTT_CRONJOB_THROTTLE_S: str = getenv("ILE_IPN_MQTT_CRONJOB_THROTTLE_S", "3.0")
+    ILE_IPN_MQTT_CRONJOB_PATH: str = getenv("ILE_IPN_MQTT_CRONJOB_PATH", "")
 
 
 class Config:
@@ -92,83 +89,72 @@ class Config:
     valkey_stream_trim_interval_s: float = float(Env.ILE_IPN_VALKEY_STREAM_TRIM_INTERVAL_S)
 
     mqtt_client_id: str = Env.ILE_IPN_MQTT_CLIENT_ID
+    mqtt_cronjob_init_delay_s: float = float(Env.ILE_IPN_MQTT_CRONJOB_INIT_DELAY_S)
+    mqtt_cronjob_interval_s: float = float(Env.ILE_IPN_MQTT_CRONJOB_INTERVAL_S)
+    mqtt_cronjob_throttle_s: float = float(Env.ILE_IPN_MQTT_CRONJOB_THROTTLE_S)
+    mqtt_cronjob_path: str = Env.ILE_IPN_MQTT_CRONJOB_PATH
 
-    shelly_gen2_announce_interval_s: float = float(Env.ILE_IPN_SHELLY_GEN2_ANNOUNCE_INTERVAL_S)
-    shelly_gen2_device_name_freshness_s: float = float(Env.ILE_IPN_SHELLY_GEN2_DEVICE_NAME_FRESHNESS_S)
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
-class ShellyGen2DeviceNames:
+class ShellyGen2DeviceInfo(typing.TypedDict):
     """
-    Cache for Shelly Gen2 device names.
+    Shelly Gen2 device info structure.
 
-    Caches names from announce messages and periodically refreshes them.
-    Thread-safe via internal lock.
+    Attributes:
+        device_id: Shelly device ID.
+        device_name: Shelly device name.
+        device_model: Shelly device model.
     """
 
-    def __init__(self, mqtt_client: paho.mqtt.client.Client, sigterm_event: threading.Event) -> None:
-        self.mqtt_client = mqtt_client
-        self.sigterm_event = sigterm_event
-        self.device_names: dict[str, tuple[str, float]] = {}  # device_id -> (name, timestamp_s)
+    device_id: str
+    device_name: str
+    device_model: str
+
+
+class ShellyGen2Devices:
+    """
+    Cache for Shelly Gen2 device info.
+
+    Maps device_id to device info from announce messages. Thread-safe.
+    """
+
+    def __init__(self) -> None:
+        self.devices: dict[str, ShellyGen2DeviceInfo] = {}  # device_id -> ShellyGen2DeviceInfo
         self._lock: threading.Lock = threading.Lock()
 
     def notify_device_seen(self, device_id: str) -> None:
-        """Notify that a device_id has been seen, triggers announce if new."""
         with self._lock:
-            if device_id not in self.device_names:
-                self.device_names[device_id] = (device_id, 0.0)
-        threading.Thread(
-            target=self._send_announce,
-            daemon=True,
-            name=f"shelly-gen2-announce-once-{device_id}",
-        ).start()
+            if device_id not in self.devices:
+                self.devices[device_id] = {"device_id": device_id, "device_name": device_id, "device_model": "unknown"}
+                ile_tools.log_diagnostic(f"shelly_gen2: seen new device_id={device_id}")
 
-    def get_device_name(self, device_id: str) -> str:
-        """Get cached device name if fresh, otherwise return device_id."""
-        current_timestamp = time.time()
+    def get_device_by_name(self, device_id: str) -> ShellyGen2DeviceInfo | None:
         with self._lock:
-            if device_id in self.device_names:
-                device_name, cached_timestamp = self.device_names[device_id]
-                if current_timestamp - cached_timestamp <= Config.shelly_gen2_device_name_freshness_s:
-                    return device_name
-        return device_id
+            return self.devices.get(device_id)
 
-    def update_device_name(self, device_id: str, device_name: str, timestamp_s: float) -> None:
-        """Update cached device name if newer than existing."""
+    def get_devices_by_model(self, model: str) -> list[ShellyGen2DeviceInfo]:
         with self._lock:
-            _, cached_timestamp_s = self.device_names.get(device_id, (device_id, 0.0))
-            if timestamp_s >= cached_timestamp_s:
-                self.device_names[device_id] = (device_name, timestamp_s)
-                ile_tools.log_diagnostic(f"shelly_gen2: updated device_name device_id={device_id} name={device_name}")
+            return [info for info in self.devices.values() if info["device_model"] == model]
 
-    def announce_thread(self) -> None:
-        """Background thread: periodically sends announce commands to known devices."""
-        while not self.sigterm_event.is_set():
-            if self.sigterm_event.wait(Config.shelly_gen2_announce_interval_s):
-                break
+    def get_all_devices(self) -> list[ShellyGen2DeviceInfo]:
+        with self._lock:
+            return list(self.devices.values())
 
-            if not self._send_announce():
-                self.sigterm_event.set()
+    def update_device_info(self, device_id: str, device_name: str, model: str) -> None:
+        with self._lock:
+            self.devices[device_id] = {"device_id": device_id, "device_name": device_name, "device_model": model}
+            ile_tools.log_diagnostic(f"shelly_gen2: updated device_id={device_id} name={device_name} model={model}")
 
-    def _send_announce(self) -> bool:
-        """Send announce command to Shelly broadcast topic. Returns True on success."""
-        try:
-            result = self.mqtt_client.publish("shellies/command", "announce", qos=1, retain=True)
-            if result.rc != paho.mqtt.client.MQTT_ERR_SUCCESS:
-                ile_tools.log_diagnostic(f"shelly_gen2: announce publish failed rc={result.rc}")
-                return False
-        except Exception as e:
-            ile_tools.print_exception(e, "shelly_gen2: announce publish failed")
-            return False
-        else:
-            ile_tools.log_diagnostic("shelly_gen2: announce published")
-            return True
 
+# ----------------------------------------------------------------------------------------------------------------------
 
 # Pre-compiled regex for normalizing table name components
 _TABLE_NAME_NORMALIZE_PATTERN: re.Pattern[str] = re.compile(r"[^a-zA-Z0-9]+")
 
 
-class ZigbeeDeviceInfo:
+class ZigbeeDeviceInfo(typing.TypedDict):
     """
     Zigbee2mqtt device info structure.
 
@@ -178,34 +164,23 @@ class ZigbeeDeviceInfo:
     Attributes:
         ieee_address: IEEE device address (e.g., "0x00158d00012345").
         friendly_name: User-assigned friendly name.
-        model: Device model string.
         vendor: Device vendor/manufacturer.
-        model_normalized: Lowercase alphanumeric model for table name.
+        model: Device model string.
         vendor_normalized: Lowercase alphanumeric vendor for table name.
+        model_normalized: Lowercase alphanumeric model for table name.
         table_name: QuestDB table name (e.g., "zigbee2mqtt_xiaomi_aqaratempsensor").
     """
 
-    def __init__(self, ieee_address: str, friendly_name: str, model: str, vendor: str) -> None:
-        self.ieee_address: str = ieee_address
-        self.friendly_name: str = friendly_name
-        self.model: str = model
-        self.vendor: str = vendor
-
-        self.model_normalized: str = _TABLE_NAME_NORMALIZE_PATTERN.sub("", model).lower()
-        self.vendor_normalized: str = _TABLE_NAME_NORMALIZE_PATTERN.sub("", vendor).lower()
-        self.table_name = f"zigbee2mqtt_{self.vendor_normalized}_{self.model_normalized}"
-
-    def __repr__(self) -> str:
-        return f"ZigbeeDeviceInfo({self})"
-
-    def __str__(self) -> str:
-        return (
-            f"(ieee_address={self.ieee_address}, friendly_name={self.friendly_name}, "
-            f"model={self.model}, vendor={self.vendor}, table_name={self.table_name})"
-        )
+    ieee_address: str
+    friendly_name: str
+    vendor: str
+    model: str
 
 
-class Zigbee2mqttDeviceMapping:
+zigbee_vendor_model_to_table_name: dict[str, str] = {}  # ieee_address -> table_name
+
+
+class Zigbee2mqttDevices:
     """
     Cache for Zigbee2mqtt device mappings.
 
@@ -213,11 +188,10 @@ class Zigbee2mqttDeviceMapping:
     """
 
     def __init__(self) -> None:
-        self.device_mapping: dict[str, ZigbeeDeviceInfo] = {}
+        self.devices: dict[str, ZigbeeDeviceInfo] = {}  # friendly_name -> ZigbeeDeviceInfo
         self._lock: threading.Lock = threading.Lock()
 
     def update_devices(self, devices: list[dict[str, typing.Any]]) -> None:
-        """Update device mapping from bridge/devices payload. Invalid entries are skipped."""
         with self._lock:
             for device in devices:
                 try:
@@ -227,28 +201,268 @@ class Zigbee2mqttDeviceMapping:
                     vendor = definition["vendor"]
                     model = definition["model"]
 
-                    device_info = ZigbeeDeviceInfo(
-                        ieee_address=ieee_address,
-                        friendly_name=friendly_name,
-                        model=model,
-                        vendor=vendor,
-                    )
+                    device_info: ZigbeeDeviceInfo = {
+                        "ieee_address": ieee_address,
+                        "friendly_name": friendly_name,
+                        "vendor": vendor,
+                        "model": model,
+                    }
 
-                    self.device_mapping[friendly_name] = device_info
+                    vendor_normalized: str = _TABLE_NAME_NORMALIZE_PATTERN.sub("", vendor).lower()
+                    model_normalized: str = _TABLE_NAME_NORMALIZE_PATTERN.sub("", model).lower()
+                    table_name = f"zigbee2mqtt_{vendor_normalized}_{model_normalized}"
+                    zigbee_vendor_model_to_table_name[ieee_address] = table_name
+
+                    self.devices[friendly_name] = device_info
                     ile_tools.log_diagnostic(f"zigbee2mqtt: mapped device_info={device_info}")
+
                 except KeyError as e:
                     ile_tools.print_exception(e, f"zigbee2mqtt: invalid device entry device={device}, skipping")
 
     def get_device_info(self, friendly_name: str) -> ZigbeeDeviceInfo | None:
-        """Get device info for friendly_name, or None if unknown."""
         with self._lock:
-            return self.device_mapping.get(friendly_name)
+            return self.devices.get(friendly_name)
+
+    def get_devices_by_vendor_model(self, vendor: str, model: str) -> list[ZigbeeDeviceInfo]:
+        with self._lock:
+            return [info for info in self.devices.values() if info["vendor"] == vendor and info["model"] == model]
+
+    def get_all_devices(self) -> list[ZigbeeDeviceInfo]:
+        with self._lock:
+            return list(self.devices.values())
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class MqttCronjobMessageDef(typing.TypedDict):
+    """Structure for cronjob MQTT message definition from YAML file."""
+
+    device_type: str  # "zigbee2mqtt", "shelly", or "none"
+    vendor: str | None  # For zigbee2mqtt filtering
+    model: str | None  # For zigbee2mqtt/shelly filtering
+    topic: str  # Topic template with placeholders
+    payload: typing.Any  # Payload (dict will be JSON serialized)
+    qos: int  # QOS level
+    retain: bool  # Retain flag
+    interval_s: int  # Send interval in seconds
+
+
+class MqttCronjobSender:
+    """
+    Periodically sends predefined MQTT messages from a YAML configuration file.
+
+    Reads messages from YAML file at ILE_IPN_CRONJOB_FILE_PATH. Each message
+    has its own interval and can target specific device types.
+
+    Supported device_type values:
+    - "zigbee2mqtt": Sends to all zigbee2mqtt devices matching vendor/model.
+      Supports placeholders: <friendly_name>, <ieee_address>, <random>
+    - "shelly": Sends to all Shelly Gen2 devices matching model.
+      Supports placeholders: <device_name>, <device_id>, <random>
+    - "none": Sends message directly without device iteration.
+
+    YAML file format:
+        messages:
+          - device_type: zigbee2mqtt
+            vendor: 'SONOFF'
+            model: 'S60ZBTPF'
+            topic: zigbee2mqtt/<friendly_name>/set
+            payload: {"state": "ON"}
+            qos: 1
+            retain: false
+            interval: 600
+    """
+
+    def __init__(
+        self,
+        mqtt_client: paho.mqtt.client.Client,
+        sigterm_event: threading.Event,
+        shelly_gen2_devices: ShellyGen2Devices,
+        zigbee2mqtt_device: Zigbee2mqttDevices,
+    ) -> None:
+        self.mqtt_client: paho.mqtt.client.Client = mqtt_client
+        self.sigterm_event: threading.Event = sigterm_event
+        self.shelly_gen2_devices: ShellyGen2Devices = shelly_gen2_devices
+        self.zigbee2mqtt_devices: Zigbee2mqttDevices = zigbee2mqtt_device
+
+        self._message_defs: list[MqttCronjobMessageDef] = []
+        self._last_sent: dict[int, float] = {}  # message index -> last sent timestamp
+        self._lock: threading.Lock = threading.Lock()
+
+    def load_messages_from_file(self, file_path: str) -> bool:
+        """Load MQTT messages from YAML configuration file. Returns True on success."""
+        try:
+            with pathlib.Path(file_path).open(encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+
+            messages: list[MqttCronjobMessageDef] = []
+            for idx, msg in enumerate(data["messages"]):
+                try:
+                    device_type = msg.get("device_type", "none")
+                    vendor = msg.get("vendor", "")
+                    model = msg.get("model", "")
+                    topic = msg["topic"]
+                    payload = msg["payload"]
+                    qos = int(msg.get("qos", 1))
+                    retain = bool(msg.get("retain", False))
+                    interval_s = int(msg.get("interval_s", 3600))
+
+                    message_def: MqttCronjobMessageDef = {
+                        "device_type": device_type,
+                        "vendor": vendor,
+                        "model": model,
+                        "topic": topic,
+                        "payload": payload,
+                        "qos": qos,
+                        "retain": retain,
+                        "interval_s": interval_s,
+                    }
+
+                    messages.append(message_def)
+                    ile_tools.log_diagnostic(
+                        f"cronjob: loaded message idx={idx} device_type={device_type} "
+                        f"topic={topic} interval_s={interval_s}s"
+                    )
+                except Exception as e:
+                    ile_tools.print_exception(e, f"cronjob: failed to parse message idx={idx} msg={msg}")
+
+            with self._lock:
+                self._message_defs = messages
+                self._last_sent = dict.fromkeys(range(len(messages)), 0.0)
+
+        except FileNotFoundError:
+            ile_tools.log_diagnostic(f"cronjob: file not found file_path={file_path}")
+            return False
+        except yaml.YAMLError as e:
+            ile_tools.print_exception(e, f"cronjob: failed to parse YAML from {file_path}")
+            return False
+        except Exception as e:
+            ile_tools.print_exception(e, f"cronjob: failed to load messages from {file_path}")
+            return False
+        else:
+            ile_tools.log_diagnostic(f"cronjob: loaded {len(messages)} messages from {file_path}")
+            return True
+
+    def cronjob_thread(self) -> None:
+        self.sigterm_event.wait(Config.mqtt_cronjob_init_delay_s)
+        while not self.sigterm_event.is_set():
+            if self.sigterm_event.wait(Config.mqtt_cronjob_interval_s):
+                break
+
+            current_time = time.time()
+            with self._lock:
+                messages_to_send = []
+                for idx, msg_def in enumerate(self._message_defs):
+                    interval_s = msg_def["interval_s"]
+                    last_sent = self._last_sent.get(idx, 0.0)
+                    if current_time - last_sent >= interval_s:
+                        messages_to_send.append((idx, msg_def))
+                        self._last_sent[idx] = current_time
+
+            for idx, msg_def in messages_to_send:
+                if not self._send_message(msg_def):
+                    ile_tools.log_diagnostic(f"cronjob: failed to send message idx={idx}")
+
+    def _send_message(self, msg_def: MqttCronjobMessageDef) -> bool:
+        device_type = msg_def["device_type"]
+        topic_template = msg_def["topic"]
+        payload_raw = msg_def["payload"]
+        qos = msg_def["qos"]
+        retain = msg_def["retain"]
+
+        if isinstance(payload_raw, (dict, list)):
+            payload_str = json.dumps(payload_raw)
+        else:
+            payload_str = str(payload_raw)
+
+        if device_type == "none":
+            return self._publish_message(topic_template, payload_str, qos=qos, retain=retain)
+
+        if device_type == "zigbee2mqtt":
+            vendor = msg_def["vendor"]
+            model = msg_def["model"]
+
+            if vendor and model:
+                z_devices = self.zigbee2mqtt_devices.get_devices_by_vendor_model(vendor, model)
+                if not z_devices:
+                    ile_tools.log_diagnostic(f"cronjob: no zigbee2mqtt devices found for vendor={vendor} model={model}")
+                    return True  # Not an error, just no devices yet
+            else:
+                z_devices = self.zigbee2mqtt_devices.get_all_devices()
+                if not z_devices:
+                    ile_tools.log_diagnostic("cronjob: no zigbee2mqtt devices found")
+                    return True  # Not an error, just no devices yet
+
+            success = True
+            for z_device in z_devices:
+                topic = topic_template.replace("<friendly_name>", z_device["friendly_name"])
+                topic = topic.replace("<ieee_address>", z_device["ieee_address"])
+                topic = topic.replace("<random>", ile_tools.random_string(8))
+
+                payload = payload_str.replace("<friendly_name>", z_device["friendly_name"])
+                payload = payload.replace("<ieee_address>", z_device["ieee_address"])
+                payload = payload.replace("<random>", ile_tools.random_string(8))
+
+                if not self._publish_message(topic, payload, qos=qos, retain=retain):
+                    success = False
+            return success
+
+        if device_type == "shelly":
+            model = msg_def["model"]
+            if model:
+                s_devices = self.shelly_gen2_devices.get_devices_by_model(model)
+                if not s_devices:
+                    ile_tools.log_diagnostic(f"cronjob: no shelly devices found for model={model}")
+                    return True  # Not an error, just no devices yet
+            else:
+                s_devices = self.shelly_gen2_devices.get_all_devices()
+                if not s_devices:
+                    ile_tools.log_diagnostic("cronjob: no shelly devices found")
+                    return True  # Not an error, just no devices yet
+
+            success = True
+            for s_device in s_devices:
+                topic = topic_template.replace("<device_name>", s_device["device_name"])
+                topic = topic.replace("<device_id>", s_device["device_id"])
+                topic = topic.replace("<random>", ile_tools.random_string(8))
+
+                payload = payload_str.replace("<device_name>", s_device["device_name"])
+                payload = payload.replace("<device_id>", s_device["device_id"])
+                payload = payload.replace("<random>", ile_tools.random_string(8))
+
+                if not self._publish_message(topic, payload, qos=qos, retain=retain):
+                    success = False
+            return success
+
+        ile_tools.log_diagnostic(f"cronjob: unknown device_type={device_type}")
+        return False
+
+    def _publish_message(self, topic: str, payload: str, *, qos: int, retain: bool) -> bool:
+        if self.sigterm_event.wait(Config.mqtt_cronjob_throttle_s):
+            return False
+        try:
+            result = self.mqtt_client.publish(topic, payload, qos=qos, retain=retain)
+            if result.rc != paho.mqtt.client.MQTT_ERR_SUCCESS:
+                ile_tools.log_diagnostic(f"cronjob: publish failed topic={topic} rc={result.rc}")
+                return False
+
+        except Exception as e:
+            ile_tools.print_exception(e, f"cronjob: publish failed topic={topic}")
+            return False
+
+        else:
+            ile_tools.log_diagnostic(f"cronjob: published topic={topic} payload={payload!r}")
+            return True
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 def parse_mqtt_message(
     mqtt_message: MqttMessage,
-    shelly_gen2_device_names: ShellyGen2DeviceNames,
-    zigbee2mqtt_device_mapping: Zigbee2mqttDeviceMapping,
+    shelly_gen2_devices: ShellyGen2Devices,
+    zigbee2mqtt_devices: Zigbee2mqttDevices,
 ) -> typing.Sequence[QuestDBRow]:
     """
     Parse MQTT message and transform to QuestDB rows.
@@ -268,9 +482,13 @@ def parse_mqtt_message(
         device_id = match.group(1)
         component = match.group(2)
         idx = match.group(3)
-        device_name = shelly_gen2_device_names.get_device_name(device_id)
-        if device_name == device_id:
-            shelly_gen2_device_names.notify_device_seen(device_id)
+
+        s_device_info = shelly_gen2_devices.get_device_by_name(device_id)
+        if not s_device_info:
+            shelly_gen2_devices.notify_device_seen(device_id)
+            device_name = device_id
+        else:
+            device_name = s_device_info["device_name"]
 
         # payload = like https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Switch
         payload = json.loads(mqtt_message["payload"])
@@ -287,12 +505,15 @@ def parse_mqtt_message(
     # Shelly Gen2 announce: <device_id>/announce (updates name cache, no rows)
     if ile_tools.SHELLY_GEN2_ANNOUNCE_PATTERN.match(topic):
         timestamp_s = mqtt_message["timestamp"]
+
+        # payload = https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly#shellygetdeviceinfo
         payload = json.loads(mqtt_message["payload"])
 
         device_id = payload["id"]
         device_name = payload.get("name") or device_id
+        device_model = payload.get("model", "unknown")
+        shelly_gen2_devices.update_device_info(device_id, device_name, device_model)
 
-        shelly_gen2_device_names.update_device_name(device_id, device_name, timestamp_s)
         return []
 
     # Telegraf: telegraf/<host>/<input_name>
@@ -317,16 +538,16 @@ def parse_mqtt_message(
     # https://www.zigbee2mqtt.io/guide/usage/mqtt_topics_and_messages.html#zigbee2mqtt-bridge-devices
     if ile_tools.ZIGBEE2MQTT_BRIDGE_DEVICES_PATTERN.match(topic):
         payload = json.loads(mqtt_message["payload"])
-        zigbee2mqtt_device_mapping.update_devices(payload)
+        zigbee2mqtt_devices.update_devices(payload)
         return []
 
     # Zigbee2mqtt device topic: zigbee2mqtt/<friendly_name>
     # https://www.zigbee2mqtt.io/guide/usage/mqtt_topics_and_messages.html#zigbee2mqtt-friendly-name
     if match := ile_tools.ZIGBEE2MQTT_DEVICE_PATTERN.match(topic):
         friendly_name = match.group(1)
-        device_info = zigbee2mqtt_device_mapping.get_device_info(friendly_name)
+        z_device_info = zigbee2mqtt_devices.get_device_info(friendly_name)
 
-        if device_info is None:
+        if z_device_info is None:
             ile_tools.log_diagnostic(f"zigbee2mqtt: unknown device friendly_name={friendly_name}, skipping")
             return []
 
@@ -335,8 +556,8 @@ def parse_mqtt_message(
 
         return [
             QuestDBRow(
-                table=device_info.table_name,
-                symbols={"friendly_name": friendly_name, "ieee_address": device_info.ieee_address},
+                table=zigbee_vendor_model_to_table_name[z_device_info["ieee_address"]],
+                symbols={"friendly_name": friendly_name, "ieee_address": z_device_info["ieee_address"]},
                 columns=ile_tools.dict_int_to_float(ile_tools.flatten_dict(payload)),
                 timestamp_ns=ile_tools.timestamp_s_to_ns(timestamp_s),
             )
@@ -348,8 +569,8 @@ def parse_mqtt_message(
 
 def _process_message_batch(
     messages: dict[bytes, list[list[tuple[bytes, dict[bytes, bytes]]]]],
-    shelly_gen2_device_names: ShellyGen2DeviceNames,
-    zigbee2mqtt_device_mapping: Zigbee2mqttDeviceMapping,
+    shelly_gen2_devices: ShellyGen2Devices,
+    zigbee2mqtt_devices: Zigbee2mqttDevices,
 ) -> tuple[list[QuestDBRow], list[bytes], int]:
     """
     Unpack and transform messages from Valkey stream into QuestDB rows.
@@ -368,7 +589,7 @@ def _process_message_batch(
                     batch_message_ids.append(message_id)
                     data_packed = message_data[b"data"]
                     data = msgpack.unpackb(data_packed, raw=False)
-                    questdb_rows = parse_mqtt_message(data, shelly_gen2_device_names, zigbee2mqtt_device_mapping)
+                    questdb_rows = parse_mqtt_message(data, shelly_gen2_devices, zigbee2mqtt_devices)
                     batch_rows.extend(questdb_rows)
 
                     if ile_tools.Config.debug:
@@ -420,8 +641,8 @@ def _write_rows_to_valkey(
 def process_stream_main_loop(
     r: valkey.Valkey,
     sigterm_event: threading.Event,
-    shelly_gen2_device_names: ShellyGen2DeviceNames,
-    zigbee2mqtt_device_mapping: Zigbee2mqttDeviceMapping,
+    shelly_gen2_devices: ShellyGen2Devices,
+    zigbee2mqtt_devices: Zigbee2mqttDevices,
 ) -> None:
     """
     Main loop: reads input stream, transforms, writes to output stream.
@@ -449,7 +670,7 @@ def process_stream_main_loop(
                 continue
 
             batch_rows, batch_message_ids, message_count = _process_message_batch(
-                messages, shelly_gen2_device_names, zigbee2mqtt_device_mapping
+                messages, shelly_gen2_devices, zigbee2mqtt_devices
             )
             total_message_count += message_count
 
@@ -511,15 +732,6 @@ def main() -> int:
 
             # noinspection PyTypeChecker
             with ile_tools.create_mqtt_client(MqttHandler(sigterm_event), Config.mqtt_client_id) as mqtt_client:
-                shelly_gen2_device_names = ShellyGen2DeviceNames(mqtt_client, sigterm_event)
-                shelly_gen2_announce_thread = threading.Thread(
-                    target=shelly_gen2_device_names.announce_thread,
-                    daemon=True,
-                    name="shelly-gen2-announce-thread",
-                )
-                shelly_gen2_announce_thread.start()
-                ile_tools.log_diagnostic("main: shelly_gen2_announce_thread started")
-
                 # Start stream trim thread
                 trim_thread = threading.Thread(
                     target=ile_tools.stream_trim_thread,
@@ -536,10 +748,30 @@ def main() -> int:
                 trim_thread.start()
                 ile_tools.log_diagnostic("main: stream_trim_thread started")
 
-                zigbee2mqtt_device_mapping = Zigbee2mqttDeviceMapping()
+                shelly_gen2_devices = ShellyGen2Devices()
+                zigbee2mqtt_devices = Zigbee2mqttDevices()
+
+                # Start cronjob MQTT sender thread if configured
+                if Config.mqtt_cronjob_path:
+                    mqtt_cronjob_sender = MqttCronjobSender(
+                        mqtt_client, sigterm_event, shelly_gen2_devices, zigbee2mqtt_devices
+                    )
+                    if mqtt_cronjob_sender.load_messages_from_file(Config.mqtt_cronjob_path):
+                        cronjob_thread = threading.Thread(
+                            target=mqtt_cronjob_sender.cronjob_thread,
+                            daemon=True,
+                            name="cronjob-mqtt-sender-thread",
+                        )
+                        cronjob_thread.start()
+                        ile_tools.log_diagnostic("main: cronjob_mqtt_sender_thread started")
+                    else:
+                        ile_tools.log_diagnostic("main: cronjob_mqtt_sender_thread not started (failed to load file)")
+                        return 1
+                else:
+                    ile_tools.log_diagnostic("main: cronjob_mqtt_sender_thread not started (no file path)")
 
                 ile_tools.log_diagnostic("main: payload_normalizer ready, waiting for messages")
-                process_stream_main_loop(r, sigterm_event, shelly_gen2_device_names, zigbee2mqtt_device_mapping)
+                process_stream_main_loop(r, sigterm_event, shelly_gen2_devices, zigbee2mqtt_devices)
 
     except Exception as e:
         ile_tools.print_exception(e, "main: fatal error")

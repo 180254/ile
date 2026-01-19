@@ -3,3 +3,4 @@ valkey[libvalkey]>=6,<7
 msgpack>=1.1,<2
 questdb>=4,<5
 requests>=2,<3
+pyyaml>=6,<7

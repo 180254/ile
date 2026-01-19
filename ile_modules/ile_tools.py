@@ -21,9 +21,11 @@ import inspect
 import json
 import logging
 import os
+import random
 import re
 import signal
 import ssl
+import string
 import sys
 import threading
 import traceback
@@ -626,6 +628,12 @@ def stream_trim_thread(
 
         if sigterm_event.wait(interval_s):
             break
+
+
+def random_string(length: int) -> str:
+    """Generate a random alphanumeric string of specified length."""
+    characters = string.ascii_letters + string.digits
+    return "".join(random.choices(characters, k=length))
 
 
 # Pre-compiled regex patterns for topic matching (shared between mqtt_ingestor and payload_normalizer)

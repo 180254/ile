@@ -263,8 +263,10 @@ services:
       - ILE_MQTT_PORT=8883
       - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
+      - ILE_IPN_MQTT_CRONJOB_PATH=/etc/cronjobs.yaml
     volumes:
       - /etc/localtime:/etc/localtime:ro
+      - ${ILE_DIR}/docker-compose/mqtt-cronjobs/${ILE_ENV}/homeserver.yaml:/etc/cronjobs.yaml:ro
     logging:
       options:
         max-size: 10m
@@ -283,6 +285,9 @@ services:
       valkey:
         condition: service_started
         restart: true
+      zigbee2mqtt:
+        condition: service_started
+        restart: false
     deploy:
       restart_policy:
         condition: any

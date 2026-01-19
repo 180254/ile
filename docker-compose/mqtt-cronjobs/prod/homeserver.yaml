@@ -1,0 +1,237 @@
+---
+messages:
+  # https://www.zigbee2mqtt.io/guide/usage/mqtt_topics_and_messages.html#zigbee2mqtt-bridge-request-device-reporting-configure
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'S60ZBTPF'
+    topic: zigbee2mqtt/<friendly_name>/set
+    qos: 1
+    retain: false
+    payload:
+      outlet_control_protect: true
+      overload_protection:
+        enable_max_voltage: ENABLE
+        enable_min_current: DISABLE
+        enable_min_power: DISABLE
+        enable_min_voltage: ENABLE
+        max_current: 13.6
+        max_power: 3400
+        max_voltage: 264.5
+        min_current: 0.1
+        min_power: 0.1
+        min_voltage: 195.5
+      state: 'ON'
+      power_on_behavior: previous
+      inching_control_set:
+        inching_control: DISABLE
+        inching_mode: 'OFF'
+    interval: 1800
+  # https://www.zigbee2mqtt.io/guide/usage/mqtt_topics_and_messages.html#zigbee2mqtt-bridge-request-device-reporting-configure
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'S60ZBTPF'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: genOnOff
+      attribute: onOff
+      minimum_report_interval: 0
+      maximum_report_interval: 3000
+      transaction: <random>
+    interval: 600
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'S60ZBTPF'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: seMetering
+      attribute: currentSummDelivered
+      minimum_report_interval: 55
+      maximum_report_interval: 55
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'S60ZBTPF'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: customClusterEwelink
+      attribute: energyToday
+      minimum_report_interval: 55
+      maximum_report_interval: 55
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'S60ZBTPF'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: customClusterEwelink
+      attribute: energyYesterday
+      minimum_report_interval: 55
+      maximum_report_interval: 55
+      reportable_change: 0
+      transaction: <random>
+    interval: 600
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'S60ZBTPF'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: customClusterEwelink
+      attribute: energyMonth
+      minimum_report_interval: 55
+      maximum_report_interval: 55
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'S60ZBTPF'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: customClusterEwelink
+      attribute: acCurrentPowerValue
+      minimum_report_interval: 55
+      maximum_report_interval: 55
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'S60ZBTPF'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: customClusterEwelink
+      attribute: acCurrentCurrentValue
+      minimum_report_interval: 55
+      maximum_report_interval: 55
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'SNZB-02WD'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: customClusterEwelink
+      attribute: acCurrentVoltageValue
+      minimum_report_interval: 55
+      maximum_report_interval: 55
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'SNZB-02WD'
+    topic: zigbee2mqtt/<friendly_name>/set
+    qos: 1
+    retain: false
+    payload:
+      humidity_calibration: 0
+      temperature_calibration: 0,
+      temperature_units: "celsius"
+    interval: 600
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'SNZB-02WD'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: genPowerCfg
+      attribute: batteryPercentageRemaining
+      minimum_report_interval: 3600
+      maximum_report_interval: 3600
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'SNZB-02WD'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: genPowerCfg
+      attribute: batteryVoltage
+      minimum_report_interval: 3600
+      maximum_report_interval: 3600
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'SNZB-02WD'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: msTemperatureMeasurement
+      attribute: measuredValue
+      minimum_report_interval: 600
+      maximum_report_interval: 600
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'SONOFF'
+    model: 'SNZB-02WD'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: msRelativeHumidity
+      attribute: measuredValue
+      minimum_report_interval: 600
+      maximum_report_interval: 600
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: none
+    qos: 1
+    retain: true
+    topic: shellies/command
+    payload: announce
+    interval: 1800

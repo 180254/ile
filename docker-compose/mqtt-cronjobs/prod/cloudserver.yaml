@@ -1,0 +1,8 @@
+---
+messages:
+  - device_type: none
+    qos: 1
+    retain: true
+    topic: shellies/command
+    payload: announce
+    interval: 1800
