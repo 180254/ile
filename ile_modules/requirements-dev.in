@@ -1,3 +1,2 @@
-types-requests>=2,<3
 msgpack-types>=0.7,<1
 types-PyYAML>=6,<7

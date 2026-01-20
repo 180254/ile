@@ -8,39 +8,31 @@ ILE_DIR=$(realpath "${SCRIPT_DIR}/../")
 
 pushd "${ILE_DIR}" >/dev/null
 
-command -v uv &>/dev/null && TOOL=uv || TOOL=
-echo "Using tool: ${TOOL:-python3 -m venv}"
+if ! command -v uv &>/dev/null; then
+  echo "ERROR: 'uv' command not found (https://github.com/astral-sh/uv)." 1>&2
+  exit 1
+fi
 
 VENV_PATH=".venv"
 
 echo "Creating or upgrading virtual environment in: ${ILE_DIR}/${VENV_PATH}"
-if [[ "${TOOL}" == "uv" ]]; then
-  uv venv "${VENV_PATH}" --seed --allow-existing
-  uv pip install --python "${VENV_PATH}/bin/python3" --upgrade pip wheel setuptools
-  uv pip install --python "${VENV_PATH}/bin/python3" --upgrade -r requirements-dev.txt
-else
-  python3 -m venv "${VENV_PATH}"
-  "${VENV_PATH}/bin/pip3" install --upgrade pip wheel setuptools
-  "${VENV_PATH}/bin/pip3" install --disable-pip-version-check --upgrade -r requirements-dev.txt
-fi
+uv venv "${VENV_PATH}" --seed --allow-existing
+uv pip install --python "${VENV_PATH}/bin/python3" --upgrade pip wheel setuptools
+uv pip install --python "${VENV_PATH}/bin/python3" --upgrade -r requirements-dev.txt
 
 for subproject in ile_modules qdb_scripts; do
-  if [[ -f "$subproject/requirements.txt" ]]; then
+  if [[ -f "$subproject/requirements.in" ]]; then
     echo "Installing requirements for subproject: $subproject"
-    if [[ "${TOOL}" == "uv" ]]; then
-      uv pip install --python "${VENV_PATH}/bin/python3" --upgrade -r $subproject/requirements.txt
-    else
-      "${VENV_PATH}/bin/pip3" install --disable-pip-version-check --upgrade -r $subproject/requirements.txt
-    fi
+    uv pip compile --python "${VENV_PATH}/bin/python3" --upgrade $subproject/requirements.in -o $subproject/requirements.txt
+    uv pip install --python "${VENV_PATH}/bin/python3" -r $subproject/requirements.txt
+  elif [[ -f "$subproject/requirements.txt" ]]; then
+    echo "Installing requirements for subproject: $subproject"
+    uv pip install --python "${VENV_PATH}/bin/python3" --upgrade -r $subproject/requirements.txt
   fi
 
-  if [[ -f "$subproject/requirements-dev.txt" ]]; then
+  if [[ -f "$subproject/requirements-dev.in" ]]; then
     echo "Installing dev requirements for subproject: $subproject"
-    if [[ "${TOOL}" == "uv" ]]; then
-      uv pip install --python "${VENV_PATH}/bin/python3" --upgrade -r $subproject/requirements-dev.txt
-    else
-      "${VENV_PATH}/bin/pip3" install --disable-pip-version-check --upgrade -r $subproject/requirements-dev.txt
-    fi
+    uv pip install --python "${VENV_PATH}/bin/python3" --upgrade -r $subproject/requirements-dev.in
   fi
 done
 
