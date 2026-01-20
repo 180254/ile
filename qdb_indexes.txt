@@ -1,3 +1,12 @@
+ALTER TABLE shelly_gen2_blutrv ALTER COLUMN device_id ADD INDEX;
+ALTER TABLE shelly_gen2_blutrv ALTER COLUMN device_name ADD INDEX;
+ALTER TABLE shelly_gen2_blutrv ALTER COLUMN idx ADD INDEX;
+ALTER TABLE shelly_gen2_bthomedevice ALTER COLUMN device_id ADD INDEX;
+ALTER TABLE shelly_gen2_bthomedevice ALTER COLUMN device_name ADD INDEX;
+ALTER TABLE shelly_gen2_bthomedevice ALTER COLUMN idx ADD INDEX;
+ALTER TABLE shelly_gen2_bthomesensor ALTER COLUMN device_id ADD INDEX;
+ALTER TABLE shelly_gen2_bthomesensor ALTER COLUMN device_name ADD INDEX;
+ALTER TABLE shelly_gen2_bthomesensor ALTER COLUMN idx ADD INDEX;
 ALTER TABLE shelly_gen2_devicepower ALTER COLUMN device_id ADD INDEX;
 ALTER TABLE shelly_gen2_devicepower ALTER COLUMN device_name ADD INDEX;
 ALTER TABLE shelly_gen2_devicepower ALTER COLUMN idx ADD INDEX;

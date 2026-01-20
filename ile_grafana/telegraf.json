@@ -3241,6 +3241,7 @@
   "templating": {
     "list": [
       {
+        "allowCustomValue": false,
         "current": {
           "text": "questdb",
           "value": "questdb"
@@ -3254,6 +3255,7 @@
         "type": "datasource"
       },
       {
+        "allowCustomValue": false,
         "current": {
           "text": "pl1lxl-PW0KZ9F6",
           "value": "pl1lxl-PW0KZ9F6"
@@ -3268,14 +3270,15 @@
         "options": [],
         "query": "select distinct host from telegraf_cpu where $__timeFilter(timestamp)",
         "refresh": 1,
-        "regex": "",
+        "regex": ".+",
         "sort": 5,
         "type": "query"
       },
       {
+        "allowCustomValue": false,
         "current": {
-          "text": "enx04bf1b40b418",
-          "value": "enx04bf1b40b418"
+          "text": "wlp9s0f0",
+          "value": "wlp9s0f0"
         },
         "datasource": {
           "type": "postgres",
@@ -3287,11 +3290,12 @@
         "options": [],
         "query": "select distinct interface from telegraf_net where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
-        "regex": "",
+        "regex": ".+",
         "sort": 5,
         "type": "query"
       },
       {
+        "allowCustomValue": false,
         "current": {
           "text": "/",
           "value": "/"
@@ -3306,11 +3310,12 @@
         "options": [],
         "query": "select distinct path from telegraf_disk where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
-        "regex": "",
+        "regex": ".+",
         "sort": 5,
         "type": "query"
       },
       {
+        "allowCustomValue": false,
         "current": {
           "text": "nvme0n1",
           "value": "nvme0n1"
@@ -3325,11 +3330,12 @@
         "options": [],
         "query": "select distinct name from telegraf_diskio where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
-        "regex": "",
+        "regex": ".+",
         "sort": 5,
         "type": "query"
       },
       {
+        "allowCustomValue": false,
         "current": {
           "text": "ile-laptop-telegraf-1",
           "value": "ile-laptop-telegraf-1"
@@ -3344,11 +3350,12 @@
         "options": [],
         "query": "select distinct container_name from telegraf_docker_container_cpu where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
-        "regex": "",
+        "regex": ".+",
         "sort": 5,
         "type": "query"
       },
       {
+        "allowCustomValue": false,
         "current": {
           "text": "NVIDIA RTX 2000 Ada Generation Laptop GPU",
           "value": "NVIDIA RTX 2000 Ada Generation Laptop GPU"
@@ -3364,7 +3371,7 @@
         "options": [],
         "query": "select distinct name from telegraf_nvidia_smi where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
-        "regex": "",
+        "regex": ".+",
         "sort": 5,
         "type": "query"
       }
@@ -3378,5 +3385,5 @@
   "timezone": "browser",
   "title": "telegraf",
   "uid": "telegraf",
-  "version": 1
+  "version": 5
 }

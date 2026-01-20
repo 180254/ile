@@ -114,7 +114,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    max(temperature) as temperature,\n    cast(0 as timestamp) as time\nfrom (\n    select last(temperature) as temperature, friendly_name\n    from zigbee2mqtt_sonoff_snzb02wd\n    where friendly_name in ($ht_device_name) and $__timeFilter(timestamp)\n)",
+          "rawSql": "select $__time(0), last(temperature)\nfrom zigbee2mqtt_sonoff_snzb02wd\nwhere ${filter:raw} and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -249,7 +249,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(temperature) as temperature,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    friendly_name in ($ht_device_name)\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(temperature) as temperature,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -365,7 +365,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    max(humidity) as humidity,\n    cast(0 as timestamp) as time\nfrom (\n    select last(humidity) as humidity, friendly_name\n    from zigbee2mqtt_sonoff_snzb02wd\n    where friendly_name in ($ht_device_name) and $__timeFilter(timestamp)\n)",
+          "rawSql": "select $__time(0), last(humidity)\nfrom zigbee2mqtt_sonoff_snzb02wd\nwhere ${filter:raw} and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -500,7 +500,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(humidity) as humidity,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    friendly_name in ($ht_device_name)\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(humidity) as humidity,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n     ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -617,7 +617,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select min(battery), cast(0 as timestamp) as time\nfrom (\n    select last(battery) as battery, friendly_name\n    from zigbee2mqtt_sonoff_snzb02wd\n    where friendly_name in ($ht_device_name) and $__timeFilter(timestamp)\n)",
+          "rawSql": "select $__time(0), last(battery)\nfrom zigbee2mqtt_sonoff_snzb02wd\nwhere ieee_address = '$ieee_address' and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -797,7 +797,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(battery) as battery,\n    concat('bat_value_', ${bat_metric:raw}) as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    ieee_address in (\n        select \n            distinct ieee_address\n        from\n            zigbee2mqtt_sonoff_snzb02wd\n        where\n            friendly_name in ($ht_device_name)\n            and $__timeFilter(timestamp)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(battery) as battery,\n    concat('bat_value_', ieee_address) as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    ieee_address = '$ieee_address'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "bat_value",
           "select": [
             [
@@ -846,7 +846,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(voltage)/1000 as voltage,\n    concat('bat_voltage_', ${bat_metric:raw}) as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    friendly_name in ($ht_device_name)\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(voltage)/1000 as voltage,\n    concat('bat_voltage_', ieee_address) as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    ieee_address = '$ieee_address'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "bat_voltage",
           "select": [
             [
@@ -950,7 +950,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select min(voltage)/1000, cast(0 as timestamp) as time\nfrom (\n    select last(voltage) as voltage, friendly_name\n    from zigbee2mqtt_sonoff_snzb02wd\n    where friendly_name in ($ht_device_name) and $__timeFilter(timestamp)\n)",
+          "rawSql": "select $__time(0), last(voltage)/1000\nfrom zigbee2mqtt_sonoff_snzb02wd\nwhere ieee_address = '$ieee_address' and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -1084,7 +1084,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(linkquality) as linkquality,\n    concat('', ${bat_metric:raw}) as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    ieee_address in (\n        select \n            distinct ieee_address\n        from\n            zigbee2mqtt_sonoff_snzb02wd\n        where\n            friendly_name in ($ht_device_name)\n            and $__timeFilter(timestamp)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(linkquality) as linkquality,\n    ieee_address as metric,\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    ieee_address = '$ieee_address'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -1134,6 +1134,7 @@
   "templating": {
     "list": [
       {
+        "allowCustomValue": false,
         "current": {
           "text": "questdb",
           "value": "questdb"
@@ -1147,51 +1148,64 @@
         "type": "datasource"
       },
       {
+        "allowCustomValue": false,
         "current": {
-          "text": "All",
-          "value": [
-            "$__all"
-          ]
+          "text": "zigbee-ht-0-outdoor",
+          "value": "zigbee-ht-0-outdoor"
         },
         "datasource": {
           "type": "postgres",
           "uid": "${datasource}"
         },
         "definition": "select distinct friendly_name from zigbee2mqtt_sonoff_snzb02wd where $__timeFilter(timestamp)",
-        "includeAll": true,
-        "multi": true,
-        "name": "ht_device_name",
+        "includeAll": false,
+        "name": "friendly_name",
         "options": [],
         "query": "select distinct friendly_name from zigbee2mqtt_sonoff_snzb02wd where $__timeFilter(timestamp)",
         "refresh": 2,
-        "regex": "",
+        "regex": ".+",
         "sort": 5,
         "type": "query"
       },
       {
+        "allowCustomValue": false,
         "current": {
-          "text": "ieee_address",
-          "value": "ieee_address"
+          "text": "0xa4c1380194c2ffff",
+          "value": "0xa4c1380194c2ffff"
         },
-        "name": "bat_metric",
+        "definition": "select distinct ieee_address from zigbee2mqtt_sonoff_snzb02wd where friendly_name = '$friendly_name' and $__timeFilter(timestamp)",
+        "name": "ieee_address",
+        "options": [],
+        "query": "select distinct ieee_address from zigbee2mqtt_sonoff_snzb02wd where friendly_name = '$friendly_name' and $__timeFilter(timestamp)",
+        "refresh": 1,
+        "regex": ".+",
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "ieee_address = '0xa4c1380194c2ffff'",
+          "value": "ieee_address = '0xa4c1380194c2ffff'"
+        },
+        "name": "filter",
         "options": [
-          {
-            "selected": false,
-            "text": "friendly_name",
-            "value": "friendly_name"
-          },
           {
             "selected": true,
             "text": "ieee_address",
-            "value": "ieee_address"
+            "value": "ieee_address = '0xa4c1380194c2ffff'"
           },
           {
             "selected": false,
-            "text": "ieee_address+friendly_name",
-            "value": "ieee_address,'_',friendly_name"
+            "text": "friendly_name",
+            "value": "friendly_name = 'zigbee-ht-0-outdoor'"
+          },
+          {
+            "selected": false,
+            "text": "friendly_name+ieee_address",
+            "value": "friendly_name = 'zigbee-ht-0-outdoor' and ieee_address = '0xa4c1380194c2ffff'"
           }
         ],
-        "query": "friendly_name, ieee_address, ieee_address+friendly_name : ieee_address\\,'_'\\,friendly_name",
+        "query": " ieee_address : ieee_address = '$ieee_address',  friendly_name : friendly_name = '$friendly_name', friendly_name+ieee_address : friendly_name = '$friendly_name' and ieee_address = '$ieee_address'",
         "type": "custom"
       }
     ]
@@ -1204,5 +1218,5 @@
   "timezone": "browser",
   "title": "zigbee2mqtt_sonoff_snzb02wd",
   "uid": "zigbee2mqtt_sonoff_snzb02wd",
-  "version": 5
+  "version": 8
 }

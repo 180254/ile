@@ -122,7 +122,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select $__time(0), last(apower) as apower\nfrom shelly_gen2_switch\nwhere device_name = '$plugs_device_name' and idx = '$idx' and $__timeFilter(timestamp)",
+          "rawSql": "select $__time(0), last(apower)\nfrom shelly_gen2_switch\nwhere ${filter:raw} and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -225,7 +225,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "with\n    shelly_gen2_switch_b as (\n        select timestamp, aenergy_total\n        from shelly_gen2_switch\n        where device_name = '$plugs_device_name' and idx = '$idx' and $__timeFilter(timestamp)\n    ),\n    consumption_t as (\n        select (case when t1.aenergy_total >= t2.aenergy_total then t1.aenergy_total-t2.aenergy_total else null end) as consumption\n        from shelly_gen2_switch_b t1\n        lt join shelly_gen2_switch_b t2\n    )\nselect\n    $__time(0),\n    sum(consumption) as value\nfrom consumption_t",
+          "rawSql": "with\n    shelly_gen2_switch_b as (\n        select timestamp, aenergy_total as energy, device_id\n        from shelly_gen2_switch\n        where ${filter:raw} and $__timeFilter(timestamp)\n    ),\n    consumption_t as (\n        select (case when t1.energy >= t2.energy then t1.energy-t2.energy else null end) as consumption\n        from shelly_gen2_switch_b t1\n        lt join shelly_gen2_switch_b t2\n        on t1.device_id = t2.device_id\n    )\nselect\n    $__time(0),\n    sum(consumption) as value\nfrom consumption_t",
           "refId": "value",
           "select": [
             [
@@ -374,7 +374,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "with\n    shelly_gen2_switch_b as (\n        select timestamp, aenergy_total\n        from shelly_gen2_switch\n        where device_name = '$plugs_device_name' and idx = '$idx' and $__timeFilter(timestamp)\n    ),\n    interval_s as (\n        select (case\n            when '$interval' like '%s' then cast(left('$interval', -1) as int)*1\n            when '$interval' like '%m' then cast(left('$interval', -1) as int)*60\n            when '$interval' like '%h' then cast(left('$interval', -1) as int)*3600\n            when '$interval' like '%d' then cast(left('$interval', -1) as int)*86400\n            when '$interval' like '%w' then cast(left('$interval', -1) as int)*604800\n            when '$interval' like '%M' then cast(left('$interval', -1) as int)*2678400\n            when '$interval' like '%y' then cast(left('$interval', -1) as int)*31536000\n            else 0 end\n        ) as value\n    ),\n    consumption_t as (\n        select\n            t1.timestamp, \n            (case\n                when datediff('s', t1.timestamp, t2.timestamp) > interval_s.value then null\n                when t1.aenergy_total >= t2.aenergy_total then t1.aenergy_total-t2.aenergy_total\n                else null end) as consumption\n        from shelly_gen2_switch_b t1\n        lt join shelly_gen2_switch_b t2\n        cross join interval_s\n    )\nselect\n    $__time(timestamp),\n    sum(consumption) as value\nfrom consumption_t\nsample by $interval fill(null) align to calendar",
+          "rawSql": "with\n    shelly_gen2_switch_b as (\n        select timestamp, aenergy_total as energy, device_id\n        from shelly_gen2_switch\n        where ${filter:raw} and $__timeFilter(timestamp)\n    ),\n    interval_s as (\n        select (case\n            when '$interval' like '%s' then cast(left('$interval', -1) as int)*1\n            when '$interval' like '%m' then cast(left('$interval', -1) as int)*60\n            when '$interval' like '%h' then cast(left('$interval', -1) as int)*3600\n            when '$interval' like '%d' then cast(left('$interval', -1) as int)*86400\n            when '$interval' like '%w' then cast(left('$interval', -1) as int)*604800\n            when '$interval' like '%M' then cast(left('$interval', -1) as int)*2678400\n            when '$interval' like '%y' then cast(left('$interval', -1) as int)*31536000\n            else 0 end\n        ) as value\n    ),\n    consumption_t as (\n        select\n            t1.timestamp, \n            (case\n                when datediff('s', t1.timestamp, t2.timestamp) > interval_s.value then null\n                when t1.energy >= t2.energy then t1.energy-t2.energy\n                else null end) as consumption\n        from shelly_gen2_switch_b t1\n        lt join shelly_gen2_switch_b t2\n        on t1.device_id = t2.device_id\n        cross join interval_s\n    )\nselect\n    $__time(timestamp),\n    sum(consumption) as value\nfrom consumption_t\nsample by $interval fill(null) align to calendar",
           "refId": "value",
           "select": [
             [
@@ -472,42 +472,7 @@
           },
           "unit": "watt"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "average"
-            },
-            "properties": [
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "dash": [
-                    10,
-                    10
-                  ],
-                  "fill": "dash"
-                }
-              },
-              {
-                "id": "custom.showPoints",
-                "value": "never"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "errors"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bool"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 9,
@@ -542,8 +507,8 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(apower) as apower\nfrom shelly_gen2_switch\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
-          "refId": "power",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(apower) as apower\nfrom shelly_gen2_switch\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "A",
           "select": [
             [
               {
@@ -571,68 +536,6 @@
             ],
             "limit": 50
           },
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        },
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "hide": false,
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "with\n    shelly_plugs_meter1b as (\n        select timestamp, total\n        from shelly_plugs_meter1\n        where device_name = '$plugs_device_name' and idx = '$idx' and is_valid = true and $__timeFilter(timestamp)\n    ),\n    far_dates_t as (\n        select \n          cast($__unixEpochFrom()*1000000L as timestamp) as timestamp_from,\n          cast($__unixEpochTo()*1000000L as timestamp) as timestamp_to\n    ),\n    consumption_t as ( -- Watt-minute\n        select\n            $__time(0),\n            sum(consumption) as value\n        from (\n            select (case when t1.total >= t2.total then t1.total-t2.total else null end) as consumption\n            from shelly_plugs_meter1b t1\n            lt join shelly_plugs_meter1b t2\n        )\n    ),\n    average_t as (\n        select\n            $__time(0),\n            (value*1.0/datediff('m', timestamp_from, timestamp_to)) as value\n        from consumption_t\n        cross join far_dates_t\n    )\nselect\n    $__time(timestamp),\n    first(average_t.value) as average\nfrom shelly_plugs_meter1b\ncross join average_t\nsample by $__interval fill(null)",
-          "refId": "average",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        },
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "format": "time_series",
-          "group": [],
-          "hide": false,
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "select\n    $__time(timestamp),\n    coalesce(is_valid, is_overpower, is_overvoltage, is_undervoltage, is_overcurrent, 0) as errors\nfrom (\n  select \n      timestamp,\n      nullif(min(1-cast(is_valid as INT)), 0) as is_valid,\n      nullif(min(cast(is_overpower as INT)), 0) as is_overpower,\n      nullif(min(cast(is_overvoltage as INT)), 0) as is_overvoltage,\n      nullif(min(cast(is_undervoltage as INT)), 0) as is_undervoltage,\n      nullif(min(cast(is_overcurrent as INT)), 0) as is_overcurrent\n  from shelly_plugs_meter1\n  where\n      device_name = '$plugs_device_name'\n      and $__timeFilter(timestamp)\n  sample by $__interval fill(null)\n)",
-          "refId": "errors",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
           "timeColumn": "time",
           "where": [
             {
@@ -737,8 +640,8 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(temperature_tC) as temperature_tC,\nfrom shelly_gen2_switch\nwhere\n    device_name = '$plugs_device_name'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
-          "refId": "value",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(temperature_tC) as tC\nfrom shelly_gen2_switch\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "A",
           "select": [
             [
               {
@@ -898,7 +801,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(current) as current\nfrom shelly_gen2_switch\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(current) as current\nfrom shelly_gen2_switch\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -1059,7 +962,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(voltage) as voltage\nfrom shelly_gen2_switch\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\n    and voltage > 0\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(voltage) as voltage\nfrom shelly_gen2_switch\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\n    and voltage > 0\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -1266,105 +1169,8 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(apower) as apower\nfrom shelly_gen2_switch\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
-          "refId": "power",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        },
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(voltage)*avg(current) as apparent_power\nfrom shelly_gen2_switch\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
-          "refId": "apparent_power",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        },
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "group": [],
-          "hide": false,
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(apower)/(avg(voltage)*avg(current)) as pf\nfrom shelly_gen2_switch\nwhere\n    device_name = '$plugs_device_name'\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
-          "refId": "pf",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(apower) as apower,\n    avg(voltage)*avg(current) as apparent_power,\n    avg(apower)/(avg(voltage)*avg(current)) as pf\nfrom shelly_gen2_switch\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\n    and voltage > 0\nsample by $__interval fill(null)",
+          "refId": "A",
           "select": [
             [
               {
@@ -1556,7 +1362,7 @@
               "group": [],
               "metricColumn": "none",
               "rawQuery": true,
-              "rawSql": "WITH\n\ninterval_s AS (\n    SELECT (\n        CASE\n            WHEN '$interval' LIKE '%s' THEN CAST(left('$interval', -1) AS INT) * 1\n            WHEN '$interval' LIKE '%m' THEN CAST(left('$interval', -1) AS INT) * 60\n            WHEN '$interval' LIKE '%h' THEN CAST(left('$interval', -1) AS INT) * 3600\n            WHEN '$interval' LIKE '%d' THEN CAST(left('$interval', -1) AS INT) * 86400\n            WHEN '$interval' LIKE '%w' THEN CAST(left('$interval',-1) AS INT) * 604800\n            WHEN '$interval' LIKE '%M' THEN CAST(left('$interval', -1) AS INT) * 2678400\n            WHEN '$interval' LIKE '%y' THEN CAST(left('$interval',-1) AS INT) * 31536000\n            ELSE 0\n        END\n    ) AS interval_sec\n),\n\nraw AS (\n    SELECT timestamp, aenergy_total\n    FROM shelly_gen2_switch\n    WHERE device_name = '$plugs_device_name'\n      AND idx = '$idx'\n      AND $__timeFilter(timestamp)\n),\n\ndiff AS (\n    SELECT\n        t1.timestamp,\n        CASE\n            WHEN datediff('s', t1.timestamp, t2.timestamp) > i.interval_sec THEN NULL\n            WHEN t1.aenergy_total >= t2.aenergy_total THEN t1.aenergy_total - t2.aenergy_total\n            ELSE NULL\n        END AS delta\n    FROM raw t1\n    LT JOIN raw t2\n    CROSS JOIN interval_s i\n),\n\n-- Apply window functions to the raw 'diff' data *before* sampling.\nrunning_totals_raw AS (\n  SELECT\n    timestamp,\n    -- Running total of all deltas up to the current timestamp\n    sum(delta) OVER (ORDER BY timestamp) as running_total_delta,\n    -- Running total of deltas *within* each time bucket/interval\n    sum(delta) OVER (PARTITION BY timestamp_floor('$interval', timestamp) ORDER BY timestamp) as bucket_total\n  FROM diff\n  WHERE delta IS NOT NULL\n),\n\n-- Sample the running totals to get the final value for each bucket\nsampled_totals AS (\n  SELECT\n    timestamp,\n    -- The last running_total_delta in the bucket is the cumulative total at the *end* of the bucket\n    last(running_total_delta) as end_of_bucket_csum,\n    -- The last bucket_total is simply the sum of deltas within this bucket\n    last(bucket_total) as this_bucket_sum\n  FROM running_totals_raw\n  SAMPLE BY $interval FILL(null)\n),\n\n-- Final calculation for the cumulative sum at the BEGINNING of the time bucket\ncum AS (\n  SELECT\n    timestamp,\n    -- The sum at the start of the bucket is the total sum at the end of the bucket\n    -- minus the sum of everything in the bucket itself.\n    -- COALESCE handles the very first bucket.\n    COALESCE((end_of_bucket_csum - this_bucket_sum), 0) as cum_wh\n  FROM sampled_totals\n),\n\n-- Total calculation needs to be adjusted for the new logic\ntot AS (\n    SELECT SUM(delta) AS total_wh FROM diff\n),\n\nbounds AS (\n    SELECT\n        CAST((($__unixEpochFrom()) + 1) * 1000000L AS TIMESTAMP) AS t0,\n        CAST((($__unixEpochTo())   - 1) * 1000000L AS TIMESTAMP) AS t1\n)\n\nSELECT\n    $__time(b.t0),\n    0 AS value,\n    0 AS percent,\n    0 AS passage_of_time\nFROM bounds b\n\nUNION ALL\n\nSELECT\n     $__time(c.timestamp),\n     c.cum_wh AS value,\n     (CASE WHEN t.total_wh > 0 THEN (c.cum_wh / t.total_wh) * 100 ELSE 0 END) AS percent,\n     (datediff('s', b.t0, c.timestamp) * 100.0 / datediff('s', b.t0, b.t1)) AS passage_of_time\nFROM cum c\nCROSS JOIN tot t\nCROSS JOIN bounds b\n\nUNION ALL\n\nSELECT\n    $__time(b.t1),\n    t.total_wh AS value,\n    100 AS percent,\n    100 AS passage_of_time\nFROM tot t CROSS JOIN bounds b\n",
+              "rawSql": "WITH\n\ninterval_s AS (\n    SELECT (\n        CASE\n            WHEN '$interval' LIKE '%s' THEN CAST(left('$interval', -1) AS INT) * 1\n            WHEN '$interval' LIKE '%m' THEN CAST(left('$interval', -1) AS INT) * 60\n            WHEN '$interval' LIKE '%h' THEN CAST(left('$interval', -1) AS INT) * 3600\n            WHEN '$interval' LIKE '%d' THEN CAST(left('$interval', -1) AS INT) * 86400\n            WHEN '$interval' LIKE '%w' THEN CAST(left('$interval',-1) AS INT) * 604800\n            WHEN '$interval' LIKE '%M' THEN CAST(left('$interval', -1) AS INT) * 2678400\n            WHEN '$interval' LIKE '%y' THEN CAST(left('$interval',-1) AS INT) * 31536000\n            ELSE 0\n        END\n    ) AS interval_sec\n),\n\nraw AS (\n    SELECT timestamp, aenergy_total as energy, device_id\n    FROM shelly_gen2_switch\n    WHERE\n      ${filter:raw}\n      AND $__timeFilter(timestamp)\n),\n\ndiff AS (\n    SELECT\n        t1.timestamp,\n        CASE\n            WHEN datediff('s', t1.timestamp, t2.timestamp) > i.interval_sec THEN NULL\n            WHEN t1.energy >= t2.energy THEN t1.energy - t2.energy\n            ELSE NULL\n        END AS delta\n    FROM raw t1\n    LT JOIN raw t2\n    ON t1.device_id = t2.device_id\n    CROSS JOIN interval_s i\n),\n\n-- Apply window functions to the raw 'diff' data *before* sampling.\nrunning_totals_raw AS (\n  SELECT\n    timestamp,\n    -- Running total of all deltas up to the current timestamp\n    sum(delta) OVER (ORDER BY timestamp) as running_total_delta,\n    -- Running total of deltas *within* each time bucket/interval\n    sum(delta) OVER (PARTITION BY timestamp_floor('$interval', timestamp) ORDER BY timestamp) as bucket_total\n  FROM diff\n  WHERE delta IS NOT NULL\n),\n\n-- Sample the running totals to get the final value for each bucket\nsampled_totals AS (\n  SELECT\n    timestamp,\n    -- The last running_total_delta in the bucket is the cumulative total at the *end* of the bucket\n    last(running_total_delta) as end_of_bucket_csum,\n    -- The last bucket_total is simply the sum of deltas within this bucket\n    last(bucket_total) as this_bucket_sum\n  FROM running_totals_raw\n  SAMPLE BY $interval FILL(null)\n),\n\n-- Final calculation for the cumulative sum at the BEGINNING of the time bucket\ncum AS (\n  SELECT\n    timestamp,\n    -- The sum at the start of the bucket is the total sum at the end of the bucket\n    -- minus the sum of everything in the bucket itself.\n    -- COALESCE handles the very first bucket.\n    COALESCE((end_of_bucket_csum - this_bucket_sum), 0) as cum_wh\n  FROM sampled_totals\n),\n\n-- Total calculation needs to be adjusted for the new logic\ntot AS (\n    SELECT SUM(delta) AS total_wh FROM diff\n),\n\nbounds AS (\n    SELECT\n        CAST((($__unixEpochFrom()) + 1) * 1000000L AS TIMESTAMP) AS t0,\n        CAST((($__unixEpochTo())   - 1) * 1000000L AS TIMESTAMP) AS t1\n)\n\nSELECT\n    $__time(b.t0),\n    0 AS value,\n    0 AS percent,\n    0 AS passage_of_time\nFROM bounds b\n\nUNION ALL\n\nSELECT\n     $__time(c.timestamp),\n     c.cum_wh AS value,\n     (CASE WHEN t.total_wh > 0 THEN (c.cum_wh / t.total_wh) * 100 ELSE 0 END) AS percent,\n     (datediff('s', b.t0, c.timestamp) * 100.0 / datediff('s', b.t0, b.t1)) AS passage_of_time\nFROM cum c\nCROSS JOIN tot t\nCROSS JOIN bounds b\n\nUNION ALL\n\nSELECT\n    $__time(b.t1),\n    t.total_wh AS value,\n    100 AS percent,\n    100 AS passage_of_time\nFROM tot t CROSS JOIN bounds b\n",
               "refId": "A",
               "select": [
                 [
@@ -1610,6 +1416,7 @@
   "templating": {
     "list": [
       {
+        "allowCustomValue": false,
         "current": {
           "text": "questdb",
           "value": "questdb"
@@ -1623,6 +1430,7 @@
         "type": "datasource"
       },
       {
+        "allowCustomValue": false,
         "current": {
           "text": "shelly-plugs-1-freeelectron",
           "value": "shelly-plugs-1-freeelectron"
@@ -1633,15 +1441,30 @@
         },
         "definition": "select distinct device_name from shelly_gen2_switch where $__timeFilter(timestamp)\n",
         "includeAll": false,
-        "name": "plugs_device_name",
+        "name": "device_name",
         "options": [],
         "query": "select distinct device_name from shelly_gen2_switch where $__timeFilter(timestamp)\n",
         "refresh": 2,
-        "regex": "",
+        "regex": ".+",
         "sort": 5,
         "type": "query"
       },
       {
+        "allowCustomValue": false,
+        "current": {
+          "text": "shellyplugsg3-54320465e7a8",
+          "value": "shellyplugsg3-54320465e7a8"
+        },
+        "definition": "select distinct device_id from shelly_gen2_switch where device_name = '$device_name' and $__timeFilter(timestamp)",
+        "name": "device_id",
+        "options": [],
+        "query": "select distinct device_id from shelly_gen2_switch where device_name = '$device_name' and $__timeFilter(timestamp)",
+        "refresh": 1,
+        "regex": ".+",
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
         "current": {
           "text": "0",
           "value": "0"
@@ -1650,16 +1473,43 @@
           "type": "postgres",
           "uid": "${datasource}"
         },
-        "definition": "select distinct idx from shelly_gen2_switch where device_name = '$plugs_device_name' and $__timeFilter(timestamp)",
+        "definition": "select distinct idx from shelly_gen2_switch where device_id = '$device_id' and $__timeFilter(timestamp)",
         "description": "",
         "includeAll": false,
         "name": "idx",
         "options": [],
-        "query": "select distinct idx from shelly_gen2_switch where device_name = '$plugs_device_name' and $__timeFilter(timestamp)",
+        "query": "select distinct idx from shelly_gen2_switch where device_id = '$device_id' and $__timeFilter(timestamp)",
         "refresh": 2,
-        "regex": "",
+        "regex": ".+",
         "sort": 3,
         "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "device_id = 'shellyplugsg3-54320465e7a8' and idx = '0'",
+          "value": "device_id = 'shellyplugsg3-54320465e7a8' and idx = '0'"
+        },
+        "name": "filter",
+        "options": [
+          {
+            "selected": true,
+            "text": "device_id",
+            "value": "device_id = 'shellyplugsg3-54320465e7a8' and idx = '0'"
+          },
+          {
+            "selected": false,
+            "text": "device_name",
+            "value": "device_name = 'shelly-plugs-1-freeelectron' and idx = '0'"
+          },
+          {
+            "selected": false,
+            "text": "device_name+device_id",
+            "value": "device_name = 'shelly-plugs-1-freeelectron' and device_id = 'shellyplugsg3-54320465e7a8' and idx = '0'"
+          }
+        ],
+        "query": "device_id : device_id = '$device_id' and idx = '$idx', device_name : device_name = '$device_name' and idx = '$idx', device_name+device_id : device_name = '$device_name' and device_id = '$device_id' and idx = '$idx'",
+        "type": "custom"
       },
       {
         "auto": false,
@@ -1728,5 +1578,5 @@
   "timezone": "browser",
   "title": "shelly_gen2_switch",
   "uid": "shelly_gen2_switch",
-  "version": 2
+  "version": 14
 }

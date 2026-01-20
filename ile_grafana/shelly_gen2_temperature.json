@@ -114,7 +114,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    max(tC) as tC,\n    cast(0 as timestamp) as time\nfrom (\n    select last(tC) as tC, device_name\n    from shelly_gen2_temperature\n    where device_name in ($ht_device_name) and idx = '$idx' and $__timeFilter(timestamp)\n)",
+          "rawSql": "select $__time(0), last(tC)\nfrom shelly_gen2_temperature\nwhere ${filter:raw} and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -249,7 +249,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(tC) as tC,\n    device_name as metric\nfrom\n    shelly_gen2_temperature\nwhere\n    device_name in ($ht_device_name)\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(tC) as tC,\n    device_name as metric\nfrom\n    shelly_gen2_temperature\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -365,7 +365,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n    max(rh),\n    cast(0 as timestamp) as time\nfrom (\n    select last(rh) as rh, device_name\n    from shelly_gen2_humidity\n    where device_name in ($ht_device_name) and idx = '$idx' and $__timeFilter(timestamp)\n)",
+          "rawSql": "select $__time(0), last(rh)\nfrom shelly_gen2_humidity\nwhere ${filter:raw} and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -500,7 +500,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(rh) as rh,\n    device_name as metric\nfrom\n    shelly_gen2_humidity\nwhere\n    device_name in ($ht_device_name)\n    and idx = '$idx'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(rh) as rh,\n    device_name as metric\nfrom\n    shelly_gen2_humidity\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "A",
           "select": [
             [
@@ -617,7 +617,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select min(battery_percent), cast(0 as timestamp) as time\nfrom (\n    select last(battery_percent) as battery_percent, device_name\n    from shelly_gen2_devicepower\n    where device_name in ($ht_device_name) and idx = '$idx' and $__timeFilter(timestamp)\n)",
+          "rawSql": "select $__time(0), last(battery_percent)\nfrom shelly_gen2_devicepower\nwhere device_id = '$device_id' and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -797,7 +797,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(battery_percent) as battery_percent,\n    concat('bat_value_', ${bat_metric:raw}) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_gen2_humidity\n        where\n            device_name in ($ht_device_name)\n            and idx = '$idx'\n            and $__timeFilter(timestamp)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(battery_percent) as battery_percent,\n    concat('bat_value_', device_id) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id = '$device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "bat_value",
           "select": [
             [
@@ -846,7 +846,7 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    timestamp as time,\n    avg(battery_V) as battery_V,\n    concat('bat_voltage_', ${bat_metric:raw}) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id in (\n        select \n            distinct device_id\n        from\n            shelly_gen2_devicepower\n        where\n            device_name in ($ht_device_name)\n            and $__timeFilter(timestamp)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(battery_V) as battery_V,\n    concat('bat_voltage_', device_id) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id = '$device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "bat_voltage",
           "select": [
             [
@@ -950,7 +950,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select min(battery_V), cast(0 as timestamp) time\nfrom (\n    select last(battery_V) as battery_V, device_name\n    from shelly_gen2_devicepower\n    where device_name in ($ht_device_name) and idx = '$idx' and $__timeFilter(timestamp)\n)",
+          "rawSql": "select $__time(0), last(battery_V)\nfrom shelly_gen2_devicepower\nwhere device_id = '$device_id' and $__timeFilter(timestamp)\n",
           "refId": "A",
           "select": [
             [
@@ -1000,6 +1000,7 @@
   "templating": {
     "list": [
       {
+        "allowCustomValue": false,
         "current": {
           "text": "questdb",
           "value": "questdb"
@@ -1013,62 +1014,79 @@
         "type": "datasource"
       },
       {
+        "allowCustomValue": false,
         "current": {
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "text": "shelly-plusht-0-livingroom",
+          "value": "shelly-plusht-0-livingroom"
         },
         "datasource": {
           "type": "postgres",
           "uid": "${datasource}"
         },
         "definition": "select distinct device_name from shelly_gen2_temperature where $__timeFilter(timestamp)",
-        "includeAll": true,
-        "multi": true,
-        "name": "ht_device_name",
+        "includeAll": false,
+        "name": "device_name",
         "options": [],
         "query": "select distinct device_name from shelly_gen2_temperature where $__timeFilter(timestamp)",
         "refresh": 2,
-        "regex": "",
+        "regex": ".+",
         "sort": 5,
         "type": "query"
       },
       {
+        "allowCustomValue": false,
+        "current": {
+          "text": "shellyplusht-c049ef8df364",
+          "value": "shellyplusht-c049ef8df364"
+        },
+        "definition": "select distinct device_id from shelly_gen2_temperature where device_name = '$device_name' and $__timeFilter(timestamp)",
+        "name": "device_id",
+        "options": [],
+        "query": "select distinct device_id from shelly_gen2_temperature where device_name = '$device_name' and $__timeFilter(timestamp)",
+        "refresh": 1,
+        "regex": ".+",
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
         "current": {
           "text": "0",
           "value": "0"
         },
-        "definition": "select distinct idx from shelly_gen2_temperature where device_name in ($ht_device_name) and $__timeFilter(timestamp)",
+        "definition": "select distinct idx from shelly_gen2_temperature where device_id = '$device_id' and $__timeFilter(timestamp)",
         "name": "idx",
         "options": [],
-        "query": "select distinct idx from shelly_gen2_temperature where device_name in ($ht_device_name) and $__timeFilter(timestamp)",
+        "query": "select distinct idx from shelly_gen2_temperature where device_id = '$device_id' and $__timeFilter(timestamp)",
         "refresh": 1,
-        "regex": "",
+        "regex": ".+",
         "type": "query"
       },
       {
+        "allowCustomValue": false,
         "current": {
-          "text": "device_id",
-          "value": "device_id"
+          "text": "device_id = 'shellyplusht-c049ef8df364' and idx = '0'",
+          "value": "device_id = 'shellyplusht-c049ef8df364' and idx = '0'"
         },
         "includeAll": false,
-        "name": "bat_metric",
+        "name": "filter",
         "options": [
           {
             "selected": true,
             "text": "device_id",
-            "value": "device_id"
+            "value": "device_id = 'shellyplusht-c049ef8df364' and idx = '0'"
           },
           {
             "selected": false,
-            "text": "device_id+device_name",
-            "value": "device_id,'_',device_name"
+            "text": "device_name",
+            "value": "device_name = 'shelly-plusht-0-livingroom' and idx = '0'"
+          },
+          {
+            "selected": false,
+            "text": "device_name+device_id",
+            "value": "device_name = 'shelly-plusht-0-livingroom' and device_id = 'shellyplusht-c049ef8df364' and idx = '0'"
           }
         ],
-        "query": "device_id, device_id+device_name : device_id\\,'_'\\,device_name",
+        "query": "device_id : device_id = '$device_id' and idx = '$idx', device_name : device_name = '$device_name' and idx = '$idx', device_name+device_id : device_name = '$device_name' and device_id = '$device_id' and idx = '$idx'",
         "type": "custom"
       }
     ]
@@ -1081,5 +1099,5 @@
   "timezone": "browser",
   "title": "shelly_gen2_temperature",
   "uid": "shelly_gen2_temperature",
-  "version": 1
+  "version": 11
 }
