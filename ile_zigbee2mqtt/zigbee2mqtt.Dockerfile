@@ -5,9 +5,10 @@ ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
 
 RUN set -eux \
-  && apk add --no-cache curl ca-certificates shadow \
+  && apk add --no-cache shadow \
   && /usr/sbin/groupadd -g "${ILE_NONROOT_GID}" nonroot \
-  && /usr/sbin/useradd -s /bin/sh -g "${ILE_NONROOT_GID}" -u "${ILE_NONROOT_UID}" nonroot
+  && /usr/sbin/useradd -s /bin/sh -g "${ILE_NONROOT_GID}" -u "${ILE_NONROOT_UID}" nonroot \
+  && apk del shadow
 
 RUN set -eux \
   && mkdir -p /app/data \

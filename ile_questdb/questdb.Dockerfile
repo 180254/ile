@@ -5,13 +5,14 @@ ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
 
 RUN set -eux \
-  && microdnf install -y curl ca-certificates shadow-utils \
+  && microdnf install -y curl shadow-utils \
   && groupadd -g "${ILE_NONROOT_GID}" nonroot \
   && useradd -l -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot \
   && microdnf remove -y shadow-utils \
   && microdnf clean all
 
-RUN chown -R nonroot:nonroot /var/lib/questdb
+RUN set -eux \
+  && chown -R nonroot:nonroot /var/lib/questdb
 
 USER nonroot
 

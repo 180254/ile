@@ -5,7 +5,7 @@ USER root
 
 RUN set -eux \
   && apt-get update \
-  && apt-get install -y --no-install-recommends curl ca-certificates gettext-base \
+  && apt-get install -y --no-install-recommends curl gettext-base \
   && rm -rf /var/lib/apt/lists/*
 
 RUN set -eux \
@@ -13,7 +13,8 @@ RUN set -eux \
     && chown -R haproxy:haproxy /config
 
 COPY haproxy-entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN set -eux \
+  && chmod +x /entrypoint.sh
 
 USER haproxy
 

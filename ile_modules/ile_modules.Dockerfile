@@ -2,9 +2,10 @@ FROM python:3.14-trixie AS build-venv
 
 COPY requirements.txt /requirements.txt
 
-RUN python3 -m venv /.venv
-RUN /.venv/bin/pip3 install --upgrade pip setuptools wheel
-RUN /.venv/bin/pip3 install --disable-pip-version-check -r /requirements.txt
+RUN set -eux \
+  && python3 -m venv /.venv \
+  && /.venv/bin/pip3 install --upgrade pip setuptools wheel \
+  && /.venv/bin/pip3 install --disable-pip-version-check -r /requirements.txt
 
 FROM python:3.14-slim-trixie
 

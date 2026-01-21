@@ -8,18 +8,19 @@ USER root
 
 RUN set -eux \
   && apt-get update \
-  && apt-get install -y --no-install-recommends curl ca-certificates \
+  && apt-get install -y --no-install-recommends curl \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd -g "${ILE_NONROOT_GID}" nonroot \
   && useradd -l -u "${ILE_NONROOT_UID}" -g "${ILE_NONROOT_GID}" nonroot
 
-RUN chown -R nonroot:nonroot \
-  /etc/grafana/grafana.ini \
-  /var/lib/grafana \
-  /usr/share/grafana \
-  /var/log/grafana \
-  /var/lib/grafana/plugins \
-  /etc/grafana/provisioning
+RUN set -eux \
+  && chown -R nonroot:nonroot \
+    /etc/grafana/grafana.ini \
+    /var/lib/grafana \
+    /usr/share/grafana \
+    /var/log/grafana \
+    /var/lib/grafana/plugins \
+    /etc/grafana/provisioning
 
 USER nonroot
 
