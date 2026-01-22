@@ -1,12 +1,12 @@
 allow_anonymous false
 password_file /mosquitto/secrets/passwd
 
-listener 8883
+listener ${ILE_MQTT_PORT}
 cafile /mosquitto/secrets/ca.crt
 certfile /mosquitto/secrets/server.crt
 keyfile /mosquitto/secrets/server.key
 
-listener 9002
+listener ${ILE_MQTT_WS_PORT}
 protocol websockets
 cafile /mosquitto/secrets/ca.crt
 certfile /mosquitto/secrets/server.crt

@@ -7,7 +7,7 @@ ARG ILE_NONROOT_GID="1001"
 USER root
 
 RUN set -eux \
-  && apk add --no-cache shadow \
+  && apk add --no-cache envsubst shadow \
   && /usr/sbin/groupadd -g "${ILE_NONROOT_GID}" nonroot \
   && /usr/sbin/useradd -s /bin/sh -g "${ILE_NONROOT_GID}" -u "${ILE_NONROOT_UID}" nonroot \
   && apk del shadow

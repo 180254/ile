@@ -37,15 +37,17 @@ services:
       vnet:
         ipv4_address: 192.168.130.10
     ports:
-      - "${ILE_MQTT_EXTERNAL_PORT}:8883" # MQTT over TLS
+      - "${ILE_MQTT_PORT}:${ILE_MQTT_PORT}"
     environment:
       - TZ=${ILE_TZ}
+      - ILE_MQTT_PORT=${ILE_MQTT_PORT}
+      - ILE_MQTT_WS_PORT=${ILE_MQTT_WS_PORT}
       - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - mosquitto_data:/mosquitto/data
-      - ${ILE_DIR}/ile_mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ${ILE_DIR}/ile_mosquitto/mosquitto.conf.tmpl:/mosquitto/config/mosquitto.conf.tmpl:ro
       - ${PWD}/tls/${ILE_ENV}/ca.pem:/mosquitto/secrets/ca.crt:ro
       - ${PWD}/tls/${ILE_ENV}/cloudserver.pem:/mosquitto/secrets/server.crt:ro
       - ${PWD}/tls/${ILE_ENV}/cloudserver-key.pem:/mosquitto/secrets/server.key:ro
@@ -58,7 +60,7 @@ services:
         timeout -s 15 5
         mosquitto_sub
         -h localhost
-        -p 8883
+        -p ${ILE_MQTT_PORT}
         --cafile /mosquitto/secrets/ca.crt
         --tls-version tlsv1.3
         --insecure
@@ -100,9 +102,10 @@ services:
       vnet:
         ipv4_address: 192.168.130.11
     ports:
-      - "${ILE_VALKEY_EXTERNAL_PORT}:6379"
+      - "${ILE_VALKEY_PORT}:${ILE_VALKEY_PORT}"
     environment:
       - TZ=${ILE_TZ}
+      - ILE_VALKEY_PORT=${ILE_VALKEY_PORT}
       - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
     volumes:
       - /etc/localtime:/etc/localtime:ro
@@ -118,7 +121,7 @@ services:
     healthcheck:
       test: >
         timeout -s 15 5
-        valkey-cli -h localhost -p 6379 -a "${ILE_VALKEY_PASSWORD}"
+        valkey-cli -h localhost -p ${ILE_VALKEY_PORT} -a "${ILE_VALKEY_PASSWORD}"
         --tls --insecure ping | grep -qaFi PONG
         || exit 1
       interval: 30s
@@ -161,13 +164,13 @@ services:
       - TZ=${ILE_TZ}
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_VALKEY_HOST=192.168.130.11
-      - ILE_VALKEY_PORT=6379
+      - ILE_VALKEY_PORT=${ILE_VALKEY_PORT}
       - ILE_VALKEY_SSL=true
       - ILE_VALKEY_DB=0
       - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
       - ILE_MQTT_HOST=192.168.130.10
       - ILE_MQTT_SSL=true
-      - ILE_MQTT_PORT=8883
+      - ILE_MQTT_PORT=${ILE_MQTT_PORT}
       - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
     volumes:
@@ -225,13 +228,13 @@ services:
       - TZ=${ILE_TZ}
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_VALKEY_HOST=192.168.130.11
-      - ILE_VALKEY_PORT=6379
+      - ILE_VALKEY_PORT=${ILE_VALKEY_PORT}
       - ILE_VALKEY_SSL=true
       - ILE_VALKEY_DB=0
       - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
       - ILE_MQTT_HOST=192.168.130.10
       - ILE_MQTT_SSL=true
-      - ILE_MQTT_PORT=8883
+      - ILE_MQTT_PORT=${ILE_MQTT_PORT}
       - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
       - ILE_IPN_MQTT_CRONJOB_PATH=/etc/cronjobs.yaml
@@ -291,13 +294,13 @@ services:
       - TZ=${ILE_TZ}
       - ILE_DEBUG=${ILE_DEBUG}
       - ILE_VALKEY_HOST=192.168.130.11
-      - ILE_VALKEY_PORT=6379
+      - ILE_VALKEY_PORT=${ILE_VALKEY_PORT}
       - ILE_VALKEY_SSL=true
       - ILE_VALKEY_DB=0
       - ILE_VALKEY_PASSWORD=${ILE_VALKEY_PASSWORD}
       - ILE_MQTT_HOST=192.168.130.10
       - ILE_MQTT_SSL=true
-      - ILE_MQTT_PORT=8883
+      - ILE_MQTT_PORT=${ILE_MQTT_PORT}
       - ILE_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
     volumes:
@@ -355,8 +358,8 @@ services:
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
       - ILE_TELEGRAF_AGENT_INTERVAL=${ILE_TELEGRAF_AGENT_INTERVAL}
-      - ILE_TELEGRAF_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:8652
-      - ILE_TELEGRAF_MQTT_ADDRESS=mqtts://192.168.130.10:8883
+      - ILE_TELEGRAF_HEALTH_SERVICE_ADDRESS=http://127.0.0.1:${ILE_TELEGRAF_HEALTH_SERVICE_PORT}
+      - ILE_TELEGRAF_MQTT_ADDRESS=mqtts://192.168.130.10:${ILE_MQTT_PORT}
       - ILE_TELEGRAF_MQTT_USERNAME=${ILE_MQTT_USERNAME}
       - ILE_TELEGRAF_MQTT_PASSWORD=${ILE_MQTT_PASSWORD}
     volumes:
@@ -379,7 +382,7 @@ services:
       # https://github.com/influxdata/telegraf/blob/release-1.28/plugins/outputs/health/README.md
       test: >
         timeout -s 15 5
-        curl -f "http://127.0.0.1:8652"
+        curl -f "http://127.0.0.1:${ILE_TELEGRAF_HEALTH_SERVICE_PORT}"
         || exit 1
       interval: 30s
       timeout: 10s
