@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 17,
+  "id": 29,
   "links": [
     {
       "asDropdown": true,
@@ -482,29 +482,30 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "device_id = 'shellyblugwg3-b08184e56b84' and idx = '200'",
-          "value": "device_id = 'shellyblugwg3-b08184e56b84' and idx = '200'"
+          "text": "((device_name = 'shelly-blugw-0-livingroom') or (device_id = 'shellyblugwg3-b08184e56b84' and device_id = device_name)) and idx = '200'",
+          "value": "((device_name = 'shelly-blugw-0-livingroom') or (device_id = 'shellyblugwg3-b08184e56b84' and device_id = device_name)) and idx = '200'"
         },
         "description": "",
+        "label": "filter_device",
         "name": "filter",
         "options": [
           {
-            "selected": true,
-            "text": "device_id",
+            "selected": false,
+            "text": "id",
             "value": "device_id = 'shellyblugwg3-b08184e56b84' and idx = '200'"
           },
           {
             "selected": false,
-            "text": "device_name",
+            "text": "name",
             "value": "device_name = 'shelly-blugw-0-livingroom' and idx = '200'"
           },
           {
-            "selected": false,
-            "text": "device_name+device_id",
-            "value": "device_name = 'shelly-blugw-0-livingroom' and device_id = 'shellyblugwg3-b08184e56b84' and idx = '200'"
+            "selected": true,
+            "text": "name+id",
+            "value": "((device_name = 'shelly-blugw-0-livingroom') or (device_id = 'shellyblugwg3-b08184e56b84' and device_id = device_name)) and idx = '200'"
           }
         ],
-        "query": "device_id : device_id = '$device_id' and idx = '$idx', device_name : device_name = '$device_name' and idx = '$idx', device_name+device_id : device_name = '$device_name' and device_id = '$device_id' and idx = '$idx'",
+        "query": "id : device_id = '$device_id' and idx = '$idx',\nname : device_name = '$device_name' and idx = '$idx',\nname+id : ((device_name = '$device_name') or (device_id = '$device_id' and device_id = device_name)) and idx = '$idx'",
         "type": "custom"
       }
     ]
@@ -515,7 +516,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "shelly_gen2_blutrv",
-  "uid": "shelly_gen2_blutrv",
-  "version": 13
+  "title": "shelly_blutrv",
+  "uid": "shelly_blutrv",
+  "version": 2
 }

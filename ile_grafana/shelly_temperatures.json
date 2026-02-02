@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 16,
+  "id": 26,
   "links": [
     {
       "asDropdown": true,
@@ -48,9 +48,9 @@
         "x": 0,
         "y": 0
       },
-      "id": 17,
+      "id": 15,
       "panels": [],
-      "title": "light panels",
+      "title": "temperature",
       "type": "row"
     },
     {
@@ -65,138 +65,27 @@
             "mode": "thresholds"
           },
           "mappings": [],
-          "max": 2500,
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#a07d41",
                 "value": 0
-              },
-              {
-                "color": "yellow",
-                "value": 2000
-              },
-              {
-                "color": "red",
-                "value": 2250
               }
             ]
           },
-          "unit": "watt"
+          "unit": "celsius"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 6,
+        "h": 5,
+        "w": 4,
         "x": 0,
         "y": 1
       },
       "id": 13,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "select $__time(0), last(power)\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere ${filter:raw} and $__timeFilter(timestamp)",
-          "refId": "A",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "current power",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "total for a given time range",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "watth"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 6,
-        "x": 6,
-        "y": 1
-      },
-      "id": 6,
-      "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
@@ -225,7 +114,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "with\n    zigbee2mqtt_sonoff_s60zbtpf_b as (\n        select timestamp, energy, ieee_address\n        from zigbee2mqtt_sonoff_s60zbtpf\n        where ${filter:raw} and $__timeFilter(timestamp)\n    ),\n    consumption_t as (\n        select (case when t1.energy >= t2.energy then t1.energy-t2.energy else null end) as consumption\n        from zigbee2mqtt_sonoff_s60zbtpf_b t1\n        lt join zigbee2mqtt_sonoff_s60zbtpf_b t2\n        on t1.ieee_address = t2.ieee_address\n    )\nselect\n    $__time(0),\n    sum(consumption)*1000 as value -- kWh to Wh\nfrom consumption_t",
+          "rawSql": "select $__time(0), last(tC)\nfrom shelly_gen2_temperature\nwhere ${filter:raw} and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -264,259 +153,7 @@
           ]
         }
       ],
-      "title": "total power consumption (broken?)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "sampled by \"consumption interval\"",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "bars",
-            "fillOpacity": 50,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "pointSize": 4,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "watth"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "value"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 1
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "with\n    zigbee2mqtt_sonoff_s60zbtpf_b as (\n        SELECT\n            timestamp AS ts,\n            lag(timestamp) OVER (PARTITION BY ieee_address ORDER BY timestamp) AS prev_ts,\n            power,\n        FROM zigbee2mqtt_sonoff_s60zbtpf\n        WHERE ${filter:raw} and $__timeFilter(timestamp)\n    ),\n    interval_s as (\n        select (case\n            when '$interval' like '%s' then cast(left('$interval', -1) as int)*1\n            when '$interval' like '%m' then cast(left('$interval', -1) as int)*60\n            when '$interval' like '%h' then cast(left('$interval', -1) as int)*3600\n            when '$interval' like '%d' then cast(left('$interval', -1) as int)*86400\n            when '$interval' like '%w' then cast(left('$interval', -1) as int)*604800\n            when '$interval' like '%M' then cast(left('$interval', -1) as int)*2678400\n            when '$interval' like '%y' then cast(left('$interval', -1) as int)*31536000\n            else 0 end\n        ) as value\n    ),\n    consumption_t as (\n        (\n            select\n                t1.ts,\n                sum(t1.power*(datediff('u', t1.ts, t1.prev_ts)))/(3600.0*1000000) as consumption\n            from zigbee2mqtt_sonoff_s60zbtpf_b t1\n            cross join interval_s\n            where datediff('s', t1.ts, t1.prev_ts) <= interval_s.value\n        ) timestamp(ts)\n    )\nselect\n    $__time(ts),\n    sum(consumption) as value\nfrom consumption_t\nsample by $interval fill(null) align to calendar",
-          "refId": "A",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "power consumption ",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "description": "total for a given time range",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "watth"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 6,
-        "x": 6,
-        "y": 4
-      },
-      "id": 32,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "WITH\nzigbee2mqtt_sonoff_s60zbtpf_b AS (\n    SELECT\n        timestamp AS ts,\n        power,\n        lag(timestamp) OVER (PARTITION BY ieee_address ORDER BY timestamp) AS prev_ts,\n    FROM zigbee2mqtt_sonoff_s60zbtpf\n    WHERE ${filter:raw} and $__timeFilter(timestamp)\n)\nSELECT\n    $__time(0),\n    sum(power*(datediff('u', ts, prev_ts)))/(3600.0*1000000) as value\nFROM zigbee2mqtt_sonoff_s60zbtpf_b\nWHERE prev_ts IS NOT NULL",
-          "refId": "A",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "total power consumption",
+      "title": "current temperature",
       "type": "stat"
     },
     {
@@ -527,6 +164,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
+            "fixedColor": "super-light-orange",
             "mode": "palette-classic"
           },
           "custom": {
@@ -535,7 +173,8 @@
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
-            "axisSoftMin": 0,
+            "axisSoftMax": 25,
+            "axisSoftMin": 17,
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
@@ -553,8 +192,8 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
-            "spanNulls": false,
+            "showPoints": "always",
+            "spanNulls": 21600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -573,15 +212,15 @@
               }
             ]
           },
-          "unit": "watt"
+          "unit": "celsius"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 9,
         "w": 12,
-        "x": 0,
-        "y": 7
+        "x": 4,
+        "y": 1
       },
       "id": 2,
       "options": {
@@ -610,8 +249,154 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(power) as power\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
-          "refId": "power",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(tC) as tC,\n    device_name as metric\nfrom\n    shelly_gen2_temperature\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "dataset": "qdb",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "with idx as ( select ${idx} as \"idx\" )\n\nselect \n    $__time(timestamp),\n    avg(tmp_tc) as tC,\n    concat('meter1_', device_name, '_', device_id) as metric\nfrom\n    shelly_ht_meter1\ncross join idx\nwhere\n    ${filter:raw}\n    and is_valid = true\n    and hum_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "B",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "temperature measurements",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 17,
+      "panels": [],
+      "title": "humidity",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "last measurement",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6e7d96",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 11
+      },
+      "id": 18,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-17142428006",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select $__time(0), last(rh)\nfrom shelly_gen2_humidity\nwhere ${filter:raw} and $__timeFilter(timestamp)",
+          "refId": "A",
           "select": [
             [
               {
@@ -649,8 +434,8 @@
           ]
         }
       ],
-      "title": "wattmeter",
-      "type": "timeseries"
+      "title": "current humidity",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -660,6 +445,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
+            "fixedColor": "super-light-blue",
             "mode": "palette-classic"
           },
           "custom": {
@@ -668,8 +454,8 @@
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
-            "axisSoftMax": 255,
-            "axisSoftMin": 0,
+            "axisSoftMax": 80,
+            "axisSoftMin": 20,
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
@@ -687,8 +473,8 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
-            "spanNulls": false,
+            "showPoints": "always",
+            "spanNulls": 21600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -707,17 +493,17 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "percent"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 12,
-        "x": 12,
-        "y": 9
+        "x": 4,
+        "y": 11
       },
-      "id": 31,
+      "id": 20,
       "options": {
         "legend": {
           "calcs": [],
@@ -744,7 +530,154 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(linkquality) as linkquality,\n    ieee_address as metric,\nfrom\n    zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(rh) as rh,\n    device_name as metric\nfrom\n    shelly_gen2_humidity\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "dataset": "qdb",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "with idx as ( select ${idx} as \"idx\" )\n\nselect \n    $__time(timestamp),\n    avg(hum_value) as rh,\n    concat('meter1_', device_name, '_', device_id) as metric\nfrom\n    shelly_ht_meter1\ncross join idx\nwhere\n    ${filter:raw}\n    and is_valid = true\n    and hum_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "B",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "humidity measurements",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 22,
+      "panels": [],
+      "title": "device",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "last measurement",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#919191",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "super-light-blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 21
+      },
+      "id": 24,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-17142428006",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select $__time(0), last(battery_percent)\nfrom shelly_gen2_devicepower\nwhere device_id = '$device_id' and $__timeFilter(timestamp)",
           "refId": "A",
           "select": [
             [
@@ -783,21 +716,8 @@
           ]
         }
       ],
-      "title": "linkquality",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 16
-      },
-      "id": 27,
-      "panels": [],
-      "title": "light panels extra",
-      "type": "row"
+      "title": "current battery value",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -807,6 +727,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
+            "fixedColor": "super-light-blue",
             "mode": "palette-classic"
           },
           "custom": {
@@ -815,11 +736,12 @@
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
+            "axisSoftMax": 0,
             "axisSoftMin": 0,
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 1,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -827,14 +749,14 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
-            "pointSize": 5,
+            "pointSize": 4,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
-            "spanNulls": false,
+            "showPoints": "always",
+            "spanNulls": 21600000,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -853,192 +775,60 @@
               }
             ]
           },
-          "unit": "amp"
+          "unit": "percent"
         },
         "overrides": [
           {
             "matcher": {
-              "id": "byName",
-              "options": "current"
+              "id": "byRegexp",
+              "options": "bat_value_.*"
             },
             "properties": [
               {
-                "id": "color",
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "custom.hideFrom",
                 "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
                 }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "bat_voltage_.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "volt"
+              },
+              {
+                "id": "custom.axisSoftMin",
+                "value": 4
+              },
+              {
+                "id": "custom.axisSoftMax",
+                "value": 6
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
-        "y": 17
-      },
-      "id": 21,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(current) as current\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
-          "refId": "A",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "ammeter",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMax": 253,
-            "axisSoftMin": 207,
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "area"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 0
-              },
-              {
-                "color": "green",
-                "value": 207
-              },
-              {
-                "color": "red",
-                "value": 253
-              }
-            ]
-          },
-          "unit": "volt"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "voltage"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "purple",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 17
+        "h": 9,
+        "w": 12,
+        "x": 4,
+        "y": 21
       },
       "id": 23,
       "options": {
@@ -1050,213 +840,7 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.2.0-17142428006",
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "format": "time_series",
-          "group": [],
-          "metricColumn": "none",
-          "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(voltage) as voltage\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\n    and voltage > 0\nsample by $__interval fill(null)",
-          "refId": "A",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "column"
-              }
-            ]
-          ],
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "voltmeter",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "axisSoftMin": 0,
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "pf"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "short"
-              },
-              {
-                "id": "custom.axisSoftMax",
-                "value": 1
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "apower"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "semi-dark-orange",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "unit",
-                "value": "watt"
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "left"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "apparent_power"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "voltamp"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "left"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 17
-      },
-      "id": 25,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1273,7 +857,160 @@
           "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select \n    $__time(timestamp),\n    avg(power) as apower,\n    avg(voltage)*avg(current) as apparent_power,\n    avg(power)/(avg(voltage)*avg(current)) as pf\nfrom zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\n    and voltage>0\nsample by $__interval fill(null)",
+          "rawSql": "select \n    $__time(timestamp),\n    avg(battery_percent) as battery_percent,\n    concat('bat_value_', device_id) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id = '$device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "bat_value",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "group": [],
+          "hide": false,
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select \n    $__time(timestamp),\n    avg(battery_V) as battery_V,\n    concat('bat_voltage_', device_id) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id = '$device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "bat_voltage",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "battery value/voltage measurements",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "last measurement",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#919191",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "super-light-blue",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "volt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 26
+      },
+      "id": 25,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-17142428006",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select $__time(0), last(battery_V)\nfrom shelly_gen2_devicepower\nwhere device_id = '$device_id' and $__timeFilter(timestamp)\n",
           "refId": "A",
           "select": [
             [
@@ -1312,8 +1049,8 @@
           ]
         }
       ],
-      "title": "powerfactor",
-      "type": "timeseries"
+      "title": "current battery voltage",
+      "type": "stat"
     }
   ],
   "preload": false,
@@ -1339,18 +1076,18 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "zigbee-plugs-4-laptoproom",
-          "value": "zigbee-plugs-4-laptoproom"
+          "text": "shelly-plusht-0-livingroom",
+          "value": "shelly-plusht-0-livingroom"
         },
         "datasource": {
           "type": "postgres",
           "uid": "${datasource}"
         },
-        "definition": "select distinct friendly_name from zigbee2mqtt_sonoff_s60zbtpf where $__timeFilter(timestamp)\n",
+        "definition": "select distinct device_name from shelly_gen2_temperature where $__timeFilter(timestamp)",
         "includeAll": false,
-        "name": "friendly_name",
+        "name": "device_name",
         "options": [],
-        "query": "select distinct friendly_name from zigbee2mqtt_sonoff_s60zbtpf where $__timeFilter(timestamp)\n",
+        "query": "select distinct device_name from shelly_gen2_temperature where $__timeFilter(timestamp)",
         "refresh": 2,
         "regex": ".+",
         "sort": 5,
@@ -1359,13 +1096,13 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "0xa4c1380571e7ffff",
-          "value": "0xa4c1380571e7ffff"
+          "text": "shellyplusht-c049ef8df364",
+          "value": "shellyplusht-c049ef8df364"
         },
-        "definition": "select distinct ieee_address from zigbee2mqtt_sonoff_s60zbtpf where friendly_name = '$friendly_name' and $__timeFilter(timestamp)",
-        "name": "ieee_address",
+        "definition": "select distinct device_id from shelly_gen2_temperature where device_name = '$device_name' and $__timeFilter(timestamp)",
+        "name": "device_id",
         "options": [],
-        "query": "select distinct ieee_address from zigbee2mqtt_sonoff_s60zbtpf where friendly_name = '$friendly_name' and $__timeFilter(timestamp)",
+        "query": "select distinct device_id from shelly_gen2_temperature where device_name = '$device_name' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
         "type": "query"
@@ -1373,86 +1110,45 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "ieee_address = '0xa4c1380571e7ffff'",
-          "value": "ieee_address = '0xa4c1380571e7ffff'"
+          "text": "0",
+          "value": "0"
         },
+        "definition": "select distinct idx from shelly_gen2_temperature where device_id = '$device_id' and $__timeFilter(timestamp)",
+        "name": "idx",
+        "options": [],
+        "query": "select distinct idx from shelly_gen2_temperature where device_id = '$device_id' and $__timeFilter(timestamp)",
+        "refresh": 1,
+        "regex": ".+",
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "((device_name = 'shelly-plusht-0-livingroom') or (device_id = 'shellyplusht-c049ef8df364' and device_id = device_name)) and idx = '0'",
+          "value": "((device_name = 'shelly-plusht-0-livingroom') or (device_id = 'shellyplusht-c049ef8df364' and device_id = device_name)) and idx = '0'"
+        },
+        "includeAll": false,
+        "label": "filter_device",
         "name": "filter",
         "options": [
           {
+            "selected": false,
+            "text": "id",
+            "value": "device_id = 'shellyplusht-c049ef8df364' and idx = '0'"
+          },
+          {
+            "selected": false,
+            "text": "name",
+            "value": "device_name = 'shelly-plusht-0-livingroom' and idx = '0'"
+          },
+          {
             "selected": true,
-            "text": "ieee_address",
-            "value": "ieee_address = '0xa4c1380571e7ffff'"
-          },
-          {
-            "selected": false,
-            "text": "friendly_name",
-            "value": "friendly_name = 'zigbee-plugs-4-laptoproom'"
-          },
-          {
-            "selected": false,
-            "text": "friendly_name+ieee_address",
-            "value": "friendly_name = 'zigbee-plugs-4-laptoproom' and ieee_address = '0xa4c1380571e7ffff'"
+            "text": "name+id",
+            "value": "((device_name = 'shelly-plusht-0-livingroom') or (device_id = 'shellyplusht-c049ef8df364' and device_id = device_name)) and idx = '0'"
           }
         ],
-        "query": " ieee_address : ieee_address = '$ieee_address',  friendly_name : friendly_name = '$friendly_name', friendly_name+ieee_address : friendly_name = '$friendly_name' and ieee_address = '$ieee_address'",
+        "query": "id : device_id = '$device_id' and idx = '$idx',\nname : device_name = '$device_name' and idx = '$idx',\nname+id : ((device_name = '$device_name') or (device_id = '$device_id' and device_id = device_name)) and idx = '$idx'",
         "type": "custom"
-      },
-      {
-        "auto": false,
-        "auto_count": 1,
-        "auto_min": "1m",
-        "current": {
-          "text": "1h",
-          "value": "1h"
-        },
-        "description": "",
-        "label": "consumption interval",
-        "name": "interval",
-        "options": [
-          {
-            "selected": false,
-            "text": "1m",
-            "value": "1m"
-          },
-          {
-            "selected": false,
-            "text": "2m",
-            "value": "2m"
-          },
-          {
-            "selected": false,
-            "text": "10m",
-            "value": "10m"
-          },
-          {
-            "selected": false,
-            "text": "30m",
-            "value": "30m"
-          },
-          {
-            "selected": true,
-            "text": "1h",
-            "value": "1h"
-          },
-          {
-            "selected": false,
-            "text": "1d",
-            "value": "1d"
-          },
-          {
-            "selected": false,
-            "text": "7d",
-            "value": "7d"
-          },
-          {
-            "selected": false,
-            "text": "30d",
-            "value": "30d"
-          }
-        ],
-        "query": "1m,2m,10m,30m,1h,1d,7d,30d",
-        "refresh": 2,
-        "type": "interval"
       }
     ]
   },
@@ -1462,7 +1158,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "zigbee2mqtt_sonoff_s60zbtpf",
-  "uid": "zigbee2mqtt_sonoff_s60zbtpf",
-  "version": 22
+  "title": "shelly_temperatures",
+  "uid": "shelly_temperatures",
+  "version": 1
 }
