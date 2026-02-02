@@ -4,7 +4,7 @@ libvalkey==4.0.1
     # via valkey
 msgpack==1.1.2
     # via -r ile_modules/requirements.in
-numpy==2.4.1
+numpy==2.4.2
     # via questdb
 paho-mqtt==2.1.0
     # via -r ile_modules/requirements.in
