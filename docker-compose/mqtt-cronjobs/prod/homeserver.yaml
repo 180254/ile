@@ -229,6 +229,54 @@ messages:
       reportable_change: 0
       transaction: <random>
     interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'Shelly'
+    model: 'SBHT-103C'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: genPowerCfg
+      attribute: batteryPercentageRemaining
+      minimum_report_interval: 3600
+      maximum_report_interval: 3600
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'Shelly'
+    model: 'SBHT-103C'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: msTemperatureMeasurement
+      attribute: measuredValue
+      minimum_report_interval: 600
+      maximum_report_interval: 600
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
+  - device_type: zigbee2mqtt
+    vendor: 'Shelly'
+    model: 'SBHT-103C'
+    topic: zigbee2mqtt/bridge/request/device/reporting/configure
+    qos: 1
+    retain: false
+    payload:
+      id: "<ieee_address>"
+      endpoint: '1'
+      cluster: msRelativeHumidity
+      attribute: measuredValue
+      minimum_report_interval: 600
+      maximum_report_interval: 600
+      reportable_change: 0
+      transaction: <random>
+    interval: 1800
   - device_type: none
     qos: 1
     retain: true
