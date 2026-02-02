@@ -41,13 +41,6 @@ volumes:
       type: none
       device: ${ILE_DIR}/volume_zigbee2mqtt_homeserver
 
-#  homeassistant_data:
-#    driver: local
-#    driver_opts:
-#      o: bind
-#      type: none
-#      device: ${ILE_DIR}/volume_homeassistant_homeserver
-
 services:
   mosquitto:
     build:
@@ -899,29 +892,6 @@ services:
           cpus: '0.3'
     labels:
       ile-autoheal: true
-
-  #  homeassistant:
-  #    build:
-  #      context: ${ILE_DIR}/ile_homeassistant
-  #      dockerfile: home-assistant.Dockerfile
-  #      args:
-  #        ILE_NONROOT_UID: ${ILE_NONROOT_UID}
-  #        ILE_NONROOT_GID: ${ILE_NONROOT_GID}
-  #      no_cache: false
-  #      pull: true
-  #    image: ile-homeserver-homeassistant:0.0.1
-  #    volumes:
-  #      - homeassistant_data:/config
-  #      - ${PWD}/tls/${ILE_ENV}/ca.pem:/config/ca.crt:ro
-  #      - /etc/localtime:/etc/localtime:ro
-  #      - /run/dbus:/run/dbus:ro
-  #    devices:
-  #      - ${ILE_IZM_DONGLE_PATH}:/dev/ttyUSB0
-  #    restart: unless-stopped
-  #    privileged: true
-  #    network_mode: host
-  #    environment:
-  #      TZ: Europe/Amsterdam
 
   # https://github.com/willfarrell/docker-autoheal
   autoheal:

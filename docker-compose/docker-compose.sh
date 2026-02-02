@@ -65,7 +65,6 @@ function create_directories() {
     mkdir -p "${ILE_DIR}/volume_questdb_homeserver"
     mkdir -p "${ILE_DIR}/volume_grafana_homeserver"
     mkdir -p "${ILE_DIR}/volume_zigbee2mqtt_homeserver"
-    mkdir -p "${ILE_DIR}/volume_homeassistant_homeserver"
     ;;
   laptop)
     mkdir -p "${ILE_DIR}/volume_mosquitto_laptop"

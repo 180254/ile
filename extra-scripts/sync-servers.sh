@@ -34,7 +34,6 @@ paths=(
   "docker-compose"
   "extra-scripts"
   "ile_grafana"
-  "ile_homeassistant"
   "ile_haproxy"
   "ile_modules"
   "ile_modules_tests"
