@@ -35,9 +35,8 @@ target-version = "py314"
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    # https://docs.astral.sh/ruff/rules/missing-type-self/
-    # "ANN101", # the rule has been removed
     # https://docs.astral.sh/ruff/rules/#pydocstyle-d
+    # undocumented-public-*
     "D100",
     "D101",
     "D102",
@@ -46,17 +45,12 @@ ignore = [
     "D105",
     "D106",
     "D107",
+    # multi-line-summary-first-line
     "D212",
-    "D415",
     # https://docs.astral.sh/ruff/rules/commented-out-code/
     "ERA001",
     # https://docs.astral.sh/ruff/rules/missing-trailing-comma/
     "COM812",
-    # https://docs.astral.sh/ruff/rules/pytest-unittest-assertion/
-    "PT009",
-    # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
-    # the rule may cause conflicts when used with the formatter
-    "ISC001",
     # https://docs.astral.sh/ruff/rules/if-else-block-instead-of-if-exp/
     "SIM108",
     # https://docs.astral.sh/ruff/rules/print/
