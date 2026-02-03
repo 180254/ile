@@ -261,6 +261,36 @@
           "format": "time_series",
           "hide": false,
           "rawQuery": true,
+          "rawSql": "with livingroom_t as (\n    select ieee_address\n    from zigbee2mqtt_shelly_sbht103c\n    where friendly_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(temperature),\n    left(concat(friendly_name, ieee_address), 24) as metric\nfrom\n    zigbee2mqtt_shelly_sbht103c\nwhere\n    (\n        (friendly_name like '%livingroom%')\n        or (ieee_address in (select ieee_address from livingroom_t) and ieee_address = friendly_name)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "zigbee2mqtt_shelly_sbht103c",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        {
+          "dataset": "qdb",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "hide": false,
+          "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select device_id\n    from shelly_gen2_blutrv\n    where device_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(current_C),\n    left(concat(device_name, device_id), 24) as metric\nfrom\n    shelly_gen2_blutrv\nwhere\n    (\n        (device_name like '%livingroom%')\n        or (device_id in (select device_id from livingroom_t) and device_id = device_name)\n    )\n    and idx = '200'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)\n",
           "refId": "shelly_gen2_blutrv",
           "sql": {
@@ -491,6 +521,36 @@
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select ieee_address\n    from zigbee2mqtt_shelly_bluhtdisplayzb\n    where friendly_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(humidity),\n    left(concat(friendly_name, ieee_address), 24) as metric\nfrom\n    zigbee2mqtt_shelly_bluhtdisplayzb\nwhere\n    (\n        (friendly_name like '%livingroom')\n        or (ieee_address in (select ieee_address from livingroom_t) and ieee_address = friendly_name)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_shelly_bluhtdisplayzb",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        {
+          "dataset": "qdb",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "with livingroom_t as (\n    select ieee_address\n    from zigbee2mqtt_shelly_sbht103c\n    where friendly_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(humidity),\n    left(concat(friendly_name, ieee_address), 24) as metric\nfrom\n    zigbee2mqtt_shelly_sbht103c\nwhere\n    (\n        (friendly_name like '%livingroom')\n        or (ieee_address in (select ieee_address from livingroom_t) and ieee_address = friendly_name)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "zigbee2mqtt_shelly_sbht103c",
           "sql": {
             "columns": [
               {
@@ -1897,5 +1957,5 @@
   "timezone": "browser",
   "title": "mixed_aio",
   "uid": "mixed_aio",
-  "version": 9
+  "version": 15
 }

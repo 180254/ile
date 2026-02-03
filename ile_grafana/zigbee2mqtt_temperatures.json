@@ -1280,9 +1280,14 @@
             "selected": false,
             "text": "zigbee2mqtt_shelly_bluhtdisplayzb",
             "value": "zigbee2mqtt_shelly_bluhtdisplayzb"
+          },
+          {
+            "selected": false,
+            "text": "zigbee2mqtt_shelly_sbht103c",
+            "value": "zigbee2mqtt_shelly_sbht103c"
           }
         ],
-        "query": "zigbee2mqtt_sonoff_snzb02wd, zigbee2mqtt_shelly_bluhtdisplayzb",
+        "query": "zigbee2mqtt_sonoff_snzb02wd, zigbee2mqtt_shelly_bluhtdisplayzb, zigbee2mqtt_shelly_sbht103c",
         "type": "custom"
       },
       {
@@ -1357,5 +1362,5 @@
   "timezone": "browser",
   "title": "zigbee2mqtt_temperatures",
   "uid": "zigbee2mqtt_temperatures",
-  "version": 1
+  "version": 5
 }
