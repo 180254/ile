@@ -1,5 +1,5 @@
 # https://github.com/valkey-io/valkey-container/blob/mainline/9.0/debian/Dockerfile
-FROM valkey/valkey:9.0.1-trixie
+FROM valkey/valkey:9.0.2-trixie
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
