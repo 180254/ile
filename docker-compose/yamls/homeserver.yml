@@ -393,6 +393,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ${ILE_DIR}/ile_telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${ILE_DIR}/ile_telegraf/telegraf-writer.conf:/etc/telegraf/telegraf.d/telegraf-writer.conf:ro
+      - ${ILE_DIR}/ile_telegraf/telegraf-speedtest.conf:/etc/telegraf/telegraf.d/telegraf-speedtest.conf:ro
       - ${PWD}/tls/${ILE_ENV}/ca.pem:/etc/telegraf/ca.crt:ro
       - ${PWD}/tls/${ILE_ENV}/homeserver.pem:/etc/telegraf/server.crt:ro
       - ${PWD}/tls/${ILE_ENV}/homeserver-key.pem:/etc/telegraf/server.key:ro
