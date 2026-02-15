@@ -1,5 +1,5 @@
-# https://github.com/eclipse-mosquitto/mosquitto/blob/v2.0.22/docker/2.0-openssl/Dockerfile
-FROM eclipse-mosquitto:2.0.22-openssl
+# https://github.com/eclipse-mosquitto/mosquitto/blob/release/2.1/docker/2.1-alpine/Dockerfile
+FROM eclipse-mosquitto:2.1.2-alpine
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
