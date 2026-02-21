@@ -4,7 +4,10 @@
 
 set -xeu
 
-envsubst < "/mosquitto/config/mosquitto.conf.tmpl" > "/mosquitto/config/mosquitto.conf"
+envsubst <"/mosquitto/config/mosquitto.conf.tmpl" >"/mosquitto/config/mosquitto.conf"
 
-mosquitto_passwd -b -c /mosquitto/secrets/passwd "${ILE_MQTT_USERNAME}" "${ILE_MQTT_PASSWORD}"
+if [ ! -f "/mosquitto/secrets/passwd" ]; then
+  mosquitto_passwd -b -c /mosquitto/secrets/passwd "${ILE_MQTT_USERNAME}" "${ILE_MQTT_PASSWORD}"
+fi
+
 /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
