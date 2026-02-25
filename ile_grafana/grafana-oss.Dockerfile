@@ -1,5 +1,5 @@
-# https://github.com/grafana/grafana/blob/v12.3.3/Dockerfile
-FROM grafana/grafana-oss:12.3.3-ubuntu
+# https://github.com/grafana/grafana/blob/v12.4.0/Dockerfile
+FROM grafana/grafana-oss:12.4.0-ubuntu
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
