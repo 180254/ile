@@ -1,5 +1,5 @@
-# https://github.com/Koenkk/zigbee2mqtt/blob/2.8.0/docker/Dockerfile
-FROM ghcr.io/koenkk/zigbee2mqtt:2.8.0
+# https://github.com/Koenkk/zigbee2mqtt/blob/2.9.`/docker/Dockerfile
+FROM ghcr.io/koenkk/zigbee2mqtt:2.9.1
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
