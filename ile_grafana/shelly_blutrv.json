@@ -24,7 +24,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 29,
   "links": [
     {
       "asDropdown": true,
@@ -90,6 +89,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -205,7 +205,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -215,7 +215,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(target_C) as target_C,\n    avg(current_C) as current_C,\n    avg(pos) as pos\nfrom\n    shelly_gen2_blutrv\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -310,6 +309,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -355,7 +355,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -365,7 +365,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(battery) as battery,\n    concat('bat_value_', device_id) as metric\nfrom\n    shelly_gen2_blutrv\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -413,7 +412,7 @@
   ],
   "preload": false,
   "refresh": "",
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [],
   "templating": {
     "list": [
@@ -448,6 +447,7 @@
         "query": "select distinct device_name from shelly_gen2_blutrv where $__timeFilter(timestamp)",
         "refresh": 2,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
@@ -463,6 +463,7 @@
         "query": "select distinct device_id from shelly_gen2_blutrv where device_name = '$device_name' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "type": "query"
       },
       {
@@ -477,6 +478,7 @@
         "query": "select distinct idx from shelly_gen2_blutrv where device_id = '$device_id' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "type": "query"
       },
       {
@@ -488,25 +490,10 @@
         "description": "",
         "label": "filter_device",
         "name": "filter",
-        "options": [
-          {
-            "selected": false,
-            "text": "id",
-            "value": "device_id = 'shellyblugwg3-b08184e56b84' and idx = '200'"
-          },
-          {
-            "selected": false,
-            "text": "name",
-            "value": "device_name = 'shelly-blugw-0-livingroom' and idx = '200'"
-          },
-          {
-            "selected": true,
-            "text": "name+id",
-            "value": "((device_name = 'shelly-blugw-0-livingroom') or (device_id = 'shellyblugwg3-b08184e56b84' and device_id = device_name)) and idx = '200'"
-          }
-        ],
+        "options": [],
         "query": "id : device_id = '$device_id' and idx = '$idx',\nname : device_name = '$device_name' and idx = '$idx',\nname+id : ((device_name = '$device_name') or (device_id = '$device_id' and device_id = device_name)) and idx = '$idx'",
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       }
     ]
   },
@@ -518,5 +505,6 @@
   "timezone": "browser",
   "title": "shelly_blutrv",
   "uid": "shelly_blutrv",
-  "version": 2
+  "version": 8,
+  "weekStart": ""
 }

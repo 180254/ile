@@ -24,7 +24,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 26,
   "links": [
     {
       "asDropdown": true,
@@ -102,7 +101,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -193,6 +192,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -236,7 +236,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -246,7 +246,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(tC) as tC,\n    device_name as metric\nfrom\n    shelly_gen2_temperature\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -295,7 +294,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with idx as ( select ${idx} as \"idx\" )\n\nselect \n    $__time(timestamp),\n    avg(tmp_tc) as tC,\n    concat('meter1_', device_name, '_', device_id) as metric\nfrom\n    shelly_ht_meter1\ncross join idx\nwhere\n    ${filter:raw}\n    and is_valid = true\n    and hum_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "B",
@@ -383,7 +381,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -474,6 +472,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -517,7 +516,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -527,7 +526,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(rh) as rh,\n    device_name as metric\nfrom\n    shelly_gen2_humidity\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -576,7 +574,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with idx as ( select ${idx} as \"idx\" )\n\nselect \n    $__time(timestamp),\n    avg(hum_value) as rh,\n    concat('meter1_', device_name, '_', device_id) as metric\nfrom\n    shelly_ht_meter1\ncross join idx\nwhere\n    ${filter:raw}\n    and is_valid = true\n    and hum_is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "B",
@@ -665,7 +662,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -756,6 +753,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -844,7 +842,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -854,7 +852,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(battery_percent) as battery_percent,\n    concat('bat_value_', device_id) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id = '$device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -903,7 +900,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(battery_V) as battery_V,\n    concat('bat_voltage_', device_id) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    device_id = '$device_id'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -998,7 +994,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "datasource": {
@@ -1055,7 +1051,7 @@
   ],
   "preload": false,
   "refresh": "",
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [],
   "templating": {
     "list": [
@@ -1090,6 +1086,7 @@
         "query": "select distinct device_name from shelly_gen2_temperature where $__timeFilter(timestamp)",
         "refresh": 2,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
@@ -1105,6 +1102,7 @@
         "query": "select distinct device_id from shelly_gen2_temperature where device_name = '$device_name' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "type": "query"
       },
       {
@@ -1119,6 +1117,7 @@
         "query": "select distinct idx from shelly_gen2_temperature where device_id = '$device_id' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "type": "query"
       },
       {
@@ -1130,25 +1129,10 @@
         "includeAll": false,
         "label": "filter_device",
         "name": "filter",
-        "options": [
-          {
-            "selected": false,
-            "text": "id",
-            "value": "device_id = 'shellyplusht-c049ef8df364' and idx = '0'"
-          },
-          {
-            "selected": false,
-            "text": "name",
-            "value": "device_name = 'shelly-plusht-0-livingroom' and idx = '0'"
-          },
-          {
-            "selected": true,
-            "text": "name+id",
-            "value": "((device_name = 'shelly-plusht-0-livingroom') or (device_id = 'shellyplusht-c049ef8df364' and device_id = device_name)) and idx = '0'"
-          }
-        ],
+        "options": [],
         "query": "id : device_id = '$device_id' and idx = '$idx',\nname : device_name = '$device_name' and idx = '$idx',\nname+id : ((device_name = '$device_name') or (device_id = '$device_id' and device_id = device_name)) and idx = '$idx'",
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       }
     ]
   },
@@ -1160,5 +1144,6 @@
   "timezone": "browser",
   "title": "shelly_temperatures",
   "uid": "shelly_temperatures",
-  "version": 1
+  "version": 7,
+  "weekStart": ""
 }

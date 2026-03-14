@@ -24,7 +24,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 30,
   "links": [
     {
       "asDropdown": true,
@@ -77,6 +76,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -170,7 +170,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -180,7 +180,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select device_id\n    from shelly_gen2_temperature\n    where device_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(tC),\n    left(concat(device_name, '-', device_id), 24) as metric\nfrom\n    shelly_gen2_temperature\nwhere\n    (\n        (device_name like '%livingroom%')\n        or (device_id in (select device_id from livingroom_t) and device_id = device_name)\n    )\n    and idx = '0'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -229,7 +228,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select ieee_address\n    from zigbee2mqtt_shelly_bluhtdisplayzb\n    where friendly_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(temperature),\n    left(concat(friendly_name, ieee_address), 24) as metric\nfrom\n    zigbee2mqtt_shelly_bluhtdisplayzb\nwhere\n    (\n        (friendly_name like '%livingroom%')\n        or (ieee_address in (select ieee_address from livingroom_t) and ieee_address = friendly_name)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_shelly_bluhtdisplayzb",
@@ -259,7 +257,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select ieee_address\n    from zigbee2mqtt_shelly_sbht103c\n    where friendly_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(temperature),\n    left(concat(friendly_name, ieee_address), 24) as metric\nfrom\n    zigbee2mqtt_shelly_sbht103c\nwhere\n    (\n        (friendly_name like '%livingroom%')\n        or (ieee_address in (select ieee_address from livingroom_t) and ieee_address = friendly_name)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_shelly_sbht103c",
@@ -289,7 +286,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select device_id\n    from shelly_gen2_blutrv\n    where device_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(current_C),\n    left(concat(device_name, device_id), 24) as metric\nfrom\n    shelly_gen2_blutrv\nwhere\n    (\n        (device_name like '%livingroom%')\n        or (device_id in (select device_id from livingroom_t) and device_id = device_name)\n    )\n    and idx = '200'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)\n",
           "refId": "shelly_gen2_blutrv",
@@ -319,7 +315,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select device_id\n    from shelly_gen2_blutrv\n    where device_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(target_C),\n    concat(left(concat(device_name, device_id), 20), '-targetC') as metric\nfrom\n    shelly_gen2_blutrv\nwhere\n    (\n        (device_name like '%livingroom%')\n        or (device_id in (select device_id from livingroom_t) and device_id = device_name)\n    )\n    and idx = '200'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)\n",
           "refId": "shelly_gen2_blutrv-targetC",
@@ -349,7 +344,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select device_id\n    from shelly_gen2_blutrv\n    where device_name LIKE '%livingroom%' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(pos),\n    concat(left(concat(device_name, device_id), 20), '-pos') as metric\nfrom\n    shelly_gen2_blutrv\nwhere\n    (\n        (device_name like '%livingroom%')\n        or (device_id in (select device_id from livingroom_t) and device_id = device_name)\n    )\n    and idx = '200'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)\n",
           "refId": "shelly_gen2_blutrv-pos",
@@ -412,6 +406,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -458,7 +453,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -468,7 +463,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select device_id\n    from shelly_gen2_humidity\n    where device_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(rh),\n    left(concat(device_name, '-', device_id), 24) as metric\nfrom\n    shelly_gen2_humidity\nwhere\n    (\n        (device_name like '%livingroom')\n        or (device_id in (select device_id from livingroom_t) and device_id = device_name)\n    )\n    and idx = '0'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -517,7 +511,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select ieee_address\n    from zigbee2mqtt_shelly_bluhtdisplayzb\n    where friendly_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(humidity),\n    left(concat(friendly_name, ieee_address), 24) as metric\nfrom\n    zigbee2mqtt_shelly_bluhtdisplayzb\nwhere\n    (\n        (friendly_name like '%livingroom')\n        or (ieee_address in (select ieee_address from livingroom_t) and ieee_address = friendly_name)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_shelly_bluhtdisplayzb",
@@ -547,7 +540,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select ieee_address\n    from zigbee2mqtt_shelly_sbht103c\n    where friendly_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(humidity),\n    left(concat(friendly_name, ieee_address), 24) as metric\nfrom\n    zigbee2mqtt_shelly_sbht103c\nwhere\n    (\n        (friendly_name like '%livingroom')\n        or (ieee_address in (select ieee_address from livingroom_t) and ieee_address = friendly_name)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_shelly_sbht103c",
@@ -577,7 +569,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "with livingroom_t as (\n    select ieee_address\n    from zigbee2mqtt_sonoff_snzb02wd\n    where friendly_name LIKE '%livingroom' and $__timeFilter(timestamp)\n)\n\nselect \n    $__time(timestamp),\n    avg(humidity),\n    left(concat(friendly_name, ieee_address), 24) as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    (\n        (friendly_name like '%livingroom')\n        or (ieee_address in (select ieee_address from livingroom_t) and ieee_address = friendly_name)\n    )\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_sonoff_snzb02wd",
@@ -640,6 +631,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -686,7 +678,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -696,7 +688,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(tC) as tC,\n    device_name as metric\nfrom\n    shelly_gen2_temperature\nwhere\n    device_name not like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -745,7 +736,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(temperature) as temperature,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_shelly_bluhtdisplayzb\nwhere\n    friendly_name not like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_shelly_bluhtdisplayzb",
@@ -775,7 +765,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(temperature) as temperature,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    friendly_name not like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_sonoff_snzb02wd",
@@ -805,7 +794,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(temperature) as temperature,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02p\nwhere\n    friendly_name not like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_sonoff_snzb02p",
@@ -868,6 +856,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -914,7 +903,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -924,7 +913,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(rh) as rh,\n    device_name as metric\nfrom\n    shelly_gen2_humidity\nwhere\n    device_name not like '%outdoor%' \n    AND $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -973,7 +961,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(humidity) as humidity,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_shelly_bluhtdisplayzb\nwhere\n    friendly_name not like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_shelly_bluhtdisplayzb",
@@ -1003,7 +990,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(humidity) as humidity,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    friendly_name not like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_sonoff_snzb02wd",
@@ -1033,7 +1019,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(humidity) as humidity,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02p\nwhere\n    friendly_name not like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_sonoff_snzb02p",
@@ -1094,6 +1079,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1140,7 +1126,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -1150,7 +1136,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(apower) as apower,\n    device_name as metric\nfrom\n    shelly_gen2_switch\nwhere\n    $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -1199,7 +1184,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(power) as power,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_s60zbtpf\nwhere\n    $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_sonoff_s60zbtpf",
@@ -1241,6 +1225,9 @@
             "cellOptions": {
               "type": "auto"
             },
+            "footer": {
+              "reducers": []
+            },
             "inspect": false
           },
           "mappings": [],
@@ -1270,14 +1257,6 @@
       "id": 22,
       "options": {
         "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
         "frameIndex": 0,
         "showHeader": true,
         "sortBy": [
@@ -1287,7 +1266,7 @@
           }
         ]
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "dataset": "qdb",
@@ -1297,7 +1276,6 @@
           },
           "editorMode": "code",
           "format": "table",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "WITH\nshelly_gen2_switch_b AS (\n    SELECT\n        timestamp AS ts,\n        device_name,\n        apower,\n        lag(timestamp) OVER (PARTITION BY device_name ORDER BY timestamp) AS prev_ts,\n    FROM shelly_gen2_switch\n    WHERE $__timeFilter(timestamp)\n)\nSELECT\n    $__time(0),\n    device_name,\n    sum(apower*(datediff('u', ts, prev_ts)))/(3600.0*1000000) as value\nFROM shelly_gen2_switch_b\nWHERE prev_ts IS NOT NULL\nGROUP by device_name",
           "refId": "shelly_gen2_switch",
@@ -1425,6 +1403,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -1492,7 +1471,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -1502,7 +1481,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(tC) as tC,\n    device_name as metric\nfrom\n    shelly_gen2_temperature\nwhere\n    device_name like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -1551,7 +1529,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(rh) as rh,\n    concat(device_name, '-rh') as metric\nfrom\n    shelly_gen2_humidity\nwhere\n    device_name like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -1600,7 +1577,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(temperature) as temperature,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    friendly_name like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_sonoff_snzb02wd-temperature",
@@ -1630,7 +1606,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(humidity) as humidity,\n    concat(friendly_name, '-rh') as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    friendly_name like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_sonoff_snzb02wd-humidity",
@@ -1660,7 +1635,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(temperature) as temperature,\n    friendly_name as metric\nfrom\n    zigbee2mqtt_shelly_bluhtdisplayzb\nwhere\n    friendly_name like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_shelly_bluhtdisplayzb-temperature",
@@ -1690,7 +1664,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(humidity) as humidity,\n    concat(friendly_name, '-rh') as metric\nfrom\n    zigbee2mqtt_shelly_bluhtdisplayzb\nwhere\n    friendly_name like '%outdoor%' \n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "zigbee2mqtt_shelly_bluhtdisplayzb-humidity",
@@ -1753,6 +1726,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -1797,7 +1771,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -1807,7 +1781,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(battery_percent) as battery_percent,\n    concat(device_name, '-', device_id) as metric\nfrom\n    shelly_gen2_devicepower\nwhere\n    $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -1856,7 +1829,54 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select \n    $__time(timestamp),\n    avg(battery) as battery,\n    concat(device_name, '-', device_id) as metric\nfrom\n    shelly_gen2_blutrv\nwhere\n    $__timeFilter(timestamp)\nsample by $__interval fill(null)",
+          "refId": "shelly_gen2_blutrv",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "group": [],
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(battery) as battery,\n    concat(friendly_name, '-', ieee_address) as metric\nfrom\n    zigbee2mqtt_shelly_bluhtdisplayzb\nwhere\n    $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -1905,7 +1925,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(battery) as battery,\n    concat(friendly_name, '-', ieee_address) as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02wd\nwhere\n    $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -1954,7 +1973,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(battery) as battery,\n    concat(friendly_name, '-', ieee_address) as metric\nfrom\n    zigbee2mqtt_sonoff_snzb02p\nwhere\n    $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -2018,10 +2036,10 @@
             "axisSoftMax": 120,
             "axisSoftMin": 0,
             "barAlignment": 0,
-            "barWidthFactor": 0.5,
-            "drawStyle": "bars",
-            "fillOpacity": 85,
-            "gradientMode": "hue",
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -2030,18 +2048,19 @@
             "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 5,
+            "pointSize": 6,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
-            "spanNulls": false,
+            "showPoints": "always",
+            "showValues": false,
+            "spanNulls": 86400000,
             "stacking": {
               "group": "A",
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "dashed"
             }
           },
           "mappings": [],
@@ -2055,7 +2074,38 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "download"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upload"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -2064,13 +2114,13 @@
         "y": 24
       },
       "id": 25,
-      "interval": "8h",
+      "interval": "1h",
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "right",
-          "showLegend": false
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "hideZeros": false,
@@ -2078,7 +2128,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -2088,11 +2138,10 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(download) as download,\n    avg(upload) as upload\nfrom\n    telegraf_internet_speed\nwhere\n    $__timeFilter(timestamp)\nsample by $__interval fill(null)",
-          "refId": "shelly_gen2_devicepower",
+          "refId": "telegraf_internet_speed",
           "select": [
             [
               {
@@ -2128,15 +2177,100 @@
               "type": "macro"
             }
           ]
+        },
+        {
+          "dataset": "qdb",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "select \n    $__time(0),\n    approx_percentile(download, 0.2) as download_,\n    approx_percentile(upload, 0.2) as upload_,\nfrom\n    telegraf_internet_speed\nwhere\n    $__timeFilter(timestamp)",
+          "refId": "telegraf_internet_speed-percentile",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
         }
       ],
       "title": "speedtest",
+      "transformations": [
+        {
+          "id": "configFromData",
+          "options": {
+            "configRefId": "telegraf_internet_speed-percentile",
+            "mappings": [
+              {
+                "fieldName": "download_",
+                "handlerArguments": {
+                  "threshold": {
+                    "color": "green"
+                  }
+                },
+                "handlerKey": "threshold1"
+              },
+              {
+                "fieldName": "upload_",
+                "handlerArguments": {
+                  "threshold": {
+                    "color": "light-orange"
+                  }
+                },
+                "handlerKey": "threshold1"
+              }
+            ]
+          }
+        },
+        {
+          "disabled": true,
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "lower",
+                  "options": {
+                    "value": "1"
+                  }
+                },
+                "fieldName": "download"
+              },
+              {
+                "config": {
+                  "id": "lower",
+                  "options": {
+                    "value": "1"
+                  }
+                },
+                "fieldName": "upload"
+              }
+            ],
+            "match": "any",
+            "type": "exclude"
+          }
+        }
+      ],
       "type": "timeseries"
     }
   ],
   "preload": false,
   "refresh": "",
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [],
   "templating": {
     "list": [
@@ -2160,35 +2294,10 @@
           "value": "1h"
         },
         "name": "min_interval",
-        "options": [
-          {
-            "selected": false,
-            "text": "1m",
-            "value": "1m"
-          },
-          {
-            "selected": false,
-            "text": "2m",
-            "value": "2m"
-          },
-          {
-            "selected": false,
-            "text": "5m",
-            "value": "5m"
-          },
-          {
-            "selected": false,
-            "text": "30m",
-            "value": "30m"
-          },
-          {
-            "selected": true,
-            "text": "1h",
-            "value": "1h"
-          }
-        ],
+        "options": [],
         "query": "1m, 2m, 5m, 30m, 1h",
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       }
     ]
   },
@@ -2200,5 +2309,6 @@
   "timezone": "browser",
   "title": "mixed_aio",
   "uid": "mixed_aio",
-  "version": 16
+  "version": 26,
+  "weekStart": ""
 }

@@ -24,7 +24,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 13,
   "links": [
     {
       "asDropdown": true,
@@ -89,6 +88,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -191,7 +191,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -230,7 +230,6 @@
           },
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select\n    $__time(timestamp),\n    avg(temp_input) as value,\n    concat(chip, '-', feature) as metric\nfrom\n    telegraf_sensors\nwhere\n    host = '$host'\n    and temp_input is not null\n    and temp_input > 0\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)\n",
@@ -295,6 +294,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -340,7 +340,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -350,7 +350,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select\n    $__time(timestamp),\n    avg(fan_input) as value,\n    concat(chip, '-', feature) as metric\nfrom\n    telegraf_sensors\nwhere\n    host = '$host'\n    and feature ~ '^fan'\n    and fan_input is not null\n    and fan_input < 10000 -- 20000 rpm? ekhm?\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)\n",
@@ -443,6 +442,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -524,7 +524,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -563,7 +563,6 @@
           },
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "with\n  telegraf_linux_cpu2 as ((\n    select\n      timestamp,\n      sum(throttle_total_time) as throttle_total_time\n    from telegraf_linux_cpu\n    where\n      host = '$host'\n      and $__timeFilter(timestamp)\n  ) timestamp(timestamp))\nselect\n  $__time(timestamp),\n  throttle_time_ms*1.0/(diff_seconds*1000.0)*100.0 as throttle_percentage\nfrom (\n  select\n    timestamp,\n    sum(throttle_time_ms) as throttle_time_ms,\n    sum(diff_seconds) as diff_seconds\n  from (\n    select\n      t1.timestamp, \n      (case when t1.throttle_total_time >= t2.throttle_total_time then t1.throttle_total_time-t2.throttle_total_time else null end) as throttle_time_ms,\n      datediff('s', t1.timestamp, t2.timestamp) as diff_seconds\n    from telegraf_linux_cpu2 t1 \n    lt join telegraf_linux_cpu2 t2\n  )\n  sample by $__interval fill(null)\n)\n",
@@ -626,6 +625,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -695,7 +695,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -766,6 +766,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -810,7 +811,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -819,7 +820,6 @@
           },
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select\n    $__time(timestamp),\n    avg(used_percent) as mem_used_percent\nfrom\n    telegraf_mem\nwhere\n    host = '$host'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -850,7 +850,6 @@
           },
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select\n    $__time(timestamp),\n    100.0-avg(available_percent) as mem_notavailable_percent\nfrom\n    telegraf_mem\nwhere\n    host = '$host'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -881,7 +880,6 @@
           },
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select\n    $__time(timestamp),\n    avg(used_percent) as swap_used_percent\nfrom\n    telegraf_swap\nwhere\n    host = '$host'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -914,7 +912,6 @@
         "type": "postgres",
         "uid": "${datasource}"
       },
-      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -946,6 +943,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -989,7 +987,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -1147,7 +1145,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 136
+            "y": 151
           },
           "id": 8,
           "options": {
@@ -1172,7 +1170,6 @@
               },
               "format": "time_series",
               "group": [],
-              "hide": false,
               "metricColumn": "none",
               "rawQuery": true,
               "rawSql": "with\n  telegraf_net2 as (\n    select timestamp, bytes_recv, bytes_sent, packets_recv, packets_sent\n    from telegraf_net\n    where\n      host = '$host'\n      and interface = '$net_interface'\n      and $__timeFilter(timestamp)\n  )\nselect\n  time,\n  bytes_recv*1.0/diff_seconds as bytes_recv_rate,\n  bytes_sent*1.0/diff_seconds as bytes_sent_rate,\n  packets_recv*1.0/diff_seconds as packets_recv_rate,\n  packets_sent*1.0/diff_seconds as packets_sent_rate\nfrom (\n  select\n    $__time(timestamp),\n    sum(bytes_recv) as bytes_recv,\n    sum(bytes_sent) as bytes_sent,\n    sum(packets_recv) as packets_recv,\n    sum(packets_sent) as packets_sent,\n    sum(diff_seconds) as diff_seconds\n  from (\n    select\n      t1.timestamp, \n      (case when t1.bytes_recv >= t2.bytes_recv then t1.bytes_recv-t2.bytes_recv else null end) as bytes_recv,\n      (case when t1.bytes_sent >= t2.bytes_sent then t1.bytes_sent-t2.bytes_sent else null end) as bytes_sent,\n      (case when t1.packets_recv >= t2.packets_recv then t1.packets_recv-t2.packets_recv else null end) as packets_recv,\n      (case when t1.packets_sent >= t2.packets_sent then t1.packets_sent-t2.packets_sent else null end) as packets_sent,\n      datediff('s', t1.timestamp, t2.timestamp) as diff_seconds\n    from telegraf_net2 t1\n    lt join telegraf_net2 t2\n  )\n  sample by $__interval fill(null)\n)",
@@ -1268,7 +1265,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 136
+            "y": 151
           },
           "id": 13,
           "options": {
@@ -1398,7 +1395,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 144
+            "y": 159
           },
           "id": 17,
           "options": {
@@ -1513,7 +1510,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 144
+            "y": 159
           },
           "id": 19,
           "options": {
@@ -1538,7 +1535,6 @@
               },
               "format": "time_series",
               "group": [],
-              "hide": false,
               "metricColumn": "none",
               "rawQuery": true,
               "rawSql": "with\n  telegraf_diskio2 as (\n    select timestamp, read_bytes, write_bytes\n    from telegraf_diskio\n    where\n      host = '$host'\n      and name = '$diskio_name'\n      and $__timeFilter(timestamp)\n  )\nselect\n  time,\n  read_bytes*1.0/diff_seconds as read_bytes_rate,\n  write_bytes*1.0/diff_seconds as write_bytes_rate\nfrom (\n  select\n    $__time(timestamp),\n    sum(read_bytes) as read_bytes,\n    sum(write_bytes) as write_bytes,\n    sum(diff_seconds) as diff_seconds\n  from (\n      select\n          t1.timestamp, \n          (case when t1.read_bytes >= t2.read_bytes then t1.read_bytes-t2.read_bytes else null end) as read_bytes,\n          (case when t1.write_bytes >= t2.write_bytes then t1.write_bytes-t2.write_bytes else null end) as write_bytes,\n          datediff('s', t1.timestamp, t2.timestamp) as diff_seconds\n      from telegraf_diskio2 t1\n      lt join telegraf_diskio2 t2\n  )\n  sample by $__interval fill(null)\n)",
@@ -1660,7 +1656,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 144
+            "y": 159
           },
           "id": 18,
           "options": {
@@ -1685,7 +1681,6 @@
               },
               "format": "time_series",
               "group": [],
-              "hide": false,
               "metricColumn": "none",
               "rawQuery": true,
               "rawSql": "with\n  telegraf_diskio2 as (\n    select timestamp, io_time, weighted_io_time\n    from telegraf_diskio\n    where\n      host = '$host'\n      and name = '$diskio_name'\n      and $__timeFilter(timestamp)\n  )\nselect\n  time,\n  io_time*1.0/(diff_seconds*1000)*100 as io_utilization_percent,\n  weighted_io_time*1.0/(diff_seconds*1000) as average_queue_depth\nfrom (\n  select\n    $__time(timestamp),\n    sum(io_time) as io_time,\n    sum(weighted_io_time) as weighted_io_time,\n    sum(diff_seconds) as diff_seconds\n  from (\n    select\n        t1.timestamp, \n        (case when t1.io_time >= t2.io_time then t1.io_time-t2.io_time else null end) as io_time,\n        (case when t1.weighted_io_time >= t2.weighted_io_time then t1.weighted_io_time-t2.weighted_io_time else null end) as weighted_io_time,\n        datediff('s', t1.timestamp, t2.timestamp) as diff_seconds\n    from telegraf_diskio2 t1\n    lt join telegraf_diskio2 t2\n  )\n  sample by $__interval fill(null)\n)",
@@ -1716,7 +1711,6 @@
               },
               "format": "time_series",
               "group": [],
-              "hide": false,
               "metricColumn": "none",
               "rawQuery": true,
               "rawSql": "select\n    $__time(timestamp),\n    avg(iops_in_progress) as iops_in_progress\nfrom\n    telegraf_diskio\nwhere\n    host = '$host'\n    and name = '$diskio_name'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -1828,7 +1822,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 152
+            "y": 167
           },
           "id": 23,
           "options": {
@@ -1944,7 +1938,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 152
+            "y": 167
           },
           "id": 24,
           "options": {
@@ -2102,7 +2096,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 152
+            "y": 167
           },
           "id": 25,
           "options": {
@@ -2127,7 +2121,6 @@
               },
               "format": "time_series",
               "group": [],
-              "hide": false,
               "metricColumn": "none",
               "rawQuery": true,
               "rawSql": "with\n  telegraf_docker_container_net2 as (\n    select timestamp, rx_bytes, tx_bytes, tx_packets, rx_packets\n    from telegraf_docker_container_net\n    where\n      host = '$host'\n      and container_name = '$docker_container_name'\n      and $__timeFilter(timestamp)\n  )\nselect\n  time,\n  rx_bytes*1.0/diff_seconds as rx_bytes_rate,\n  tx_bytes*1.0/diff_seconds as tx_bytes_rate,\n  tx_packets*1.0/diff_seconds as tx_packets_rate,\n  rx_packets*1.0/diff_seconds as rx_packets_rate\nfrom (\n  select\n    $__time(timestamp),\n    sum(rx_bytes) as rx_bytes,\n    sum(tx_bytes) as tx_bytes,\n    sum(tx_packets) as tx_packets,\n    sum(rx_packets) as rx_packets,\n    sum(diff_seconds) as diff_seconds\n  from (\n      select\n          t1.timestamp, \n          (case when t1.rx_bytes >= t2.rx_bytes then t1.rx_bytes-t2.rx_bytes else null end) as rx_bytes,\n          (case when t1.tx_bytes >= t2.tx_bytes then t1.tx_bytes-t2.tx_bytes else null end) as tx_bytes,\n          (case when t1.tx_packets >= t2.tx_packets then t1.tx_packets-t2.tx_packets else null end) as tx_packets,\n          (case when t1.rx_packets >= t2.rx_packets then t1.rx_packets-t2.rx_packets else null end) as rx_packets,\n          datediff('s', t1.timestamp, t2.timestamp) as diff_seconds\n      from telegraf_docker_container_net2 t1\n      lt join telegraf_docker_container_net2 t2\n  )\n  sample by $__interval fill(null)\n)",
@@ -2237,7 +2230,7 @@
             "h": 7,
             "w": 8,
             "x": 0,
-            "y": 160
+            "y": 175
           },
           "id": 34,
           "options": {
@@ -2352,7 +2345,7 @@
             "h": 7,
             "w": 8,
             "x": 8,
-            "y": 160
+            "y": 175
           },
           "id": 33,
           "options": {
@@ -2467,7 +2460,7 @@
             "h": 7,
             "w": 8,
             "x": 16,
-            "y": 160
+            "y": 175
           },
           "id": 32,
           "options": {
@@ -2538,7 +2531,6 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
-          "description": "",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2569,6 +2561,7 @@
                   "type": "linear"
                 },
                 "showPoints": "auto",
+                "showValues": false,
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
@@ -2638,7 +2631,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "12.2.0-17142428006",
+          "pluginVersion": "12.4.0",
           "targets": [
             {
               "datasource": {
@@ -2696,7 +2689,6 @@
               "editorMode": "code",
               "format": "time_series",
               "group": [],
-              "hide": false,
               "metricColumn": "none",
               "rawQuery": true,
               "rawSql": "select\n    $__time(timestamp),\n    avg(c_capacity) as capacity,\n    concat('capacity_', name) as metric\nfrom\n    telegraf_power_supply\nwhere\n    host = '$host'\n    and type = 'Battery'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)\n",
@@ -2789,14 +2781,14 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "12.2.0-17142428006",
+          "pluginVersion": "12.4.0",
           "targets": [
             {
               "dataset": "qdb",
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "WITH ordered AS (\n    SELECT\n        timestamp AS ts,\n        c_percentage AS pct,\n        lag(timestamp)     OVER (PARTITION BY name ORDER BY timestamp) AS prev_ts,\n        lag(c_percentage)  OVER (PARTITION BY name ORDER BY timestamp) AS prev_pct\n    FROM telegraf_power_supply\n    WHERE\n        host = '$host'\n        and type = 'Battery'\n        and status = 'Discharging'\n        and $__timeFilter(timestamp)\n),\nvalid AS (\n    SELECT\n        (ts - prev_ts) / 1000000L AS delta_s,  -- seconds (micros)\n        (prev_pct - pct) AS pct_drop\n    FROM ordered\n    WHERE prev_ts IS NOT NULL\n      AND (ts - prev_ts) < 65000000L          -- only intervals < 65s (micros)\n)\nSELECT\n    --sum(delta_s) AS total_seconds,\n    --sum(pct_drop) AS total_pct_drop,\n    (sum(pct_drop) / NULLIF(sum(delta_s), 0)) * 3600 AS avg_pct_drop_per_hour,\n    (100 * sum(delta_s) / NULLIF(sum(pct_drop), 0)) / 3600 as est_operating_time_hours\nFROM valid",
+              "rawSql": "WITH ordered AS (\n    SELECT\n        timestamp AS ts,\n        c_percentage AS pct,\n        lag(timestamp)     OVER (PARTITION BY name ORDER BY timestamp) AS prev_ts,\n        lag(c_percentage)  OVER (PARTITION BY name ORDER BY timestamp) AS prev_pct\n    FROM telegraf_power_supply\n    WHERE\n        host = '$host'\n        and type = 'Battery'\n        and status = 'Discharging'\n        and $__timeFilter(timestamp)\n),\nvalid AS (\n    SELECT\n        (ts - prev_ts) / 1000000L AS delta_s,  -- seconds (micros)\n        (prev_pct - pct) AS pct_drop\n    FROM ordered\n    WHERE prev_ts IS NOT NULL\n      AND (ts - prev_ts) < 65000000L          -- only intervals < 65s (micros)\n)\nSELECT\n    --sum(delta_s) AS total_seconds,\n    --sum(pct_drop) AS total_pct_drop,\n    (sum(pct_drop) / NULLIF(sum(delta_s), 0)) * 3600 AS avg_pct_drop_per_hour,\n    (100 * sum(delta_s) / NULLIF(sum(pct_drop), 0)) / 3600 as est_operating_time_hours,\n    (100 * sum(delta_s) / NULLIF(sum(pct_drop), 0)) / 3600 * 0.8 as est_operating_time_hours_80proc\nFROM valid",
               "refId": "A",
               "sql": {
                 "columns": [
@@ -2868,14 +2860,14 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "12.2.0-17142428006",
+          "pluginVersion": "12.4.0",
           "targets": [
             {
               "dataset": "qdb",
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "WITH ordered AS (\n    SELECT\n        timestamp AS ts,\n        c_percentage AS pct,\n        lag(timestamp)     OVER (PARTITION BY name ORDER BY timestamp) AS prev_ts,\n        lag(c_percentage)  OVER (PARTITION BY name ORDER BY timestamp) AS prev_pct\n    FROM telegraf_power_supply\n    WHERE\n        host = '$host'\n        and type = 'Battery'\n        and status = 'Charging'\n        and $__timeFilter(timestamp)\n),\nvalid AS (\n    SELECT\n        (ts - prev_ts) / 1000000L AS delta_s,  -- seconds (micros)\n        (pct - prev_pct) AS pct_incr\n    FROM ordered\n    WHERE prev_ts IS NOT NULL\n      AND (ts - prev_ts) < 65000000L          -- only intervals < 65s (micros)\n)\nSELECT\n    --sum(delta_s) AS total_seconds,\n    --sum(pct_incr) AS total_incr_incr,\n    (sum(pct_incr) / NULLIF(sum(delta_s), 0)) * 3600 AS avg_pct_incr_per_hour,\n    (100 * sum(delta_s) / NULLIF(sum(pct_incr), 0)) / 3600 as est_charging_time_hours\nFROM valid",
+              "rawSql": "WITH ordered AS (\n    SELECT\n        timestamp AS ts,\n        c_percentage AS pct,\n        lag(timestamp)     OVER (PARTITION BY name ORDER BY timestamp) AS prev_ts,\n        lag(c_percentage)  OVER (PARTITION BY name ORDER BY timestamp) AS prev_pct\n    FROM telegraf_power_supply\n    WHERE\n        host = '$host'\n        and type = 'Battery'\n        and status = 'Charging'\n        and $__timeFilter(timestamp)\n),\nvalid AS (\n    SELECT\n        (ts - prev_ts) / 1000000L AS delta_s,  -- seconds (micros)\n        (pct - prev_pct) AS pct_incr\n    FROM ordered\n    WHERE prev_ts IS NOT NULL\n      AND (ts - prev_ts) < 65000000L          -- only intervals < 65s (micros)\n)\nSELECT\n    --sum(delta_s) AS total_seconds,\n    --sum(pct_incr) AS total_incr_incr,\n    (sum(pct_incr) / NULLIF(sum(delta_s), 0)) * 3600 AS avg_pct_incr_per_hour,\n    (100 * sum(delta_s) / NULLIF(sum(pct_incr), 0)) / 3600 as est_charging_time_hours,\n    (100 * sum(delta_s) / NULLIF(sum(pct_incr), 0)) / 3600 * 0.8 as est_charging_time_hours_80proc\nFROM valid",
               "refId": "A",
               "sql": {
                 "columns": [
@@ -2904,7 +2896,6 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
-          "description": "",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2934,6 +2925,7 @@
                   "type": "linear"
                 },
                 "showPoints": "auto",
+                "showValues": false,
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
@@ -2978,7 +2970,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "12.2.0-17142428006",
+          "pluginVersion": "12.4.0",
           "targets": [
             {
               "datasource": {
@@ -3037,7 +3029,6 @@
             "type": "postgres",
             "uid": "${datasource}"
           },
-          "description": "",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3068,6 +3059,7 @@
                   "type": "linear"
                 },
                 "showPoints": "auto",
+                "showValues": false,
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
@@ -3125,7 +3117,7 @@
               "sort": "none"
             }
           },
-          "pluginVersion": "12.2.0-17142428006",
+          "pluginVersion": "12.4.0",
           "targets": [
             {
               "datasource": {
@@ -3135,7 +3127,6 @@
               "editorMode": "code",
               "format": "time_series",
               "group": [],
-              "hide": false,
               "metricColumn": "none",
               "rawQuery": true,
               "rawSql": "select\n    $__time(timestamp),\n    avg(voltage_now)/1000000 as voltage_now,\n    concat('[V]', type, '_', name) as metric\nfrom\n    telegraf_power_supply\nwhere\n    host = '$host'\n    and type = 'USB'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -3184,7 +3175,6 @@
               "editorMode": "code",
               "format": "time_series",
               "group": [],
-              "hide": false,
               "metricColumn": "none",
               "rawQuery": true,
               "rawSql": "select\n    $__time(timestamp),\n    avg(current_now)/1000000 as current_now,\n    concat('[A]', type, '_', name) as metric\nfrom\n    telegraf_power_supply\nwhere\n    host = '$host'\n    and type = 'USB'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -3236,7 +3226,7 @@
   ],
   "preload": false,
   "refresh": "",
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [],
   "templating": {
     "list": [
@@ -3271,6 +3261,7 @@
         "query": "select distinct host from telegraf_cpu where $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
@@ -3291,6 +3282,7 @@
         "query": "select distinct interface from telegraf_net where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
@@ -3311,6 +3303,7 @@
         "query": "select distinct path from telegraf_disk where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
@@ -3331,6 +3324,7 @@
         "query": "select distinct name from telegraf_diskio where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
@@ -3351,6 +3345,7 @@
         "query": "select distinct container_name from telegraf_docker_container_cpu where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
@@ -3372,6 +3367,7 @@
         "query": "select distinct name from telegraf_nvidia_smi where host = '$host' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       }
@@ -3385,5 +3381,6 @@
   "timezone": "browser",
   "title": "telegraf",
   "uid": "telegraf",
-  "version": 5
+  "version": 12,
+  "weekStart": ""
 }

@@ -24,7 +24,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 27,
   "links": [
     {
       "asDropdown": true,
@@ -110,7 +109,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -213,7 +212,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -302,6 +301,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -362,7 +362,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -451,6 +451,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -483,7 +484,9 @@
       "id": 2,
       "options": {
         "legend": {
-          "calcs": [],
+          "calcs": [
+            "mean"
+          ],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
@@ -494,7 +497,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -504,7 +507,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(apower) as apower\nfrom shelly_gen2_switch\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -553,7 +555,6 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "hide": false,
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(power) as apower,\n    concat('meter1_', device_name, '_', device_id) as metric\nfrom shelly_plugs_meter1\nwhere\n    ${filter:raw}\n    and is_valid = true\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
           "refId": "B",
@@ -615,6 +616,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -658,7 +660,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -760,6 +762,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -819,7 +822,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -909,6 +912,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -980,7 +984,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -1069,6 +1073,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1186,7 +1191,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -1196,7 +1201,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(apower) as apower,\n    avg(voltage)*avg(current) as apparent_power,\n    avg(apower)/(avg(voltage)*avg(current)) as pf\nfrom shelly_gen2_switch\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\n    and voltage > 0\nsample by $__interval fill(null)",
@@ -1441,7 +1445,7 @@
   ],
   "preload": false,
   "refresh": "",
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [],
   "templating": {
     "list": [
@@ -1462,8 +1466,8 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "shelly-plugs-1-freeelectron",
-          "value": "shelly-plugs-1-freeelectron"
+          "text": "shelly-plugs-1-livingroom",
+          "value": "shelly-plugs-1-livingroom"
         },
         "datasource": {
           "type": "postgres",
@@ -1476,6 +1480,7 @@
         "query": "select distinct device_name from shelly_gen2_switch where $__timeFilter(timestamp)\n",
         "refresh": 2,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
@@ -1491,6 +1496,7 @@
         "query": "select distinct device_id from shelly_gen2_switch where device_name = '$device_name' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "type": "query"
       },
       {
@@ -1511,36 +1517,22 @@
         "query": "select distinct idx from shelly_gen2_switch where device_id = '$device_id' and $__timeFilter(timestamp)",
         "refresh": 2,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 3,
         "type": "query"
       },
       {
         "allowCustomValue": false,
         "current": {
-          "text": "((device_name = 'shelly-plugs-1-freeelectron') or (device_id = 'shellyplugsg3-54320465e7a8' and device_id = device_name)) and idx = '0'",
-          "value": "((device_name = 'shelly-plugs-1-freeelectron') or (device_id = 'shellyplugsg3-54320465e7a8' and device_id = device_name)) and idx = '0'"
+          "text": "((device_name = 'shelly-plugs-1-livingroom') or (device_id = 'shellyplugsg3-54320465e7a8' and device_id = device_name)) and idx = '0'",
+          "value": "((device_name = 'shelly-plugs-1-livingroom') or (device_id = 'shellyplugsg3-54320465e7a8' and device_id = device_name)) and idx = '0'"
         },
         "label": "filter_device",
         "name": "filter",
-        "options": [
-          {
-            "selected": false,
-            "text": "id",
-            "value": "device_id = 'shellyplugsg3-54320465e7a8' and idx = '0'"
-          },
-          {
-            "selected": false,
-            "text": "name",
-            "value": "device_name = 'shelly-plugs-1-freeelectron' and idx = '0'"
-          },
-          {
-            "selected": true,
-            "text": "name+id",
-            "value": "((device_name = 'shelly-plugs-1-freeelectron') or (device_id = 'shellyplugsg3-54320465e7a8' and device_id = device_name)) and idx = '0'"
-          }
-        ],
+        "options": [],
         "query": "id : device_id = '$device_id' and idx = '$idx',\nname : device_name = '$device_name' and idx = '$idx',\nname+id : ((device_name = '$device_name') or (device_id = '$device_id' and device_id = device_name)) and idx = '$idx'",
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       },
       {
         "auto": false,
@@ -1609,5 +1601,6 @@
   "timezone": "browser",
   "title": "shelly_plugs",
   "uid": "shelly_plugs",
-  "version": 1
+  "version": 8,
+  "weekStart": ""
 }

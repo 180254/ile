@@ -24,7 +24,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 25,
   "links": [
     {
       "asDropdown": true,
@@ -102,7 +101,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -193,6 +192,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -236,7 +236,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -246,7 +246,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(temperature) as temperature,\n    friendly_name as metric\nfrom\n    $table_name\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -353,7 +352,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -444,6 +443,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -487,7 +487,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -497,7 +497,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(humidity) as humidity,\n    friendly_name as metric\nfrom\n    $table_name\nwhere\n     ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -605,7 +604,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -696,6 +695,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": 21600000,
             "stacking": {
               "group": "A",
@@ -784,7 +784,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -794,7 +794,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(battery) as battery,\n    concat('bat_value_', ieee_address) as metric\nfrom\n    $table_name\nwhere\n    ieee_address = '$ieee_address'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -843,7 +842,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(COALESCE(voltage, 0))/1000 as voltage,\n    concat('bat_voltage_', ieee_address) as metric\nfrom\n    $table_name\nwhere\n    ieee_address = '$ieee_address'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -1197,7 +1195,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(linkquality) as linkquality,\n    ieee_address as metric,\nfrom\n    $table_name\nwhere\n    ieee_address = '$ieee_address'\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -1245,7 +1242,7 @@
   ],
   "preload": false,
   "refresh": "",
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [],
   "templating": {
     "list": [
@@ -1270,30 +1267,10 @@
           "value": "zigbee2mqtt_sonoff_snzb02wd"
         },
         "name": "table_name",
-        "options": [
-          {
-            "selected": true,
-            "text": "zigbee2mqtt_sonoff_snzb02wd",
-            "value": "zigbee2mqtt_sonoff_snzb02wd"
-          },
-          {
-            "selected": false,
-            "text": "zigbee2mqtt_sonoff_snzb02p",
-            "value": "zigbee2mqtt_sonoff_snzb02p"
-          },
-          {
-            "selected": false,
-            "text": "zigbee2mqtt_shelly_bluhtdisplayzb",
-            "value": "zigbee2mqtt_shelly_bluhtdisplayzb"
-          },
-          {
-            "selected": false,
-            "text": "zigbee2mqtt_shelly_sbht103c",
-            "value": "zigbee2mqtt_shelly_sbht103c"
-          }
-        ],
+        "options": [],
         "query": "zigbee2mqtt_sonoff_snzb02wd, zigbee2mqtt_sonoff_snzb02p, zigbee2mqtt_shelly_bluhtdisplayzb, zigbee2mqtt_shelly_sbht103c",
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       },
       {
         "allowCustomValue": false,
@@ -1312,6 +1289,7 @@
         "query": "select distinct friendly_name from $table_name where $__timeFilter(timestamp)",
         "refresh": 2,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
@@ -1327,6 +1305,7 @@
         "query": "select distinct ieee_address from $table_name where friendly_name = '$friendly_name' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "type": "query"
       },
       {
@@ -1337,25 +1316,10 @@
         },
         "label": "filter_device",
         "name": "filter",
-        "options": [
-          {
-            "selected": false,
-            "text": "ieee_address",
-            "value": "ieee_address = '0xa4c1380194c2ffff'"
-          },
-          {
-            "selected": false,
-            "text": "friendly_name",
-            "value": "friendly_name = 'zigbee-ht-0-outdoor'"
-          },
-          {
-            "selected": true,
-            "text": "friendly_name+ieee_address",
-            "value": "((friendly_name = 'zigbee-ht-0-outdoor') or (ieee_address = '0xa4c1380194c2ffff' and ieee_address = friendly_name))"
-          }
-        ],
+        "options": [],
         "query": "ieee_address : ieee_address = '$ieee_address', \nfriendly_name : friendly_name = '$friendly_name',\nfriendly_name+ieee_address : ((friendly_name = '$friendly_name') or (ieee_address = '$ieee_address' and ieee_address = friendly_name)) ",
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       }
     ]
   },
@@ -1367,5 +1331,6 @@
   "timezone": "browser",
   "title": "zigbee2mqtt_temperatures",
   "uid": "zigbee2mqtt_temperatures",
-  "version": 6
+  "version": 9,
+  "weekStart": ""
 }

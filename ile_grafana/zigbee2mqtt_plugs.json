@@ -24,7 +24,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 24,
   "links": [
     {
       "asDropdown": true,
@@ -110,7 +109,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -213,7 +212,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -302,6 +301,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -362,7 +362,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -465,7 +465,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -554,13 +554,14 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "dashed"
             }
           },
           "mappings": [],
@@ -586,7 +587,9 @@
       "id": 2,
       "options": {
         "legend": {
-          "calcs": [],
+          "calcs": [
+            "mean"
+          ],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
@@ -597,7 +600,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -607,7 +610,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(power) as power\nfrom $table_name\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -688,6 +690,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -731,7 +734,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -741,7 +744,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(linkquality) as linkquality,\n    ieee_address as metric,\nfrom\n    $table_name\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\nsample by $__interval fill(null)",
@@ -834,6 +836,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -893,7 +896,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -983,6 +986,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1054,7 +1058,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -1143,6 +1147,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1260,7 +1265,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.2.0-17142428006",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -1270,7 +1275,6 @@
           "editorMode": "code",
           "format": "time_series",
           "group": [],
-          "hide": false,
           "metricColumn": "none",
           "rawQuery": true,
           "rawSql": "select \n    $__time(timestamp),\n    avg(power) as apower,\n    avg(voltage)*avg(current) as apparent_power,\n    avg(power)/(avg(voltage)*avg(current)) as pf\nfrom $table_name\nwhere\n    ${filter:raw}\n    and $__timeFilter(timestamp)\n    and voltage>0\nsample by $__interval fill(null)",
@@ -1318,7 +1322,7 @@
   ],
   "preload": false,
   "refresh": "",
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [],
   "templating": {
     "list": [
@@ -1343,21 +1347,16 @@
           "value": "zigbee2mqtt_sonoff_s60zbtpf"
         },
         "name": "table_name",
-        "options": [
-          {
-            "selected": true,
-            "text": "zigbee2mqtt_sonoff_s60zbtpf",
-            "value": "zigbee2mqtt_sonoff_s60zbtpf"
-          }
-        ],
+        "options": [],
         "query": "zigbee2mqtt_sonoff_s60zbtpf",
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       },
       {
         "allowCustomValue": false,
         "current": {
-          "text": "zigbee-plugs-4-laptoproom",
-          "value": "zigbee-plugs-4-laptoproom"
+          "text": "zigbee-plugs-3-freeelectron",
+          "value": "zigbee-plugs-3-freeelectron"
         },
         "datasource": {
           "type": "postgres",
@@ -1370,14 +1369,15 @@
         "query": "select distinct friendly_name from $table_name where $__timeFilter(timestamp)\n",
         "refresh": 2,
         "regex": ".+",
+        "regexApplyTo": "value",
         "sort": 5,
         "type": "query"
       },
       {
         "allowCustomValue": false,
         "current": {
-          "text": "0xa4c1380571e7ffff",
-          "value": "0xa4c1380571e7ffff"
+          "text": "0xa4c138056bdcffff",
+          "value": "0xa4c138056bdcffff"
         },
         "definition": "select distinct ieee_address from $table_name where friendly_name = '$friendly_name' and $__timeFilter(timestamp)",
         "name": "ieee_address",
@@ -1385,36 +1385,22 @@
         "query": "select distinct ieee_address from $table_name where friendly_name = '$friendly_name' and $__timeFilter(timestamp)",
         "refresh": 1,
         "regex": ".+",
+        "regexApplyTo": "value",
         "type": "query"
       },
       {
         "allowCustomValue": false,
         "current": {
-          "text": "((friendly_name = 'zigbee-plugs-4-laptoproom') or (ieee_address = '0xa4c1380571e7ffff' and ieee_address = friendly_name))",
-          "value": "((friendly_name = 'zigbee-plugs-4-laptoproom') or (ieee_address = '0xa4c1380571e7ffff' and ieee_address = friendly_name))"
+          "text": "((friendly_name = 'zigbee-plugs-3-freeelectron') or (ieee_address = '0xa4c138056bdcffff' and ieee_address = friendly_name))",
+          "value": "((friendly_name = 'zigbee-plugs-3-freeelectron') or (ieee_address = '0xa4c138056bdcffff' and ieee_address = friendly_name))"
         },
         "description": "",
         "label": "filter_device",
         "name": "filter",
-        "options": [
-          {
-            "selected": false,
-            "text": "ieee_address",
-            "value": "ieee_address = '0xa4c1380571e7ffff'"
-          },
-          {
-            "selected": false,
-            "text": "friendly_name",
-            "value": "friendly_name = 'zigbee-plugs-4-laptoproom'"
-          },
-          {
-            "selected": true,
-            "text": "friendly_name+ieee_address",
-            "value": "((friendly_name = 'zigbee-plugs-4-laptoproom') or (ieee_address = '0xa4c1380571e7ffff' and ieee_address = friendly_name))"
-          }
-        ],
+        "options": [],
         "query": "ieee_address : ieee_address = '$ieee_address', \nfriendly_name : friendly_name = '$friendly_name',\nfriendly_name+ieee_address : ((friendly_name = '$friendly_name') or (ieee_address = '$ieee_address' and ieee_address = friendly_name)) ",
-        "type": "custom"
+        "type": "custom",
+        "valuesFormat": "csv"
       },
       {
         "auto": false,
@@ -1483,5 +1469,6 @@
   "timezone": "browser",
   "title": "zigbee2mqtt_plugs",
   "uid": "zigbee2mqtt_plugs",
-  "version": 1
+  "version": 8,
+  "weekStart": ""
 }
