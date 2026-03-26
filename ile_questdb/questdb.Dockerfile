@@ -1,5 +1,5 @@
-# https://github.com/questdb/questdb/blob/9.3.3/core/Dockerfile
-FROM questdb/questdb:9.3.3
+# https://github.com/questdb/questdb/blob/9.3.4/core/Dockerfile
+FROM questdb/questdb:9.3.4
 
 ARG ILE_NONROOT_UID="1001"
 ARG ILE_NONROOT_GID="1001"
